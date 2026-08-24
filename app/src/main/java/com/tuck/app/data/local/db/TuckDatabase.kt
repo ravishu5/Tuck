@@ -11,7 +11,6 @@ import com.tuck.app.data.local.db.dao.EntityDao
 import com.tuck.app.data.local.db.dao.ItemRawPayloadDao
 import com.tuck.app.data.local.db.dao.MediaAssetDao
 import com.tuck.app.data.local.db.dao.SavedItemDao
-import com.tuck.app.data.local.db.dao.SavedItemFtsDao
 import com.tuck.app.data.local.db.dao.SearchHistoryDao
 import com.tuck.app.data.local.db.dao.SourceContentDao
 import com.tuck.app.data.local.db.dao.TagDao
@@ -24,7 +23,6 @@ import com.tuck.app.data.local.db.entity.MediaAssetEntity
 import com.tuck.app.data.local.db.entity.OcrBlockEntity
 import com.tuck.app.data.local.db.entity.SavedItemCollectionCrossRef
 import com.tuck.app.data.local.db.entity.SavedItemEntity
-import com.tuck.app.data.local.db.entity.SavedItemFtsEntity
 import com.tuck.app.data.local.db.entity.SavedItemTagCrossRef
 import com.tuck.app.data.local.db.entity.SearchHistoryEntity
 import com.tuck.app.data.local.db.entity.SourceCommentEntity
@@ -37,7 +35,6 @@ import kotlinx.serialization.json.JsonObject
 @Database(
     entities = [
         SavedItemEntity::class,
-        SavedItemFtsEntity::class,
         EntityEntity::class,
         TagEntity::class,
         SavedItemTagCrossRef::class,
@@ -52,13 +49,12 @@ import kotlinx.serialization.json.JsonObject
         DerivedPointEntity::class,
         OcrBlockEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
 abstract class TuckDatabase : RoomDatabase() {
     abstract fun savedItemDao(): SavedItemDao
-    abstract fun savedItemFtsDao(): SavedItemFtsDao
     abstract fun entityDao(): EntityDao
     abstract fun tagDao(): TagDao
     abstract fun collectionDao(): CollectionDao
@@ -286,6 +282,25 @@ abstract class TuckDatabase : RoomDatabase() {
                 )
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_ocr_blocks_itemId` ON `ocr_blocks`(`itemId`)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_ocr_blocks_assetId` ON `ocr_blocks`(`assetId`)")
+            }
+        }
+
+        /**
+         * Rebuilds the full-text index as a directly-owned FTS4 table.
+         *
+         * Android's SQLite has no fts5 module, so BM25 is not available; ranking is
+         * computed from `matchinfo` instead, which needs the table outside Room's
+         * `@Fts4` management. Also adds the porter tokenizer and prefix indexes.
+         *
+         * The index is derived data rebuilt from source, so dropping it loses nothing.
+         */
+        val MIGRATION_3_4 = object : androidx.room.migration.Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("DROP TRIGGER IF EXISTS saved_items_fts_delete")
+                db.execSQL("DROP TABLE IF EXISTS saved_items_fts")
+                db.execSQL(com.tuck.app.data.local.db.dao.SavedItemFtsDaoImpl.CREATE_TABLE)
+                db.execSQL(com.tuck.app.data.local.db.dao.SavedItemFtsDaoImpl.CREATE_DELETE_TRIGGER)
+                db.execSQL(com.tuck.app.data.local.db.dao.backfillSql())
             }
         }
 

@@ -1,13 +1,13 @@
 package com.tuck.app.data.local.db.entity
 
-import androidx.room.Entity
-import androidx.room.Fts4
-import androidx.room.PrimaryKey
-
-@Fts4
-@Entity(tableName = "saved_items_fts")
+/**
+ * A row of the `saved_items_fts` index.
+ *
+ * Deliberately *not* a Room `@Entity`: the index is a raw FTS5 virtual table so it
+ * can use BM25 ranking, which Room's `@Fts4` annotation cannot express. It is
+ * created and maintained by [com.tuck.app.data.local.db.dao.SavedItemFtsDaoImpl].
+ */
 data class SavedItemFtsEntity(
-    @PrimaryKey
     val rowid: Long,
     val title: String,
     val description: String,

@@ -35,7 +35,7 @@ class KeywordSearchEngine @Inject constructor(
     private val collectionDao: CollectionDao
 ) : SearchEngine {
 
-    override val name: String = "FTS4_Keyword_Engine"
+    override val name: String = "FTS4_Ranked_Engine"
 
     override suspend fun search(filter: SearchFilter): List<SearchResult> = withContext(Dispatchers.IO) {
         val query = filter.query.trim()
@@ -44,7 +44,7 @@ class KeywordSearchEngine @Inject constructor(
         val matchingSnippets = mutableMapOf<Long, String?>()
         val itemIdsOrdered = mutableListOf<Long>()
 
-        // 1. Primary: Try SQLite FTS4 Match
+        // 1. Primary: FTS4 match, ordered by weighted matchinfo relevance
         val ftsQuery = formatFtsQuery(query)
         if (ftsQuery.isNotBlank()) {
             try {
@@ -108,7 +108,7 @@ class KeywordSearchEngine @Inject constructor(
 
         // Sort items
         val sorted = when (filter.sortOrder) {
-            SortOrder.RELEVANCE -> collectionFiltered // Preserves FTS + Match rank order
+            SortOrder.RELEVANCE -> collectionFiltered // Preserves the relevance ranking from the FTS query
             SortOrder.NEWEST -> collectionFiltered.sortedByDescending { it.createdAt }
             SortOrder.OLDEST -> collectionFiltered.sortedBy { it.createdAt }
             SortOrder.RECENTLY_OPENED -> collectionFiltered.sortedByDescending { it.lastOpenedAt ?: it.createdAt }
@@ -128,11 +128,16 @@ class KeywordSearchEngine @Inject constructor(
 
     fun formatFtsQuery(rawQuery: String): String {
         // Strip problematic FTS special operators and escape
-        val cleaned = rawQuery.replace(Regex("[^a-zA-Z0-9\\s₹$€£#@_.-]"), " ").trim()
+        // `-` is deliberately NOT preserved: in FTS4 query syntax a leading hyphen is
+        // the NOT operator, so "nike-air" parsed as `nike AND NOT air` and excluded
+        // the very rows it should have matched.
+        val cleaned = rawQuery.replace(Regex("[^a-zA-Z0-9\\s₹$€£#@_.]"), " ").trim()
         val tokens = cleaned.split(Regex("\\s+")).filter { it.isNotBlank() }
         if (tokens.isEmpty()) return ""
 
-        // Use prefix wildcard match for each token: token1* token2*
+        // Bareword prefix tokens: FTS4 applies `*` only to an unquoted token, not to a
+        // quoted phrase. The cleaning pass above has already removed anything the
+        // query parser would choke on.
         return tokens.joinToString(" ") { "$it*" }
     }
 

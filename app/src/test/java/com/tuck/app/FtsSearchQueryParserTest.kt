@@ -61,6 +61,13 @@ class FtsSearchQueryParserTest {
     }
 
     @Test
+    fun testFormatFtsQueryStripsHyphenSoItIsNotReadAsNotOperator() {
+        val raw = "nike-air max"
+        val formatted = searchEngine.formatFtsQuery(raw)
+        assertEquals("nike* air* max*", formatted)
+    }
+
+    @Test
     fun testFormatFtsQueryBlank() {
         val raw = "   "
         val formatted = searchEngine.formatFtsQuery(raw)

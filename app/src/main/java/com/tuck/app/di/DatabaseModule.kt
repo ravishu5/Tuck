@@ -12,6 +12,7 @@ import com.tuck.app.data.local.db.dao.ItemRawPayloadDao
 import com.tuck.app.data.local.db.dao.MediaAssetDao
 import com.tuck.app.data.local.db.dao.SavedItemDao
 import com.tuck.app.data.local.db.dao.SavedItemFtsDao
+import com.tuck.app.data.local.db.dao.SavedItemFtsDaoImpl
 import com.tuck.app.data.local.db.dao.SearchHistoryDao
 import com.tuck.app.data.local.db.dao.SourceContentDao
 import com.tuck.app.data.local.db.dao.TagDao
@@ -43,6 +44,10 @@ object DatabaseModule {
         ).addCallback(object : RoomDatabase.Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 super.onCreate(db)
+                // The FTS5 index is not a Room entity, so Room will not create it
+                // on a fresh install - only MIGRATION_3_4 covers upgrades.
+                db.execSQL(SavedItemFtsDaoImpl.CREATE_TABLE)
+                db.execSQL(SavedItemFtsDaoImpl.CREATE_DELETE_TRIGGER)
                 CoroutineScope(Dispatchers.IO).launch {
                     val dao = collectionDaoProvider.get()
                     for ((name, icon) in TuckDatabase.DEFAULT_SMART_COLLECTIONS) {
@@ -56,7 +61,11 @@ object DatabaseModule {
                     }
                 }
             }
-        }).addMigrations(TuckDatabase.MIGRATION_1_2, TuckDatabase.MIGRATION_2_3)
+        }).addMigrations(
+            TuckDatabase.MIGRATION_1_2,
+            TuckDatabase.MIGRATION_2_3,
+            TuckDatabase.MIGRATION_3_4
+        )
             .build()
     }
 
@@ -64,7 +73,7 @@ object DatabaseModule {
     fun provideSavedItemDao(database: TuckDatabase): SavedItemDao = database.savedItemDao()
 
     @Provides
-    fun provideSavedItemFtsDao(database: TuckDatabase): SavedItemFtsDao = database.savedItemFtsDao()
+    fun provideSavedItemFtsDao(database: TuckDatabase): SavedItemFtsDao = SavedItemFtsDaoImpl(database)
 
     @Provides
     fun provideEntityDao(database: TuckDatabase): EntityDao = database.entityDao()

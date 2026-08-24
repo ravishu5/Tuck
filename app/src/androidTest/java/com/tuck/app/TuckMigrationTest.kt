@@ -148,6 +148,64 @@ class TuckMigrationTest {
     }
 
     @Test
+    fun migrate3To4_rebuildsSearchableRankedIndex() {
+        helper.createDatabase(TEST_DB, 2).use { db ->
+            db.execSQL(
+                """
+                INSERT INTO saved_items
+                    (id, contentType, title, description, originalUrl, canonicalUrl, sourceDomain,
+                     sourceApp, mimeType, localFilePath, thumbnailPath, originalText, extractedText,
+                     ocrText, commentsJson, createdAt, updatedAt, lastOpenedAt, isFavorite,
+                     isArchived, isDeleted, processingStatus, textHash, imageSha256)
+                VALUES
+                    (1, 'IMAGE', 'Nike Air Max screenshot', NULL, NULL, NULL, NULL, NULL, 'image/png',
+                     NULL, NULL, NULL, NULL, 'Nike Air Max 8999 Amazon', NULL,
+                     1700000000000, 1700000000000, NULL, 0, 0, 0, 'READY', NULL, NULL)
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                INSERT INTO saved_items
+                    (id, contentType, title, description, originalUrl, canonicalUrl, sourceDomain,
+                     sourceApp, mimeType, localFilePath, thumbnailPath, originalText, extractedText,
+                     ocrText, commentsJson, createdAt, updatedAt, lastOpenedAt, isFavorite,
+                     isArchived, isDeleted, processingStatus, textHash, imageSha256)
+                VALUES
+                    (2, 'NOTE', 'Deleted note', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                     'nike mentioned here', NULL, NULL, NULL,
+                     1700000000000, 1700000000000, NULL, 0, 0, 1, 'READY', NULL, NULL)
+                """.trimIndent()
+            )
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 3, true, TuckDatabase.MIGRATION_2_3).close()
+        // validateDroppedTables = false: saved_items_fts is deliberately not a Room
+        // entity, so Room reports it as an "unexpected table".
+        val db = helper.runMigrationsAndValidate(TEST_DB, 4, false, TuckDatabase.MIGRATION_3_4)
+
+        db.use {
+            it.query("SELECT rowid FROM saved_items_fts WHERE saved_items_fts MATCH '\"nike\"*'").use { c ->
+                assertEquals("only the live item is indexed", 1, c.count)
+                c.moveToFirst()
+                assertEquals(1L, c.getLong(0))
+            }
+            // matchinfo is what the ranking reads; assert it is queryable post-migration.
+            it.query(
+                "SELECT matchinfo(saved_items_fts, 'pcnalx') FROM saved_items_fts WHERE saved_items_fts MATCH '\"nike\"*'"
+            ).use { c ->
+                assertTrue("matchinfo must be available", c.moveToFirst())
+                assertTrue("matchinfo returns a packed int blob", c.getBlob(0).size >= 12)
+            }
+            // The delete trigger keeps the index from stranding rows.
+            it.execSQL("DELETE FROM saved_items WHERE id = 1")
+            it.query("SELECT COUNT(*) FROM saved_items_fts").use { c ->
+                c.moveToFirst()
+                assertEquals("delete trigger must clear the index row", 0, c.getInt(0))
+            }
+        }
+    }
+
+    @Test
     fun migrate2To3_parsesCommentsJsonIntoMaterializedPathTree() {
         helper.createDatabase(TEST_DB, 2).use { db ->
             db.execSQL(

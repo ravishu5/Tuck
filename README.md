@@ -12,7 +12,7 @@ Tuck is a production-quality, local-first Android application that solves conten
   - Appears in Android's system share menu for `ACTION_SEND` and `ACTION_SEND_MULTIPLE`.
   - Supports URLs, Notes, Images/Screenshots, PDFs, and Documents.
   - Instantly saves content locally (`PENDING`), displays a sleek bottom HUD ("Saved ✓"), and processes in the background via WorkManager.
-- **🔍 Full-Text Search (SQLite FTS4 via Room `@Fts4`)**:
+- **🔍 Full-Text Search (SQLite FTS4 with weighted relevance ranking)**:
   - Searches simultaneously across titles, descriptions, URLs, raw text, on-device OCR text, entity values, and tags.
   - Supports prefix matching, phrase search, and live debounced results as you type.
   - Filters by Content Type, Favorites, Date ranges (e.g. Last 30 days), Collections, and multiple sort orders (Relevance, Newest, Oldest, Recently Opened).
@@ -53,7 +53,7 @@ Tuck is built following **Clean Architecture**, **MVVM**, and the **Repository P
 - **Language & Runtime**: Kotlin 2.0.x with Coroutines & Flow.
 - **UI Framework**: Jetpack Compose with Material 3, Custom Typography, and Dark/Light/System theme support.
 - **Dependency Injection**: Hilt (Dagger).
-- **Database**: Room 2.6.x with a Room `@Fts4` virtual table for full-text search (no BM25 ranking; see DECISIONS.md).
+- **Database**: Room 2.6.x plus a directly-owned FTS4 virtual table. Android's SQLite has no `fts5` module, so relevance is scored from FTS4 `matchinfo` rather than BM25 (see DECISIONS.md).
 - **Background Processing**: AndroidX WorkManager `CoroutineWorker` for reliable, retryable background enrichment.
 - **Image Loading**: Coil Compose.
 - **On-Device OCR**: Google ML Kit Text Recognition (`play-services-mlkit-text-recognition`).
@@ -86,7 +86,7 @@ Tuck is built following **Clean Architecture**, **MVVM**, and the **Repository P
                                             |
 +-------------------------------------------v-------------------------------------------+
 |                             Data Layer & Background Workers                           |
-|  - SavedItemRepositoryImpl  - SearchRepositoryImpl (FTS4 keyword engine)              |
+|  - SavedItemRepositoryImpl  - SearchRepositoryImpl (FTS4 ranked engine)               |
 |  - FileStorageService       - UrlMetadataProcessor   - ImageOcrProcessor              |
 |  - PdfProcessor             - ItemProcessingWorker (WorkManager CoroutineWorker)      |
 +-------------------------------------------+-------------------------------------------+

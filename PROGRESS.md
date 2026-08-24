@@ -84,7 +84,9 @@ Wired the two dead components and replaced the mocked migration test. What was a
 - [x] `MIGRATION_2_3` implemented; no `fallbackToDestructiveMigration` in the tree
 - [x] `commentsJson` migrated into `source_posts` + `source_comments` with materialized paths, and now read by the UI
 - [x] Checked-in `2.json` restored to its shipped state
-- [ ] FTS5 external-content table with triggers — **it is `@Fts4`, no triggers, no BM25.** Recorded as a deliberate decision in `DECISIONS.md`; left unticked because the milestone as written is not met
+- [x] Full-text index with a delete trigger and weighted relevance ranking. ~~FTS5 external-content~~ —
+  **not possible on Android**: verified on device as `no such module: fts5`. Replaced by a directly-owned
+  FTS4 table ranked via `matchinfo`; 7 instrumentation tests cover ranking, prefix, snippet and delete
 - [x] Migration test proving zero data loss — `TuckMigrationTest` builds a real v2 database from the
   checked-in schema, runs `runMigrationsAndValidate`, and asserts rows, defaults, media promotion and
   the parsed comment tree. Passing on device
@@ -136,7 +138,6 @@ Wired the two dead components and replaced the mocked migration test. What was a
 - [x] Search history
 - [x] Offline vault JSON backup export and import
 - [x] Cache cleanup and local data management
-- [ ] Weighted relevance ranking
 - [ ] Query DSL (`source:reddit`, `in:research`, `after:last-month`)
 - ~~Semantic search / embeddings~~ — **cut 2026-08-25** with the rest of the AI scope.
   Keyword search is now the only retrieval path, which makes ranking quality (below) the top priority
@@ -199,16 +200,13 @@ retrieval quality**. Everything below is ordered against that.
    OCR off still runs OCR. A visible broken promise, roughly an hour.
 2. **Delete the mocked `RoomMigrationTest`** now that `TuckMigrationTest` covers it for real.
    Keeping both invites someone to trust the one that cannot fail.
-3. **Search ranking.** With semantic search cut, FTS4 + plain `MATCH` with no BM25 is the whole
-   retrieval story. Either move to a raw FTS5 external-content table with triggers and weighted BM25,
-   or build explicit scoring on top of FTS4. This is now the highest-leverage work in the app.
-4. **Solve Reddit access.** The extractor parses real payloads (fixture-tested) but the public
+3. **Solve Reddit access.** The extractor parses real payloads (fixture-tested) but the public
    `.json` endpoint 403s unauthenticated, so the flagship capture saves posts without comments.
-5. **Retrieval and organisation gaps** — query DSL (`source:`, `in:`, `after:`), grid view (there is
+4. **Retrieval and organisation gaps** — query DSL (`source:`, `in:`, `after:`), grid view (there is
    no `LazyVerticalGrid` anywhere), bulk selection outside Inbox, dedupe merge UI, per-item
    Markdown/HTML/JSON export, nested-collection UI for the existing `parentId` column.
-6. **Release hardening** — real signing config from a git-ignored `keystore.properties`, turn on
+5. **Release hardening** — real signing config from a git-ignored `keystore.properties`, turn on
    `isMinifyEnabled`, test the R8 rules, add a baseline profile, measure against the performance
    budgets with a 10k-item seed.
-7. **Finish the source/derived split** — `saved_items` still carries the text columns the v3 tables
+6. **Finish the source/derived split** — `saved_items` still carries the text columns the v3 tables
    were meant to own.
