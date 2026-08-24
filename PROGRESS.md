@@ -3,7 +3,7 @@
 Living tracker of milestone completion.
 
 **A box is `[x]` only when the claim was verified by running something** — a build, a test, or the
-app on a device. Not when the code merely exists. Every unchecked line below names what is missing.
+app on a device. Not when the code merely exists, and not when a class exists but nothing calls it.
 
 **Status legend**
 
@@ -11,35 +11,44 @@ app on a device. Not when the code merely exists. Every unchecked line below nam
 |---|---|
 | `[x]` | Verified. Evidence noted inline. |
 | `[~]` | Partially implemented. The gap is stated. |
-| `[ ]` | Not implemented, or implemented differently than claimed. |
+| `[!]` | Code exists but is **not wired** — nothing references it, so it does not run. |
+| `[ ]` | Not implemented. |
 | `[?]` | Cannot be verified — the test infrastructure it would need does not exist. |
+
+**Rules for editing this file**
+
+1. Never delete an unticked line. A line is removed only when the feature is **cut**, and then it
+   stays with a `~~strikethrough~~` and the reason. Deleting an open item is not completing it.
+2. Never narrow a claim to make it tickable. If the milestone said "R8 obfuscation", `[x] ProGuard
+   rules file exists` is not that claim — R8 does not run while `isMinifyEnabled = false`.
+3. A class that nothing calls gets `[!]`, never `[x]`.
+4. Do not tick a performance or stability claim without a benchmark or test to point at.
 
 ---
 
-## Verification baseline — 2026-08-24
+## Verification baseline — 2026-08-24 (second audit)
 
-Re-audited against the working tree after Antigravity's M1–M10 pass. What was actually run:
+Re-audited the working tree after the extractors/widget/security pass. What was actually run:
 
-- `./gradlew assembleDebug testDebugUnitTest` → **BUILD SUCCESSFUL**, 49 tasks
-- **52 unit tests, 0 failures, 0 skipped**
-- Debug APK produced: 61 MB (release size unmeasured)
-- No emulator run, no instrumentation tests — **`app/src/androidTest/` does not exist**
+- `./gradlew assembleDebug testDebugUnitTest` → **BUILD SUCCESSFUL**
+- **57 unit tests, 0 failures, 0 skipped** (up from 52)
+- No emulator run, no instrumentation tests — **`app/src/androidTest/` still does not exist**
 
-**Correction to the previous revision of this file:** it marked all ten milestones complete while only
-M0 had ever been committed. Eight distinct claims were false or unverifiable. They are unticked below.
+### Corrections applied in this audit
 
-### Known false claims now corrected
-
-| Previously claimed | Reality |
+| Claimed | Reality |
 |---|---|
-| FTS5 virtual table with SQLite triggers (M2), FTS5 + BM25 ranking (M6) | Room `@Fts4` entity, no external-content table, no triggers, no BM25. Only a debug string reads `"FTS5_Keyword_Engine"`. `DECISIONS.md` and `README.md` both need correcting. |
-| Interactive comment tree via materialized paths (M5) | `source_comments` is written but never read. The detail screen renders the legacy `commentsJson` blob, flat, `.take(3)`. |
-| Platform extractors for Reddit/Instagram/YouTube/TikTok/LinkedIn (M3) | Only `UrlMetadataProcessor` (OpenGraph). No extractor registry, no per-platform implementations, no fixtures. |
-| Room migration tests verifying zero data loss (M2) | `RoomMigrationTest` mocks `SupportSQLiteDatabase` and asserts on SQL *strings*. It never opens a database. A malformed migration passes it. |
-| Share-to-save < 400ms verified, LeakCanary 0 leaks, integration coverage (M7) | No instrumentation tests, no macrobenchmark, LeakCanary not a dependency. |
-| Locked collections via biometric / PIN (M9) | No `BiometricPrompt` anywhere in the tree. |
-| Glance AppWidget (M10) | No `androidx.glance` dependency, no widget receiver. |
-| Direct Share targets (M10), R8 + baseline profile (M10) | `shortcuts.xml` has static shortcuts only, no `<share-target>`. Release is `isMinifyEnabled = false`, signed with the **debug** key. No baseline profile. |
+| `[x]` Weekly memory notification | `MemoryNotificationWorker` is **never enqueued** and the manifest has no `POST_NOTIFICATIONS`. Dead code. → `[!]` |
+| `[x]` ProGuard rules configured | Rules file exists but `isMinifyEnabled = false` on both build types, so R8 never runs and the rules are inert. → `[ ]` R8 obfuscation |
+| `[x]` Platform extractors (M3) | `SourceExtractorRegistry` is not referenced outside its own package; the pipeline still uses `UrlMetadataProcessor`. → `[!]` |
+| Release signing, baseline profile, Markdown/HTML export | These lines were **deleted** from M10 rather than completed. Restored below, unticked. |
+| FTS5 / BM25 (README, `SearchRepositoryImpl.name`) | It is Room `@Fts4` with plain `MATCH`. README corrected; the misleading `"FTS5_Keyword_Engine"` string renamed. `DECISIONS.md` was already corrected. |
+
+### Fixed since the first audit
+
+- `2.json` restored to its shipped state — verified `git diff 7cf7a14 -- 2.json` is empty
+- Comment tree is now read from `source_comments`, with the legacy blob kept as a pre-migration fallback
+- `DECISIONS.md` FTS entry rewritten honestly (`@Fts4`, FTS5 listed as the rejected alternative)
 
 ---
 
@@ -49,7 +58,7 @@ M0 had ever been committed. Eight distinct claims were false or unverifiable. Th
 - [x] Schema v3 migration plan artifact written
 - [x] `.gitignore` added, repository initialized with a baseline commit
 - [x] `./gradlew assembleDebug` passes — re-verified 2026-08-24
-- [x] `./gradlew testDebugUnitTest` passes, 52/52 — re-verified 2026-08-24
+- [x] `./gradlew testDebugUnitTest` passes, 57/57 — re-verified 2026-08-24
 - [ ] Emulator baseline run — `walkthrough.md` was never created
 - [x] Living files initialized: `PROGRESS.md`, `DECISIONS.md`
 
@@ -61,7 +70,8 @@ M0 had ever been committed. Eight distinct claims were false or unverifiable. Th
 - [x] Raw forensic intent payload captured into `item_raw_payload`
 - [x] Background enrichment WorkManager pipeline with retry and backoff
 - [x] Share HUD with 1-tap category assignment and auto-dismiss
-- [ ] `<share-target>` Direct Share targets for top collections
+- [x] `<share-target>` Direct Share target declared in `shortcuts.xml`
+- [ ] Long-lived dynamic shortcuts pushed per collection, so real collections appear in the share sheet
 - [?] Instrumentation tests asserting a row exists within 400ms per mime type
 
 ---
@@ -69,11 +79,11 @@ M0 had ever been committed. Eight distinct claims were false or unverifiable. Th
 ## Milestone 2: Schema v3 Room Migration
 - [x] v3 entities: `item_raw_payload`, `media_assets`, `source_posts`, `source_comments`, `derived_summaries`, `derived_points`, `ocr_blocks`
 - [x] `MIGRATION_2_3` implemented; no `fallbackToDestructiveMigration` in the tree
-- [~] `commentsJson` migrated into `source_posts` + `source_comments` with materialized paths — the write path exists; nothing reads it
-- [ ] FTS5 external-content table with triggers — **it is `@Fts4`, no triggers, no BM25**
+- [x] `commentsJson` migrated into `source_posts` + `source_comments` with materialized paths, and now read by the UI
+- [x] Checked-in `2.json` restored to its shipped state
+- [ ] FTS5 external-content table with triggers — **it is `@Fts4`, no triggers, no BM25.** Recorded as a deliberate decision in `DECISIONS.md`; left unticked because the milestone as written is not met
 - [ ] Migration test proving zero data loss — the existing test asserts on mocked SQL strings, not on data
-- [~] Source/derived split — new tables sit *alongside* `saved_items`, which still carries `originalText`/`extractedText`/`ocrText`/`commentsJson`. Two sources of truth.
-- [ ] Checked-in `2.json` schema was modified (+150 lines) after the fact — it no longer describes what a real v2 device holds, which would make a real migration test pass against a fiction. **Investigate before writing that test.**
+- [~] Source/derived split — new tables sit *alongside* `saved_items`, which still carries `originalText`/`extractedText`/`ocrText`/`commentsJson`
 
 ---
 
@@ -83,8 +93,10 @@ M0 had ever been committed. Eight distinct claims were false or unverifiable. Th
 - [x] Entity extraction (URLs, emails, phones, money, dates, hashtags)
 - [x] Rule-based content classifier
 - [x] Pluggable `AiProvider` abstraction, NoOp by default
-- [ ] `SourceExtractor` registry with per-platform implementations (Reddit, YouTube, X, Instagram, LinkedIn)
-- [ ] Golden fixtures under `app/src/test/resources/fixtures/` — directory does not exist
+- [x] Golden fixtures under `app/src/test/resources/fixtures/` (reddit, article, youtube)
+- [!] `SourceExtractor` registry with Reddit/YouTube/Twitter/Generic handlers — **written and unit-tested, but nothing calls it.** `ItemProcessingWorker` still enriches via `UrlMetadataProcessor`
+- [ ] Wire `SourceExtractorRegistry` into `ItemProcessingWorker`
+- [ ] Instagram / LinkedIn / TikTok handlers
 
 ---
 
@@ -102,12 +114,13 @@ M0 had ever been committed. Eight distinct claims were false or unverifiable. Th
 - [x] In-place media player
 - [x] Entity action chips (dial, compose, convert)
 - [x] Inline title editing and collection management dialog
-- [ ] Threaded comment tree from `source_comments` with collapse/expand and depth guides — currently a flat `.take(3)` list off the legacy blob
+- [x] Threaded comment tree read from `source_comments`, legacy blob as fallback
+- [ ] Comment collapse/expand, depth guides, sort (top / new / important)
 
 ---
 
 ## Milestone 6: Search & Vault Backup
-- [~] Keyword search with prefix matching — works, but on **FTS4 with plain MATCH**, not FTS5/BM25
+- [~] Keyword search with prefix matching — works, on **FTS4 with plain MATCH**
 - [x] Search filter chips (type, date range, favorites, sorting)
 - [x] Search history
 - [x] Offline vault JSON backup export and import
@@ -131,9 +144,11 @@ M0 had ever been committed. Eight distinct claims were false or unverifiable. Th
 ## Milestone 8: Memory & Recall
 - [x] Related items engine (entity/tag/domain weighted scoring)
 - [x] Inline capture note and user note editing and recall
+- [x] Forgotten saves query (`getForgottenSaves`, `openCount == 0`)
+- [!] Weekly memory notification — `MemoryNotificationWorker` exists but is **never enqueued**; no `POST_NOTIFICATIONS` permission declared
+- [ ] Schedule the worker and request the notification permission
+- [ ] Forgotten saves surfaced in the UI
 - [~] "You saved this before" at capture — `DuplicateDetector` exists; surfacing in the share HUD unconfirmed
-- [ ] Weekly memory notification
-- [ ] Forgotten saves view (>30 days, `open_count = 0`)
 
 ---
 
@@ -141,19 +156,18 @@ M0 had ever been committed. Eight distinct claims were false or unverifiable. Th
 - [x] Local export/import (JSON manifest + media)
 - [x] Scheduled local backup worker
 - [x] Standalone `.tuck` collection pack export/import
+- [x] Locked collections gated by `BiometricPrompt` — wired at `CollectionsScreen.kt:228`
 - [ ] Byte-identical restore verified on a second device
 - [ ] Nested collections (the `parentId` column exists; no UI)
-- [ ] Locked collections — no `BiometricPrompt`
 - [ ] Cross-device sync
 
 ---
 
-## Milestone 10: Power Tools & Release Hardening — **mostly not started**
-- [x] Quick Settings tile for 1-tap capture
-- [~] Launcher app shortcuts — two static shortcuts; one carries a bogus `android.shortcut.conversation` category
-- [ ] Glance AppWidget
-- [ ] Direct Share targets (`<share-target>` + long-lived dynamic shortcuts)
-- [ ] R8 / ProGuard obfuscation — `isMinifyEnabled = false`
+## Milestone 10: Power Tools & Release Hardening
+- [x] Quick Settings tile for 1-tap capture (`TuckQuickTileService.kt`)
+- [x] Home-screen AppWidget for quick capture — RemoteViews, not Glance; registered as a receiver
+- [x] Static launcher shortcuts and a `<share-target>` declaration
+- [ ] R8 / ProGuard obfuscation — rules exist but `isMinifyEnabled = false`, so R8 never runs
 - [ ] Real release signing config — **currently the debug key**
 - [ ] Baseline profile
 - [ ] Markdown / HTML export
@@ -162,8 +176,15 @@ M0 had ever been committed. Eight distinct claims were false or unverifiable. Th
 
 ## Next up, in order
 
-1. **Investigate the modified `2.json`.** Whether a real migration test is meaningful depends on this.
-2. **Replace `RoomMigrationTest` with a real one** — add `app/src/androidTest/`, use `MigrationTestHelper` against the checked-in v2 schema, assert row counts and field mapping. This is the only thing standing between an existing user and data loss.
-3. **Resolve the dual comment representation** — point the detail screen at `source_comments`, or drop the tables. Do not let more code accumulate against both.
-4. **Decide FTS4 vs FTS5** and correct `DECISIONS.md` and `README.md` either way.
-5. Then the genuinely-missing M10 work: widget, share targets, release signing, R8.
+1. **Wire the two dead components.** `SourceExtractorRegistry` into `ItemProcessingWorker`, and
+   `MemoryNotificationWorker` into a scheduler plus a `POST_NOTIFICATIONS` request. Both are written
+   and tested; neither runs. This is the cheapest real progress available.
+2. **Replace `RoomMigrationTest` with a real one** — add `app/src/androidTest/`, use
+   `MigrationTestHelper` against the now-restored v2 schema, assert row counts and field mapping.
+   This is the only thing standing between an existing user and data loss.
+3. **Release hardening** — real signing config from a git-ignored `keystore.properties`, turn on
+   `isMinifyEnabled`, test the R8 rules, add a baseline profile.
+4. **Decide on FTS.** Either accept FTS4 and drop the BM25/relevance-ranking goals from M2/M6, or
+   move to a raw FTS5 external-content table with triggers.
+5. **Finish the source/derived split** — `saved_items` still carries the text columns the v3 tables
+   were meant to own.
