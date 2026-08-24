@@ -1,0 +1,76 @@
+[
+  {
+    "kind": "Listing",
+    "data": {
+      "children": [
+        {
+          "kind": "t3",
+          "data": {
+            "id": "gnn_post_1",
+            "subreddit": "MachineLearning",
+            "title": "Graph Neural Networks in Production — A 2026 Survey",
+            "selftext": "Comprehensive analysis of modern GNN architectures deployed in recommendation systems.",
+            "author": "ml_researcher",
+            "score": 542,
+            "num_comments": 24,
+            "created_utc": 1718000000,
+            "permalink": "/r/MachineLearning/comments/gnn_post_1/graph_neural_networks_in_production/",
+            "over_18": false
+          }
+        }
+      ]
+    }
+  },
+  {
+    "kind": "Listing",
+    "data": {
+      "children": [
+        {
+          "kind": "t1",
+          "data": {
+            "id": "comm_1",
+            "parent_id": "t3_gnn_post_1",
+            "author": "alice_eng",
+            "body": "We migrated our recommender to GATv2 last quarter with 14% latency drop.",
+            "score": 128,
+            "created_utc": 1718003600,
+            "depth": 0,
+            "replies": {
+              "kind": "Listing",
+              "data": {
+                "children": [
+                  {
+                    "kind": "t1",
+                    "data": {
+                      "id": "comm_1_1",
+                      "parent_id": "t1_comm_1",
+                      "author": "bob_data",
+                      "body": "Did you use PyG or DGL for the serving layer?",
+                      "score": 34,
+                      "created_utc": 1718007200,
+                      "depth": 1,
+                      "replies": ""
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "kind": "t1",
+          "data": {
+            "id": "comm_2",
+            "parent_id": "t3_gnn_post_1",
+            "author": "charlie_ai",
+            "body": "Great writeup, bookmarking this for our team study group.",
+            "score": 45,
+            "created_utc": 1718005000,
+            "depth": 0,
+            "replies": ""
+          }
+        }
+      ]
+    }
+  }
+]
