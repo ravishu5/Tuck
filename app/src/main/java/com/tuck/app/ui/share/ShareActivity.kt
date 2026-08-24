@@ -112,12 +112,13 @@ fun ShareDialogOverlay(
     onOpenItem: (Long) -> Unit,
     onDismiss: () -> Unit
 ) {
+    var userInteracted by remember { mutableStateOf(false) }
     val tuckColors = TuckTheme.colors
     val tuckShapes = TuckTheme.shapes
 
-    // Fast auto-dismiss after 3.5 seconds after saving
-    LaunchedEffect(uiState) {
-        if (uiState is ShareUiState.Saved && !uiState.isCustomCategoryDialogOpen) {
+    // Auto-dismiss after 3.5 seconds if user has not interacted with categories
+    LaunchedEffect(uiState, userInteracted) {
+        if (uiState is ShareUiState.Saved && !uiState.isCustomCategoryDialogOpen && !userInteracted) {
             delay(3500)
             onDismiss()
         }
@@ -238,7 +239,10 @@ fun ShareDialogOverlay(
                                     TuckCategoryChip(
                                         label = col.name,
                                         isSelected = isSelected,
-                                        onClick = { onToggleCollection(col.id) },
+                                        onClick = {
+                                            userInteracted = true
+                                            onToggleCollection(col.id)
+                                        },
                                         icon = if (isSelected) "✓" else null
                                     )
                                 }
@@ -250,7 +254,10 @@ fun ShareDialogOverlay(
                                     border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.accent.copy(alpha = 0.4f)),
                                     modifier = Modifier
                                         .clip(tuckShapes.pill)
-                                        .clickable { onOpenCustomCategoryDialog(true) }
+                                        .clickable {
+                                            userInteracted = true
+                                            onOpenCustomCategoryDialog(true)
+                                        }
                                 ) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,

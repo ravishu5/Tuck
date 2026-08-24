@@ -12,6 +12,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.security.MessageDigest
@@ -39,14 +40,79 @@ class FileStorageService @Inject constructor(
         File(context.filesDir, "thumbnails").apply { mkdirs() }
     }
 
+    private fun takePersistableUriPermissionSafely(uri: Uri) {
+        if (uri.scheme == "content") {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (ignored: SecurityException) {
+                // Non-persistable providers
+            }
+        }
+    }
+
+    suspend fun saveStreamUri(uri: Uri, mimeType: String? = null): StorageSaveResult = withContext(Dispatchers.IO) {
+        takePersistableUriPermissionSafely(uri)
+        val resolvedMime = (mimeType ?: context.contentResolver.getType(uri) ?: "application/octet-stream").lowercase()
+
+        when {
+            resolvedMime.startsWith("image/") -> saveImageFromUri(uri)
+            resolvedMime == "application/pdf" -> savePdfFromUri(uri)
+            else -> {
+                val ext = when {
+                    resolvedMime.contains("vcard") -> "vcf"
+                    resolvedMime.startsWith("video/") -> "mp4"
+                    resolvedMime.startsWith("audio/") -> "mp3"
+                    resolvedMime.contains("json") -> "json"
+                    resolvedMime.contains("text/plain") -> "txt"
+                    else -> "bin"
+                }
+                saveDocumentFromUri(uri, ext)
+            }
+        }
+    }
+
+    suspend fun saveAllStreamsFromUris(uris: List<Uri>, mimeType: String? = null): List<StorageSaveResult> = withContext(Dispatchers.IO) {
+        uris.map { uri ->
+            saveStreamUri(uri, mimeType)
+        }
+    }
+
+    private fun openStreamSafely(uri: Uri): InputStream? {
+        return try {
+            if (uri.scheme == "file" && uri.path != null) {
+                val file = File(uri.path!!)
+                if (file.exists() && file.canRead()) {
+                    FileInputStream(file)
+                } else {
+                    context.contentResolver.openInputStream(uri)
+                }
+            } else {
+                context.contentResolver.openInputStream(uri)
+            }
+        } catch (e: Exception) {
+            try {
+                if (uri.path != null) {
+                    val file = File(uri.path!!)
+                    if (file.exists()) FileInputStream(file) else null
+                } else null
+            } catch (e2: Exception) {
+                null
+            }
+        }
+    }
+
     suspend fun saveImageFromUri(uri: Uri): StorageSaveResult = withContext(Dispatchers.IO) {
+        takePersistableUriPermissionSafely(uri)
         val fileName = "img_${UUID.randomUUID()}.jpg"
         val destinationFile = File(imagesDir, fileName)
 
         var sha256 = ""
-        context.contentResolver.openInputStream(uri)?.use { input ->
+        openStreamSafely(uri)?.use { input ->
             val digest = MessageDigest.getInstance("SHA-256")
-            val buffer = ByteArray(8192)
+            val buffer = ByteArray(16384)
             var bytesRead: Int
             FileOutputStream(destinationFile).use { output ->
                 while (input.read(buffer).also { bytesRead = it } != -1) {
@@ -68,13 +134,14 @@ class FileStorageService @Inject constructor(
     }
 
     suspend fun savePdfFromUri(uri: Uri): StorageSaveResult = withContext(Dispatchers.IO) {
+        takePersistableUriPermissionSafely(uri)
         val fileName = "doc_${UUID.randomUUID()}.pdf"
         val destinationFile = File(pdfsDir, fileName)
 
         var sha256 = ""
-        context.contentResolver.openInputStream(uri)?.use { input ->
+        openStreamSafely(uri)?.use { input ->
             val digest = MessageDigest.getInstance("SHA-256")
-            val buffer = ByteArray(8192)
+            val buffer = ByteArray(16384)
             var bytesRead: Int
             FileOutputStream(destinationFile).use { output ->
                 while (input.read(buffer).also { bytesRead = it } != -1) {
@@ -96,13 +163,14 @@ class FileStorageService @Inject constructor(
     }
 
     suspend fun saveDocumentFromUri(uri: Uri, originalExtension: String = "bin"): StorageSaveResult = withContext(Dispatchers.IO) {
+        takePersistableUriPermissionSafely(uri)
         val fileName = "doc_${UUID.randomUUID()}.$originalExtension"
         val destinationFile = File(documentsDir, fileName)
 
         var sha256 = ""
-        context.contentResolver.openInputStream(uri)?.use { input ->
+        openStreamSafely(uri)?.use { input ->
             val digest = MessageDigest.getInstance("SHA-256")
-            val buffer = ByteArray(8192)
+            val buffer = ByteArray(16384)
             var bytesRead: Int
             FileOutputStream(destinationFile).use { output ->
                 while (input.read(buffer).also { bytesRead = it } != -1) {

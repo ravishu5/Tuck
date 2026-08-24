@@ -8,6 +8,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.tuck.app.data.local.storage.FileStorageService
+import com.tuck.app.di.IoDispatcher
 import com.tuck.app.domain.model.Collection
 import com.tuck.app.domain.model.ContentType
 import com.tuck.app.domain.model.ProcessingStatus
@@ -21,11 +22,14 @@ import com.tuck.app.processing.ShareParser
 import com.tuck.app.processing.UrlMetadataProcessor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 sealed interface ShareUiState {
@@ -44,13 +48,14 @@ sealed interface ShareUiState {
 
 @HiltViewModel
 class ShareViewModel @Inject constructor(
-    @ApplicationContext private val context: Context,
     private val shareParser: ShareParser,
     private val savedItemRepository: SavedItemRepository,
     private val collectionRepository: CollectionRepository,
     private val fileStorageService: FileStorageService,
     private val duplicateDetector: DuplicateDetector,
-    private val urlMetadataProcessor: UrlMetadataProcessor
+    private val urlMetadataProcessor: UrlMetadataProcessor,
+    private val workManager: WorkManager,
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ShareUiState>(ShareUiState.Idle)
@@ -61,23 +66,30 @@ class ShareViewModel @Inject constructor(
             _uiState.value = ShareUiState.Saving
 
             try {
-                collectionRepository.ensureDefaultCollections()
-
                 val parsed = shareParser.parseIntent(intent, callerPackage)
                 if (parsed == null) {
                     _uiState.value = ShareUiState.Error("Unable to handle shared content")
                     return@launch
                 }
 
-                val savedItemId = saveParsedContent(parsed)
+                val (savedItemId, allCollections) = withContext(ioDispatcher) {
+                    collectionRepository.ensureDefaultCollections()
+                    val id = saveParsedContent(parsed)
 
-                // Schedule background enrichment worker via WorkManager
-                val workRequest = OneTimeWorkRequestBuilder<ItemProcessingWorker>()
-                    .setInputData(workDataOf(ItemProcessingWorker.KEY_ITEM_ID to savedItemId))
-                    .build()
-                WorkManager.getInstance(context).enqueue(workRequest)
+                    val workRequest = OneTimeWorkRequestBuilder<ItemProcessingWorker>()
+                        .setInputData(workDataOf(ItemProcessingWorker.KEY_ITEM_ID to id))
+                        .setBackoffCriteria(
+                            androidx.work.BackoffPolicy.EXPONENTIAL,
+                            10,
+                            java.util.concurrent.TimeUnit.SECONDS
+                        )
+                        .build()
+                    workManager.enqueue(workRequest)
 
-                val allCollections = collectionRepository.getAllCollections().first()
+                    val collections = collectionRepository.getAllCollections().first()
+                    Pair(id, collections)
+                }
+
                 val subtitle = buildSubtitle(parsed)
 
                 _uiState.value = ShareUiState.Saved(
@@ -140,27 +152,14 @@ class ShareViewModel @Inject constructor(
         var canonicalUrl: String? = null
         var sourceDomain: String? = null
 
-        // 1. Process files / images / PDFs if present
+        // 1. Process files / images / PDFs / contacts / streams if present (copy all stream bytes immediately)
         if (parsed.streamUris.isNotEmpty()) {
-            val firstUri = parsed.streamUris.first()
-            when (parsed.contentType) {
-                ContentType.IMAGE, ContentType.MULTI_IMAGE -> {
-                    val result = fileStorageService.saveImageFromUri(firstUri)
-                    localFilePath = result.localFilePath
-                    thumbnailPath = result.thumbnailPath
-                    imageSha256 = result.sha256
-                }
-                ContentType.PDF -> {
-                    val result = fileStorageService.savePdfFromUri(firstUri)
-                    localFilePath = result.localFilePath
-                    thumbnailPath = result.thumbnailPath
-                    imageSha256 = result.sha256
-                }
-                else -> {
-                    val result = fileStorageService.saveDocumentFromUri(firstUri)
-                    localFilePath = result.localFilePath
-                    imageSha256 = result.sha256
-                }
+            val results = fileStorageService.saveAllStreamsFromUris(parsed.streamUris, parsed.mimeType)
+            if (results.isNotEmpty()) {
+                val primaryResult = results.first()
+                localFilePath = primaryResult.localFilePath
+                thumbnailPath = primaryResult.thumbnailPath
+                imageSha256 = primaryResult.sha256
             }
         }
 
@@ -178,10 +177,10 @@ class ShareViewModel @Inject constructor(
         val item = SavedItem(
             contentType = parsed.contentType,
             title = parsed.title,
-            description = null,
+            description = parsed.extraMetadata["query"] ?: parsed.extraMetadata["org"],
             originalUrl = parsed.url,
             canonicalUrl = canonicalUrl,
-            sourceDomain = sourceDomain,
+            sourceDomain = sourceDomain ?: if (parsed.contentType == ContentType.LOCATION) "Maps" else null,
             sourceApp = parsed.sourceApp,
             mimeType = parsed.mimeType,
             localFilePath = localFilePath,
