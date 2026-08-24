@@ -80,16 +80,14 @@ class RelatedItemsEngineImpl @Inject constructor(
             val now = System.currentTimeMillis()
             val sevenDaysAgo = now - (7L * 24 * 60 * 60 * 1000)
 
-            // Prefer items tucked over 7 days ago that are unarchived
-            val olderItems = allItems.filter { item ->
-                item.createdAt < sevenDaysAgo && !item.isArchived
-            }
-
-            if (olderItems.isNotEmpty()) {
-                olderItems.shuffled().take(limit)
-            } else {
-                allItems.filter { !it.isArchived }.takeLast(limit)
-            }
+            // Only items tucked over 7 days ago. There is deliberately no fallback to
+            // recent saves: "Rediscover from your vault" offering something saved
+            // moments ago makes the feature look broken, so an empty vault shows
+            // nothing and the section hides itself.
+            allItems
+                .filter { item -> item.createdAt < sevenDaysAgo && !item.isArchived }
+                .shuffled()
+                .take(limit)
         }
     }
 

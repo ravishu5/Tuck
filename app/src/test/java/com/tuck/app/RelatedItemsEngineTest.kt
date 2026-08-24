@@ -107,4 +107,24 @@ class RelatedItemsEngineTest {
         assertTrue(result.isNotEmpty())
         assertTrue(result.any { it.id == 10L })
     }
+
+    @Test
+    fun testRediscoverExcludesRecentSavesEntirely() = runBlocking {
+        val now = System.currentTimeMillis()
+        val freshItem = SavedItem(
+            id = 11L,
+            contentType = ContentType.URL,
+            title = "Saved moments ago",
+            createdAt = now - (60L * 1000)
+        )
+
+        every { savedItemRepository.getAllActiveItems() } returns flowOf(listOf(freshItem))
+
+        val result = engine.getRediscoverItems(5).first()
+
+        assertTrue(
+            "a vault with nothing old enough must surface nothing, not fall back to recent saves",
+            result.isEmpty()
+        )
+    }
 }
