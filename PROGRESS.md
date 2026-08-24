@@ -185,8 +185,14 @@ Wired the two dead components and replaced the mocked migration test. What was a
 - [x] Quick Settings tile for 1-tap capture (`TuckQuickTileService.kt`)
 - [x] Home-screen AppWidget for quick capture — RemoteViews, not Glance; registered as a receiver
 - [x] Static launcher shortcuts and a `<share-target>` declaration
-- [ ] R8 / ProGuard obfuscation — rules exist but `isMinifyEnabled = false`, so R8 never runs
-- [ ] Real release signing config — **currently the debug key**
+- [x] R8 / ProGuard obfuscation and resource shrinking enabled; release build installed and smoke-tested
+  on a physical device (Room, Hilt, navigation and resurfacing all intact under minification)
+- [x] Signing plumbing reads a git-ignored `keystore.properties`, falling back to the debug key when absent
+- [ ] **Generate the actual release keystore** — must be done by a human; the fallback debug key must
+  never reach Play
+- [ ] APK size: release is **43.6 MB against a 25 MB budget**, dominated by the bundled ML Kit model.
+  Swapping `com.google.mlkit:text-recognition` for the Play-Services-delivered variant would cut ~20 MB
+  but would require Google Play Services on the device
 - [ ] Baseline profile
 - [ ] Markdown / HTML export
 

@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -30,10 +32,35 @@ android {
         }
     }
 
+    signingConfigs {
+        // Real release signing comes from a git-ignored keystore.properties:
+        //   storeFile=/absolute/path/tuck-release.jks
+        //   storePassword=...
+        //   keyAlias=...
+        //   keyPassword=...
+        // Absent that file the release build falls back to the debug key, which is
+        // fine locally and must never be used for a Play upload.
+        create("release") {
+            val propsFile = rootProject.file("keystore.properties")
+            if (propsFile.exists()) {
+                val props = Properties().apply { propsFile.inputStream().use { load(it) } }
+                storeFile = file(props.getProperty("storeFile"))
+                storePassword = props.getProperty("storePassword")
+                keyAlias = props.getProperty("keyAlias")
+                keyPassword = props.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("debug")
+            isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = if (rootProject.file("keystore.properties").exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -41,6 +68,7 @@ android {
         }
         debug {
             isMinifyEnabled = false
+            versionNameSuffix = "-debug"
         }
     }
 
