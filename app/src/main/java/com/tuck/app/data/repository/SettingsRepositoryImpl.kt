@@ -34,6 +34,7 @@ class SettingsRepositoryImpl @Inject constructor(
         val AUTO_CATEGORIZE_ENABLED = booleanPreferencesKey("auto_categorize_enabled")
         val SAVE_COMMENTS_ENABLED = booleanPreferencesKey("save_comments_enabled")
         val WIFI_ONLY_METADATA = booleanPreferencesKey("wifi_only_metadata")
+        val MEMORY_RESURFACING_ENABLED = booleanPreferencesKey("memory_resurfacing_enabled")
     }
 
     override fun getSettings(): Flow<AppSettings> {
@@ -54,6 +55,7 @@ class SettingsRepositoryImpl @Inject constructor(
             val autoCategorize = preferences[PreferencesKeys.AUTO_CATEGORIZE_ENABLED] ?: true
             val saveComments = preferences[PreferencesKeys.SAVE_COMMENTS_ENABLED] ?: true
             val wifiOnly = preferences[PreferencesKeys.WIFI_ONLY_METADATA] ?: false
+            val memoryResurfacing = preferences[PreferencesKeys.MEMORY_RESURFACING_ENABLED] ?: false
 
             AppSettings(
                 theme = theme,
@@ -61,8 +63,15 @@ class SettingsRepositoryImpl @Inject constructor(
                 ocrEnabled = ocrEnabled,
                 autoCategorizeEnabled = autoCategorize,
                 saveCommentsEnabled = saveComments,
-                wifiOnlyMetadata = wifiOnly
+                wifiOnlyMetadata = wifiOnly,
+                memoryResurfacingEnabled = memoryResurfacing
             )
+        }
+    }
+
+    override suspend fun setMemoryResurfacingEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.MEMORY_RESURFACING_ENABLED] = enabled
         }
     }
 

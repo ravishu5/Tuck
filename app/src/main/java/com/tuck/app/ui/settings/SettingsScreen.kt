@@ -1,6 +1,12 @@
 package com.tuck.app.ui.settings
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -66,6 +72,17 @@ fun SettingsScreen(
     val tuckColors = TuckTheme.colors
     val tuckShapes = TuckTheme.shapes
     val context = LocalContext.current
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (!granted) {
+            Toast.makeText(
+                context,
+                "Weekly Memory is on, but notifications are blocked for Tuck",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -208,6 +225,25 @@ fun SettingsScreen(
                         subtitle = "Index top discussions from Reddit and social posts for offline search",
                         checked = uiState.settings.saveCommentsEnabled,
                         onCheckedChange = { viewModel.setSaveCommentsEnabled(it) }
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    SettingsSwitchRow(
+                        title = "Weekly Memory",
+                        subtitle = "Resurface one forgotten save each week. Off by default.",
+                        checked = uiState.settings.memoryResurfacingEnabled,
+                        onCheckedChange = { enabled ->
+                            if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                ContextCompat.checkSelfPermission(
+                                    context,
+                                    Manifest.permission.POST_NOTIFICATIONS
+                                ) != PackageManager.PERMISSION_GRANTED
+                            ) {
+                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                            viewModel.setMemoryResurfacingEnabled(enabled)
+                        }
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))

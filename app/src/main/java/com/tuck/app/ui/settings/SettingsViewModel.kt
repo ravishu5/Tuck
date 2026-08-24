@@ -8,6 +8,7 @@ import com.tuck.app.domain.repository.SavedItemRepository
 import com.tuck.app.domain.repository.SettingsRepository
 import com.tuck.app.domain.repository.StorageUsage
 import com.tuck.app.data.local.storage.VaultBackupService
+import com.tuck.app.processing.MemoryNotificationScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -28,7 +29,8 @@ data class SettingsUiState(
 class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val savedItemRepository: SavedItemRepository,
-    private val vaultBackupService: VaultBackupService
+    private val vaultBackupService: VaultBackupService,
+    private val memoryNotificationScheduler: MemoryNotificationScheduler
 ) : ViewModel() {
 
     private val _storageUsage = MutableStateFlow(StorageUsage(0, 0, 0, 0, 0))
@@ -80,6 +82,13 @@ class SettingsViewModel @Inject constructor(
     fun setSaveCommentsEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setSaveCommentsEnabled(enabled)
+        }
+    }
+
+    fun setMemoryResurfacingEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setMemoryResurfacingEnabled(enabled)
+            memoryNotificationScheduler.apply(enabled)
         }
     }
 
