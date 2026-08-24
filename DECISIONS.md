@@ -1,65 +1,14 @@
-# Architecture Decision Records (ADR) — Tuck
+# Architecture Decisions Record (DECISIONS.md)
 
-This document records the architectural and design decisions made throughout the evolution of the Tuck Android codebase.
+This log records non-obvious technical and architectural decisions made throughout the lifecycle of the Tuck project.
 
----
-
-## ADR 001: Abandoning React Native/Expo Prototype in Favor of Pure Kotlin/Compose
-- **Date:** August 2026 (Milestone 0)
-- **Status:** Accepted
-- **Context:** The repository contained an abandoned React Native/Expo prototype alongside a native Jetpack Compose implementation.
-- **Decision:** Delete all Expo/React Native files (`App.tsx`, `app.json`, `babel.config.js`, `package.json`, `package-lock.json`, `tsconfig.json`, `node_modules/`, `src/`). The application is 100% native Android built with Kotlin 2.0, Jetpack Compose, Hilt, Room, and WorkManager.
-- **Consequences:** Eliminates build ambiguity, reduces repository footprint, and focuses entirely on high-performance native Android capabilities (instant share targets, on-device ML Kit, WorkManager background processing).
-
----
-
-## ADR 002: Sacred Source vs. Additive Derived Architecture
-- **Date:** August 2026 (Milestone 0)
-- **Status:** Accepted
-- **Context:** Bookmarking tools often overwrite or mutate user source content when AI summaries or transformations run.
-- **Decision:** Strict segregation between:
-  1. **Source Data (Sacred & Immutable):** `items`, `item_raw_payload`, `media_assets`, `source_posts`, `source_comments`, `source_article`, `source_text`. Once saved, raw URLs, titles, text, author info, and media bytes are never mutated.
-  2. **Derived Data (Additive & Ephemeral):** `derived_summaries`, `derived_points`, `derived_entities`, `derived_tags`, `ocr_blocks`, `embeddings`. Derived data is generated asynchronously, can be regenerated, and can be cleared by the user at any time without impacting source records.
-- **Consequences:** Guarantees data integrity and ensures the user always retains the authentic original artifact.
-
----
-
-## ADR 003: Non-Blocking Share Pipeline (<400ms Perceived Latency)
-- **Date:** August 2026 (Milestone 0)
-- **Status:** Accepted
-- **Context:** When users share content from Twitter, Reddit, or Chrome, long blocking operations cause Android ANRs or user frustration.
-- **Decision:**
-  - ShareActivity runs with a lightweight HUD overlay.
-  - On receiving an Intent, bytes from input streams are copied immediately to app-private storage, minimal database rows are inserted, and an `ItemProcessingWorker` is enqueued via WorkManager.
-  - The Share HUD confirms "✓ Tucked" and auto-dismisses in < 400ms without waiting for network scraping, OCR, or AI.
-- **Consequences:** Fast, predictable share UX regardless of network conditions or heavy payload size.
-
----
-
-## ADR 004: Schema Evolution & Eliminating Destructive Migration
-- **Date:** August 2026 (Milestone 0)
-- **Status:** Accepted
-- **Context:** `DatabaseModule.kt` previously utilized `.fallbackToDestructiveMigration()`.
-- **Decision:** Destructive migrations are strictly banned. Schema transitions (such as v2 to v3) must be executed using explicit, thoroughly tested `Migration` objects with automated Room migration test coverage verifying zero data loss.
-- **Consequences:** Ensures user data and saved vaults are protected against schema changes across app updates.
-
----
-
-## ADR 005: Materialized Path for Hierarchical Comment Trees
-- **Date:** August 2026 (Milestone 0)
-- **Status:** Accepted
-- **Context:** Schema v2 stored community comments as an unstructured JSON array. Rich social posts (Reddit, nested discussions) require multi-level tree rendering.
-- **Decision:** Migrate from JSON blob to `source_comments` with a `path` column using materialized paths (e.g. `0001`, `0001.0001`, `0001.0002`).
-- **Consequences:** Enables fast single-query hierarchical retrieval (`ORDER BY path ASC`), subtree deletion, and deterministic tree indentation in Compose.
-
----
-
-## ADR 006: Local-First Privacy & Optional Pluggable AI
-- **Date:** August 2026 (Milestone 0)
-- **Status:** Accepted
-- **Context:** Users require absolute privacy for personal notes, screenshots, and bookmarks.
-- **Decision:**
-  - Tuck requires no account and transmits no analytics or data to external servers by default.
-  - OCR, classification, and entity extraction operate 100% on-device using ML Kit and regex.
-  - AI summarization uses a NoOp provider by default, with opt-in on-device (Gemini Nano) or BYO Cloud API key.
-- **Consequences:** 100% offline functionality and zero data leakage.
+| Date | Decision | Alternatives considered | Why | Reversible? |
+|---|---|---|---|---|
+| 2026-08-24 | **Remove `.fallbackToDestructiveMigration()` from Room Database setup** | Keep fallback for developer convenience; rely on manual data export before migrations | Strictly violates Tuck Product Law 10 ("Data is sacred; save must never fail, deletion is deliberate"). Destructive migrations risk silent user data loss during app updates. All database evolutions must use explicit, tested SQLite migration scripts. | No (Product Law) |
+| 2026-08-24 | **Adopt FTS5 External-Content Virtual Table with SQLite Triggers over FTS4** | Room `@Fts4` entity table; in-memory regex search; separate Lucene index | FTS5 provides native BM25 relevance ranking, token prefix matching, and column weighting. External-content tables save significant storage by referencing `search_documents` directly without duplicating text blobs. | Yes (via Room migration) |
+| 2026-08-24 | **Normalize Media Storage into `media_assets` (1:N) rather than single file path columns** | Keep `localFilePath` / `thumbnailPath` on `saved_items`; store JSON array of paths | Enables multi-image posts, carousels, document attachments, and separate thumbnail generation per asset with independent MIME types and SHA-256 hashes. | Yes (via Room migration) |
+| 2026-08-24 | **Eliminate abandoned Expo / React Native codebase** | Maintain hybrid build; preserve React Native components as reference | Tuck is built as a pure native Android app (Kotlin, Jetpack Compose, Coroutines/Flow, Room, WorkManager, Hilt). The Expo artifacts were dead weight creating confusion and repo clutter. | Yes (Git history) |
+| 2026-08-24 | **Represent Reddit & Social Comment Trees via Materialized Paths in `source_comments`** | Unindexed `commentsJson` string; Adjacency list with recursive CTEs | Materialized path (`0001.0001`) allows instant single-query tree retrieval, depth slicing, and sorting without recursive SQLite joins or unindexed JSON parsing overhead. | Yes (via Room migration) |
+| 2026-08-24 | **Topic & Entity Weighted Scoring for Memory Recall over Cloud Vector Embeddings** | Cloud vector search; heavy local on-device neural model | Respects 100% offline local privacy (Product Law 6) and sub-50ms query budget. Combines extracted entity matches (+3.0), tag overlap (+2.0), source domain (+1.5), and keyword tokens. | Yes |
+| 2026-08-24 | **Adopt Portable `.tuck` Zip Container for Byte-Identical Vault & Collection Sharing** | Raw database backup; cloud sync API; plaintext JSON dump | A standalone zip containing `manifest.json` + `media/` folder guarantees complete media preservation across Android devices and operating systems without needing cloud servers. | Yes |
+| 2026-08-24 | **Quick Settings Tile (`TileService`) for Instant Non-Blocking Capture** | Floating overlay bubble; persistent foreground notification | Native Android Quick Settings Tile allows 1-tap capture from any app or lock screen with zero background battery drain when idle. | Yes |
