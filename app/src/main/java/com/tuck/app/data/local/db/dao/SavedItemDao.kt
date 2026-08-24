@@ -53,6 +53,14 @@ interface SavedItemDao {
     """)
     fun getItemsByCollection(collectionId: Long): Flow<List<SavedItemEntity>>
 
+    @Query("""
+        SELECT s.* FROM saved_items s
+        INNER JOIN saved_item_collections c ON s.id = c.savedItemId
+        WHERE c.collectionId = :collectionId AND s.isDeleted = 0
+        ORDER BY s.createdAt DESC
+    """)
+    suspend fun getItemsByCollectionList(collectionId: Long): List<SavedItemEntity>
+
     @Query("UPDATE saved_items SET isFavorite = :isFavorite, updatedAt = :updatedAt WHERE id = :id")
     suspend fun setFavorite(id: Long, isFavorite: Boolean, updatedAt: Long = System.currentTimeMillis())
 

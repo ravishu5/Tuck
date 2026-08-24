@@ -14,10 +14,12 @@ import com.tuck.app.domain.model.ProcessingStatus
         Index(value = ["sourceDomain"]),
         Index(value = ["processingStatus"]),
         Index(value = ["isFavorite"]),
+        Index(value = ["isPinned"]),
         Index(value = ["isDeleted"]),
         Index(value = ["canonicalUrl"]),
         Index(value = ["textHash"]),
-        Index(value = ["imageSha256"])
+        Index(value = ["imageSha256"]),
+        Index(value = ["dedupeGroupId"])
     ]
 )
 data class SavedItemEntity(
@@ -25,6 +27,7 @@ data class SavedItemEntity(
     val id: Long = 0,
     val contentType: ContentType,
     val title: String,
+    val titleIsUserEdited: Boolean = false,
     val description: String? = null,
     val originalUrl: String? = null,
     val canonicalUrl: String? = null,
@@ -40,10 +43,16 @@ data class SavedItemEntity(
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
     val lastOpenedAt: Long? = null,
+    val openCount: Int = 0,
+    val isPinned: Boolean = false,
     val isFavorite: Boolean = false,
     val isArchived: Boolean = false,
     val isDeleted: Boolean = false,
+    val deletedAt: Long? = null,
     val processingStatus: ProcessingStatus = ProcessingStatus.PENDING,
+    val captureNote: String? = null,
+    val userNote: String? = null,
+    val dedupeGroupId: String? = null,
     val textHash: String? = null,
     val imageSha256: String? = null
 )

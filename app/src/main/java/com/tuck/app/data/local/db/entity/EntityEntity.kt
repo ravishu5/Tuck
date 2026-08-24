@@ -28,5 +28,8 @@ data class EntityEntity(
     val savedItemId: Long,
     val type: EntityType,
     val value: String,
-    val normalizedValue: String
+    val normalizedValue: String,
+    val charStart: Int = 0,
+    val charEnd: Int = 0,
+    val producer: String = "rule-based"
 )

@@ -6,10 +6,14 @@ import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.tuck.app.data.local.db.TuckDatabase
 import com.tuck.app.data.local.db.dao.CollectionDao
+import com.tuck.app.data.local.db.dao.DerivedContentDao
 import com.tuck.app.data.local.db.dao.EntityDao
+import com.tuck.app.data.local.db.dao.ItemRawPayloadDao
+import com.tuck.app.data.local.db.dao.MediaAssetDao
 import com.tuck.app.data.local.db.dao.SavedItemDao
 import com.tuck.app.data.local.db.dao.SavedItemFtsDao
 import com.tuck.app.data.local.db.dao.SearchHistoryDao
+import com.tuck.app.data.local.db.dao.SourceContentDao
 import com.tuck.app.data.local.db.dao.TagDao
 import dagger.Module
 import dagger.Provides
@@ -52,8 +56,7 @@ object DatabaseModule {
                     }
                 }
             }
-        }).addMigrations(TuckDatabase.MIGRATION_1_2)
-            .fallbackToDestructiveMigration()
+        }).addMigrations(TuckDatabase.MIGRATION_1_2, TuckDatabase.MIGRATION_2_3)
             .build()
     }
 
@@ -74,4 +77,16 @@ object DatabaseModule {
 
     @Provides
     fun provideSearchHistoryDao(database: TuckDatabase): SearchHistoryDao = database.searchHistoryDao()
+
+    @Provides
+    fun provideMediaAssetDao(database: TuckDatabase): MediaAssetDao = database.mediaAssetDao()
+
+    @Provides
+    fun provideSourceContentDao(database: TuckDatabase): SourceContentDao = database.sourceContentDao()
+
+    @Provides
+    fun provideDerivedContentDao(database: TuckDatabase): DerivedContentDao = database.derivedContentDao()
+
+    @Provides
+    fun provideItemRawPayloadDao(database: TuckDatabase): ItemRawPayloadDao = database.itemRawPayloadDao()
 }
