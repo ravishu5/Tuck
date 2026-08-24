@@ -35,7 +35,7 @@ class KeywordSearchEngine @Inject constructor(
     private val collectionDao: CollectionDao
 ) : SearchEngine {
 
-    override val name: String = "FTS5_Keyword_Engine"
+    override val name: String = "FTS4_Keyword_Engine"
 
     override suspend fun search(filter: SearchFilter): List<SearchResult> = withContext(Dispatchers.IO) {
         val query = filter.query.trim()
@@ -44,7 +44,7 @@ class KeywordSearchEngine @Inject constructor(
         val matchingSnippets = mutableMapOf<Long, String?>()
         val itemIdsOrdered = mutableListOf<Long>()
 
-        // 1. Primary: Try SQLite FTS5 Match
+        // 1. Primary: Try SQLite FTS4 Match
         val ftsQuery = formatFtsQuery(query)
         if (ftsQuery.isNotBlank()) {
             try {
