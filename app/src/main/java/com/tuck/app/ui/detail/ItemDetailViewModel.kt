@@ -3,6 +3,7 @@ package com.tuck.app.ui.detail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tuck.app.domain.memory.RelatedItemsEngine
 import com.tuck.app.domain.model.Collection
 import com.tuck.app.domain.model.SavedItem
 import com.tuck.app.domain.repository.CollectionRepository
@@ -20,17 +21,24 @@ import javax.inject.Inject
 data class DetailUiState(
     val item: SavedItem? = null,
     val allCollections: List<Collection> = emptyList(),
+    val relatedItems: List<SavedItem> = emptyList(),
     val isEditingTitle: Boolean = false,
     val editedTitle: String = "",
     val isLoading: Boolean = true,
     val isDeleted: Boolean = false
 )
 
+private data class TitleEditState(
+    val isEditing: Boolean = false,
+    val text: String = ""
+)
+
 @HiltViewModel
 class ItemDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val savedItemRepository: SavedItemRepository,
-    private val collectionRepository: CollectionRepository
+    private val collectionRepository: CollectionRepository,
+    private val relatedItemsEngine: RelatedItemsEngine
 ) : ViewModel() {
 
     private val itemId: Long = checkNotNull(savedStateHandle["itemId"])
@@ -45,18 +53,23 @@ class ItemDetailViewModel @Inject constructor(
         }
     }
 
+    private val titleEditFlow = combine(_isEditingTitle, _editedTitle) { isEditing, text ->
+        TitleEditState(isEditing = isEditing, text = text)
+    }
+
     val uiState: StateFlow<DetailUiState> = combine(
         savedItemRepository.getItemByIdFlow(itemId),
         collectionRepository.getAllCollections(),
-        _isEditingTitle,
-        _editedTitle,
+        relatedItemsEngine.findRelatedItems(itemId, 5),
+        titleEditFlow,
         _isDeleted
-    ) { item, allCollections, isEditing, editedTitleText, isDeleted ->
+    ) { item, allCollections, relatedItems, titleEdit, isDeleted ->
         DetailUiState(
             item = item,
             allCollections = allCollections,
-            isEditingTitle = isEditing,
-            editedTitle = if (isEditing) editedTitleText else item?.title.orEmpty(),
+            relatedItems = relatedItems,
+            isEditingTitle = titleEdit.isEditing,
+            editedTitle = if (titleEdit.isEditing) titleEdit.text else item?.title.orEmpty(),
             isLoading = false,
             isDeleted = isDeleted
         )
@@ -90,6 +103,13 @@ class ItemDetailViewModel @Inject constructor(
 
     fun cancelEditTitle() {
         _isEditingTitle.value = false
+    }
+
+    fun saveUserNote(note: String) {
+        val currentItem = uiState.value.item ?: return
+        viewModelScope.launch {
+            savedItemRepository.updateItem(currentItem.copy(userNote = note.trim().ifBlank { null }))
+        }
     }
 
     fun toggleFavorite() {

@@ -33,6 +33,7 @@ import com.tuck.app.ui.collections.CollectionsScreen
 import com.tuck.app.ui.detail.ItemDetailScreen
 import com.tuck.app.ui.favorites.FavoritesScreen
 import com.tuck.app.ui.home.HomeScreen
+import com.tuck.app.ui.inbox.InboxScreen
 import com.tuck.app.ui.navigation.BottomNavScreen
 import com.tuck.app.ui.navigation.NavRoutes
 import com.tuck.app.ui.search.SearchScreen
@@ -60,10 +61,9 @@ fun TuckApp(
 
     val bottomNavScreens = listOf(
         BottomNavScreen.Home,
-        BottomNavScreen.Search,
-        BottomNavScreen.Categories,
-        BottomNavScreen.Favorites,
-        BottomNavScreen.Settings
+        BottomNavScreen.Inbox,
+        BottomNavScreen.Collections,
+        BottomNavScreen.Search
     )
 
     val showBottomBar = bottomNavScreens.any { it.route == currentRoute }
@@ -154,16 +154,24 @@ fun TuckApp(
                     )
                 }
 
-                composable(NavRoutes.SEARCH) {
-                    SearchScreen(
+                composable(NavRoutes.INBOX) {
+                    InboxScreen(
                         onNavigateToDetail = { itemId ->
                             navController.navigate(NavRoutes.detail(itemId))
                         }
                     )
                 }
 
-                composable(NavRoutes.CATEGORIES) {
+                composable(NavRoutes.COLLECTIONS) {
                     CollectionsScreen(
+                        onNavigateToDetail = { itemId ->
+                            navController.navigate(NavRoutes.detail(itemId))
+                        }
+                    )
+                }
+
+                composable(NavRoutes.SEARCH) {
+                    SearchScreen(
                         onNavigateToDetail = { itemId ->
                             navController.navigate(NavRoutes.detail(itemId))
                         }

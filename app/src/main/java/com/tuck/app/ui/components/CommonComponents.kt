@@ -242,6 +242,8 @@ fun ContentTypeBadge(contentType: ContentType) {
         ContentType.PDF -> Triple(Icons.Filled.PictureAsPdf, AccentOrange.copy(alpha = 0.15f), AccentOrange)
         ContentType.VIDEO -> Triple(Icons.Filled.Movie, AccentRose.copy(alpha = 0.15f), AccentRose)
         ContentType.DOCUMENT -> Triple(Icons.Filled.Description, AccentEmerald.copy(alpha = 0.15f), AccentEmerald)
+        ContentType.CONTACT -> Triple(Icons.Filled.Email, AccentAmber.copy(alpha = 0.15f), AccentAmber)
+        ContentType.LOCATION -> Triple(Icons.Filled.ArrowOutward, AccentEmerald.copy(alpha = 0.15f), AccentEmerald)
         else -> Triple(Icons.Filled.Language, Color.Gray.copy(alpha = 0.15f), Color.Gray)
     }
 

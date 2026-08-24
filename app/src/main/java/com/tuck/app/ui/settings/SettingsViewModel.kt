@@ -103,6 +103,21 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun exportFullArchive(destFile: java.io.File? = null, onExported: (String) -> Unit) {
+        viewModelScope.launch {
+            val file = vaultBackupService.exportFullVaultZip(destFile)
+            onExported(file.absolutePath)
+        }
+    }
+
+    fun restoreFullArchive(zipFile: java.io.File, onRestored: (Int) -> Unit) {
+        viewModelScope.launch {
+            val count = vaultBackupService.restoreFullVaultZip(zipFile)
+            refreshStorageUsage()
+            onRestored(count)
+        }
+    }
+
     fun restoreVault(json: String, onRestored: (Int) -> Unit) {
         viewModelScope.launch {
             val count = vaultBackupService.restoreVaultJson(json)

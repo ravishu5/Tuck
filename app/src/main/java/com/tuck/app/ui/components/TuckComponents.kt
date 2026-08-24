@@ -157,6 +157,8 @@ fun TuckPlatformBadge(
         item.contentType == ContentType.IMAGE -> Triple("Screenshot", Color(0xFF10B981), Icons.Filled.Image)
         item.contentType == ContentType.PDF -> Triple("PDF", Color(0xFFEF4444), Icons.Filled.PictureAsPdf)
         item.contentType == ContentType.TEXT -> Triple("Note", Color(0xFF8B5CF6), Icons.Filled.Notes)
+        item.contentType == ContentType.CONTACT -> Triple("Contact", Color(0xFFF59E0B), Icons.Filled.Description)
+        item.contentType == ContentType.LOCATION -> Triple("Location", Color(0xFF10B981), Icons.Filled.Language)
         else -> Triple(item.sourceDomain ?: "Web", tuckColors.accent, Icons.Filled.Language)
     }
 

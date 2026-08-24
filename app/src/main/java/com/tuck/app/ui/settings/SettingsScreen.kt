@@ -242,8 +242,21 @@ fun SettingsScreen(
 
                     SettingsActionRow(
                         icon = Icons.Filled.Download,
+                        title = "Export Full Vault Archive (.tuck)",
+                        subtitle = "Complete archive with photos, PDFs, and notes",
+                        onClick = {
+                            viewModel.exportFullArchive { path ->
+                                Toast.makeText(context, "Archive exported: $path", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    SettingsActionRow(
+                        icon = Icons.Filled.Download,
                         title = "Export Vault JSON",
-                        subtitle = "Create a complete offline backup of your items",
+                        subtitle = "Lightweight text and metadata backup",
                         onClick = {
                             viewModel.exportVault { path ->
                                 Toast.makeText(context, "Backup exported: $path", Toast.LENGTH_SHORT).show()

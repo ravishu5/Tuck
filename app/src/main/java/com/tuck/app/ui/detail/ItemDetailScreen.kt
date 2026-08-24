@@ -98,6 +98,7 @@ import java.util.Locale
 @Composable
 fun ItemDetailScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToDetail: ((Long) -> Unit)? = null,
     viewModel: ItemDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -415,6 +416,86 @@ fun ItemDetailScreen(
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(14.dp)
                     )
+                }
+            }
+
+            // 7. Personal Notes (User Note & Capture Note)
+            var userNoteText by remember(item.userNote) { mutableStateOf(item.userNote ?: "") }
+            Spacer(modifier = Modifier.height(24.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Personal Notes",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (userNoteText != (item.userNote ?: "")) {
+                    TextButton(onClick = { viewModel.saveUserNote(userNoteText) }) {
+                        Text("Save Note", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = userNoteText,
+                onValueChange = { userNoteText = it },
+                placeholder = { Text("Add your thoughts, key takeaways, or follow-ups...") },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 3,
+                maxLines = 8,
+                shape = RoundedCornerShape(12.dp)
+            )
+
+            // 8. Related Saves in Vault (Memory Engine)
+            if (uiState.relatedItems.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(28.dp))
+                Text(
+                    text = "Related Saves in Your Vault",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    uiState.relatedItems.forEach { related ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onNavigateToDetail?.invoke(related.id) },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = related.title,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = related.sourceDomain ?: related.contentType.name,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
 

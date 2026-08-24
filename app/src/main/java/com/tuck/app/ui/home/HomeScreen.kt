@@ -153,6 +153,17 @@ fun HomeScreen(
                 }
             }
 
+            // 3.5. Rediscover from your vault (Memory Layer)
+            if (uiState.rediscoverItems.isNotEmpty() && uiState.selectedSource == null) {
+                item {
+                    RediscoverMemorySection(
+                        items = uiState.rediscoverItems,
+                        onItemClick = onNavigateToDetail
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                }
+            }
+
             // 4. Recently Tucked Section Title
             item {
                 TuckSectionHeader(
@@ -589,3 +600,74 @@ private fun QuickStashOptionRow(
         }
     }
 }
+
+@Composable
+fun RediscoverMemorySection(
+    items: List<com.tuck.app.domain.model.SavedItem>,
+    onItemClick: (Long) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val tuckColors = TuckTheme.colors
+    val tuckShapes = TuckTheme.shapes
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Notes,
+                    contentDescription = null,
+                    tint = tuckColors.accent,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Rediscover from your vault",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = tuckColors.textPrimary
+                )
+            }
+        }
+
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(items, key = { "rediscover_${it.id}" }) { item ->
+                Surface(
+                    shape = tuckShapes.medium,
+                    color = tuckColors.surfaceCard,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.border),
+                    modifier = Modifier
+                        .width(220.dp)
+                        .clip(tuckShapes.medium)
+                        .clickable { onItemClick(item.id) }
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = item.title,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = tuckColors.textPrimary,
+                            maxLines = 2,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = item.sourceDomain ?: item.contentType.name,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = tuckColors.accent
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+

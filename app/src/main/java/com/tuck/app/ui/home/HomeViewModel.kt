@@ -8,6 +8,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.tuck.app.data.local.storage.FileStorageService
+import com.tuck.app.domain.memory.RelatedItemsEngine
 import com.tuck.app.domain.model.Collection
 import com.tuck.app.domain.model.ContentType
 import com.tuck.app.domain.model.SavedItem
@@ -30,6 +31,7 @@ import javax.inject.Inject
 data class HomeUiState(
     val items: List<SavedItem> = emptyList(),
     val collections: List<Collection> = emptyList(),
+    val rediscoverItems: List<SavedItem> = emptyList(),
     val selectedCategory: String? = null,
     val selectedType: ContentType? = null,
     val selectedSource: String? = null,
@@ -44,6 +46,12 @@ private data class FilterState(
     val source: String? = null
 )
 
+private data class BaseHomeData(
+    val allItems: List<SavedItem>,
+    val collections: List<Collection>,
+    val rediscoverItems: List<SavedItem>
+)
+
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -51,7 +59,8 @@ class HomeViewModel @Inject constructor(
     private val collectionRepository: CollectionRepository,
     private val screenshotImporter: ScreenshotImporter,
     private val fileStorageService: FileStorageService,
-    private val urlMetadataProcessor: UrlMetadataProcessor
+    private val urlMetadataProcessor: UrlMetadataProcessor,
+    private val relatedItemsEngine: RelatedItemsEngine
 ) : ViewModel() {
 
     private val _selectedCategory = MutableStateFlow<String?>(null)
@@ -68,6 +77,14 @@ class HomeViewModel @Inject constructor(
         FilterState(category = category, type = type, source = source)
     }
 
+    private val baseDataFlow = combine(
+        savedItemRepository.getAllActiveItems(),
+        collectionRepository.getAllCollections(),
+        relatedItemsEngine.getRediscoverItems(4)
+    ) { allItems, collections, rediscover ->
+        BaseHomeData(allItems = allItems, collections = collections, rediscoverItems = rediscover)
+    }
+
     init {
         viewModelScope.launch {
             collectionRepository.ensureDefaultCollections()
@@ -76,13 +93,12 @@ class HomeViewModel @Inject constructor(
     }
 
     val uiState: StateFlow<HomeUiState> = combine(
-        savedItemRepository.getAllActiveItems(),
-        collectionRepository.getAllCollections(),
+        baseDataFlow,
         filterState,
         _unimportedScreenshots,
         _isImporting
-    ) { allItems, collections, filter, unimported, isImporting ->
-        val filtered = allItems.filter { item ->
+    ) { baseData, filter, unimported, isImporting ->
+        val filtered = baseData.allItems.filter { item ->
             val matchesType = filter.type == null || item.contentType == filter.type
             val matchesCat = filter.category == null || item.collections.any { it.name.equals(filter.category, ignoreCase = true) }
             val domain = item.sourceDomain ?: ""
@@ -103,7 +119,8 @@ class HomeViewModel @Inject constructor(
         }
         HomeUiState(
             items = filtered,
-            collections = collections,
+            collections = baseData.collections,
+            rediscoverItems = baseData.rediscoverItems,
             selectedCategory = filter.category,
             selectedType = filter.type,
             selectedSource = filter.source,
@@ -132,6 +149,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             val toImport = _unimportedScreenshots.value
             if (toImport.isEmpty()) return@launch
+
 
             _isImporting.value = true
             try {
