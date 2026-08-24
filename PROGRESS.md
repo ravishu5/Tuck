@@ -26,13 +26,16 @@ app on a device. Not when the code merely exists, and not when a class exists bu
 
 ---
 
-## Verification baseline — 2026-08-24 (second audit)
+## Verification baseline — 2026-08-25 (third audit)
 
-Re-audited the working tree after the extractors/widget/security pass. What was actually run:
+Wired the two dead components and replaced the mocked migration test. What was actually run:
 
-- `./gradlew assembleDebug testDebugUnitTest` → **BUILD SUCCESSFUL**
-- **57 unit tests, 0 failures, 0 skipped** (up from 52)
-- No emulator run, no instrumentation tests — **`app/src/androidTest/` still does not exist**
+- `./gradlew assembleDebug testDebugUnitTest connectedDebugAndroidTest` → **BUILD SUCCESSFUL**
+- **61 unit tests, 0 failures**
+- **3 instrumentation tests, 0 failures, on a booted Pixel_10a (API 37) emulator**
+- End-to-end share verified on device: a Reddit URL shared via `ACTION_SEND` produced a
+  `source_posts` row with `platform=REDDIT`, `community=r/androidapps`, `extractorVersion=REDDIT`,
+  read back out of the on-device database
 
 ### Corrections applied in this audit
 
@@ -82,7 +85,9 @@ Re-audited the working tree after the extractors/widget/security pass. What was 
 - [x] `commentsJson` migrated into `source_posts` + `source_comments` with materialized paths, and now read by the UI
 - [x] Checked-in `2.json` restored to its shipped state
 - [ ] FTS5 external-content table with triggers — **it is `@Fts4`, no triggers, no BM25.** Recorded as a deliberate decision in `DECISIONS.md`; left unticked because the milestone as written is not met
-- [ ] Migration test proving zero data loss — the existing test asserts on mocked SQL strings, not on data
+- [x] Migration test proving zero data loss — `TuckMigrationTest` builds a real v2 database from the
+  checked-in schema, runs `runMigrationsAndValidate`, and asserts rows, defaults, media promotion and
+  the parsed comment tree. Passing on device
 - [~] Source/derived split — new tables sit *alongside* `saved_items`, which still carries `originalText`/`extractedText`/`ocrText`/`commentsJson`
 
 ---
@@ -94,8 +99,12 @@ Re-audited the working tree after the extractors/widget/security pass. What was 
 - [x] Rule-based content classifier
 - [x] Pluggable `AiProvider` abstraction, NoOp by default
 - [x] Golden fixtures under `app/src/test/resources/fixtures/` (reddit, article, youtube)
-- [!] `SourceExtractor` registry with Reddit/YouTube/Twitter/Generic handlers — **written and unit-tested, but nothing calls it.** `ItemProcessingWorker` still enriches via `UrlMetadataProcessor`
-- [ ] Wire `SourceExtractorRegistry` into `ItemProcessingWorker`
+- [x] `SourceExtractor` registry wired into `ItemProcessingWorker` via `SourceContentFetcher`, verified on device
+- [x] Nested comment trees flattened to `source_comments` with materialized paths, capped at 500, idempotent on retry
+- [ ] **Reddit comment capture is blocked in practice** — the public `.json` endpoint returned 403 to
+  every User-Agent tried from this network. The item still saves and `source_posts` is still written
+  (Product Law 2 holds), but comments come back empty. Needs OAuth or another route; the pre-existing
+  `UrlMetadataProcessor.fetchRedditMetadata` has the same limitation
 - [ ] Instagram / LinkedIn / TikTok handlers
 
 ---
@@ -134,7 +143,8 @@ Re-audited the working tree after the extractors/widget/security pass. What was 
 ## Milestone 7: Performance & Hardening — **not started**
 - [?] Share-to-save perceived latency < 400ms — no benchmark exists
 - [ ] LeakCanary validation — not a dependency
-- [?] Integration test coverage — no `androidTest` source set
+- [~] Integration test coverage — `androidTest` source set now exists with 3 passing tests; only
+  migration and JSON mapping are covered, no UI or share-path instrumentation yet
 - [ ] 10,000-item seeded database and performance baseline
 - [ ] Edge case validation (airplane mode, large PDFs, multi-image intents)
 - [ ] Production release build — still debug-signed
@@ -145,8 +155,9 @@ Re-audited the working tree after the extractors/widget/security pass. What was 
 - [x] Related items engine (entity/tag/domain weighted scoring)
 - [x] Inline capture note and user note editing and recall
 - [x] Forgotten saves query (`getForgottenSaves`, `openCount == 0`)
-- [!] Weekly memory notification — `MemoryNotificationWorker` exists but is **never enqueued**; no `POST_NOTIFICATIONS` permission declared
-- [ ] Schedule the worker and request the notification permission
+- [x] Weekly memory notification — scheduled by `MemoryNotificationScheduler` as unique periodic work,
+  re-applied on app start, with `POST_NOTIFICATIONS` declared and requested at the point of opt-in.
+  **Off by default**; the Settings switch is the global off switch
 - [ ] Forgotten saves surfaced in the UI
 - [~] "You saved this before" at capture — `DuplicateDetector` exists; surfacing in the share HUD unconfirmed
 
@@ -176,12 +187,11 @@ Re-audited the working tree after the extractors/widget/security pass. What was 
 
 ## Next up, in order
 
-1. **Wire the two dead components.** `SourceExtractorRegistry` into `ItemProcessingWorker`, and
-   `MemoryNotificationWorker` into a scheduler plus a `POST_NOTIFICATIONS` request. Both are written
-   and tested; neither runs. This is the cheapest real progress available.
-2. **Replace `RoomMigrationTest` with a real one** — add `app/src/androidTest/`, use
-   `MigrationTestHelper` against the now-restored v2 schema, assert row counts and field mapping.
-   This is the only thing standing between an existing user and data loss.
+1. **Solve Reddit access.** The extractor parses a real payload correctly (fixture-tested), but the
+   public `.json` endpoint 403s unauthenticated. Without this the flagship feature captures no
+   comments. Options: OAuth app credentials, or user-supplied credentials.
+2. **Delete `RoomMigrationTest`** (the mocked one) now that `TuckMigrationTest` covers it for real —
+   keeping both invites someone to trust the wrong one.
 3. **Release hardening** — real signing config from a git-ignored `keystore.properties`, turn on
    `isMinifyEnabled`, test the R8 rules, add a baseline profile.
 4. **Decide on FTS.** Either accept FTS4 and drop the BM25/relevance-ranking goals from M2/M6, or
