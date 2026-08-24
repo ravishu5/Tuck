@@ -12,7 +12,7 @@
             android:targetClass="com.tuck.app.ui.MainActivity">
             <extra android:name="EXTRA_OPEN_QUICK_ADD" android:value="true" />
         </intent>
-        <categories android:name="android.shortcut.conversation" />
+        <categories android:name="com.tuck.app.category.QUICK_ACTION" />
     </shortcut>
     <shortcut
         android:shortcutId="search_vault"
@@ -26,5 +26,17 @@
             android:targetClass="com.tuck.app.ui.MainActivity">
             <extra android:name="EXTRA_OPEN_SEARCH" android:value="true" />
         </intent>
+        <categories android:name="com.tuck.app.category.SEARCH_ACTION" />
     </shortcut>
+
+    <!-- Direct Share Target for Android Sharesheet Direct Share -->
+    <share-target android:targetClass="com.tuck.app.ui.share.ShareActivity">
+        <data android:mimeType="text/plain" />
+        <data android:mimeType="text/html" />
+        <data android:mimeType="text/uri-list" />
+        <data android:mimeType="image/*" />
+        <data android:mimeType="application/pdf" />
+        <data android:mimeType="*/*" />
+        <category android:name="com.tuck.app.category.DIRECT_SHARE_TARGET" />
+    </share-target>
 </shortcuts>
