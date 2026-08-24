@@ -3,6 +3,9 @@ package com.tuck.app.ui.detail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tuck.app.data.local.db.dao.SourceContentDao
+import com.tuck.app.data.local.db.entity.SourceCommentEntity
+import com.tuck.app.data.local.db.entity.SourcePostEntity
 import com.tuck.app.domain.memory.RelatedItemsEngine
 import com.tuck.app.domain.model.Collection
 import com.tuck.app.domain.model.SavedItem
@@ -20,6 +23,8 @@ import javax.inject.Inject
 
 data class DetailUiState(
     val item: SavedItem? = null,
+    val sourcePost: SourcePostEntity? = null,
+    val commentsTree: List<SourceCommentEntity> = emptyList(),
     val allCollections: List<Collection> = emptyList(),
     val relatedItems: List<SavedItem> = emptyList(),
     val isEditingTitle: Boolean = false,
@@ -33,11 +38,17 @@ private data class TitleEditState(
     val text: String = ""
 )
 
+private data class SourceContentState(
+    val post: SourcePostEntity? = null,
+    val comments: List<SourceCommentEntity> = emptyList()
+)
+
 @HiltViewModel
 class ItemDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val savedItemRepository: SavedItemRepository,
     private val collectionRepository: CollectionRepository,
+    private val sourceContentDao: SourceContentDao,
     private val relatedItemsEngine: RelatedItemsEngine
 ) : ViewModel() {
 
@@ -57,21 +68,30 @@ class ItemDetailViewModel @Inject constructor(
         TitleEditState(isEditing = isEditing, text = text)
     }
 
+    private val sourceContentFlow = combine(
+        sourceContentDao.getPostFlow(itemId),
+        sourceContentDao.getCommentsTree(itemId)
+    ) { post, comments ->
+        SourceContentState(post = post, comments = comments)
+    }
+
     val uiState: StateFlow<DetailUiState> = combine(
         savedItemRepository.getItemByIdFlow(itemId),
+        sourceContentFlow,
         collectionRepository.getAllCollections(),
         relatedItemsEngine.findRelatedItems(itemId, 5),
-        titleEditFlow,
-        _isDeleted
-    ) { item, allCollections, relatedItems, titleEdit, isDeleted ->
+        titleEditFlow
+    ) { item, sourceContent, allCollections, relatedItems, titleEdit ->
         DetailUiState(
             item = item,
+            sourcePost = sourceContent.post,
+            commentsTree = sourceContent.comments,
             allCollections = allCollections,
             relatedItems = relatedItems,
             isEditingTitle = titleEdit.isEditing,
             editedTitle = if (titleEdit.isEditing) titleEdit.text else item?.title.orEmpty(),
             isLoading = false,
-            isDeleted = isDeleted
+            isDeleted = _isDeleted.value
         )
     }.stateIn(
         scope = viewModelScope,

@@ -292,11 +292,12 @@ fun ItemDetailScreen(
                 )
             }
 
-            // Saved Top Comments & Discussion Section
-            if (item.comments.isNotEmpty()) {
+            // Materialized Threaded Comments & Discussion Section
+            if (uiState.commentsTree.isNotEmpty() || item.comments.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(20.dp))
-                SavedCommentsSection(
-                    comments = item.comments,
+                ThreadedCommentTreeSection(
+                    commentsTree = uiState.commentsTree,
+                    legacyComments = item.comments,
                     onCopyComment = { text -> copyToClipboard(context, "Comment", text) }
                 )
             }
@@ -899,12 +900,14 @@ fun copyToClipboard(context: Context, label: String, text: String) {
 }
 
 @Composable
-fun SavedCommentsSection(
-    comments: List<com.tuck.app.domain.model.SavedComment>,
+fun ThreadedCommentTreeSection(
+    commentsTree: List<com.tuck.app.data.local.db.entity.SourceCommentEntity>,
+    legacyComments: List<com.tuck.app.domain.model.SavedComment>,
     onCopyComment: (String) -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    val displayComments = if (expanded) comments else comments.take(3)
+    val totalCount = if (commentsTree.isNotEmpty()) commentsTree.size else legacyComments.size
+    var isExpanded by remember { mutableStateOf(false) }
+    var collapsedPaths by remember { mutableStateOf(setOf<String>()) }
 
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -920,21 +923,21 @@ fun SavedCommentsSection(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "💬 Community Comments (${comments.size})",
+                    text = "💬 Threaded Discussion ($totalCount)",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                if (comments.size > 3) {
+                if (totalCount > 4) {
                     Text(
-                        text = if (expanded) "Show Less" else "Show All (${comments.size})",
+                        text = if (isExpanded) "Show Top Only" else "Show Full Tree ($totalCount)",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
-                            .clickable { expanded = !expanded }
+                            .clickable { isExpanded = !isExpanded }
                             .padding(horizontal = 6.dp, vertical = 4.dp)
                     )
                 }
@@ -942,25 +945,163 @@ fun SavedCommentsSection(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            displayComments.forEachIndexed { index, comment ->
-                if (index > 0) {
-                    Spacer(modifier = Modifier.height(10.dp))
+            if (commentsTree.isNotEmpty()) {
+                val visibleComments = if (isExpanded) {
+                    commentsTree.filter { comment ->
+                        // Hide if any parent path is in collapsedPaths
+                        val parts = comment.path.split(".")
+                        var isParentCollapsed = false
+                        for (i in 1 until parts.size) {
+                            val subPath = parts.take(i).joinToString(".")
+                            if (collapsedPaths.contains(subPath)) {
+                                isParentCollapsed = true
+                                break
+                            }
+                        }
+                        !isParentCollapsed
+                    }
+                } else {
+                    commentsTree.take(4)
                 }
 
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                visibleComments.forEachIndexed { index, comment ->
+                    if (index > 0) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+
+                    val isCollapsed = collapsedPaths.contains(comment.path)
+                    val indent = (comment.depth.coerceAtMost(5) * 14).dp
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = indent)
+                    ) {
+                        // Depth guide vertical bar if nested
+                        if (comment.depth > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .width(2.dp)
+                                    .height(48.dp)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.35f))
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable {
+                                    if (comment.childCount > 0) {
+                                        collapsedPaths = if (isCollapsed) {
+                                            collapsedPaths - comment.path
+                                        } else {
+                                            collapsedPaths + comment.path
+                                        }
+                                    }
+                                }
                         ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = comment.authorHandle ?: "anonymous",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (comment.isOp) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
+                                        )
+
+                                        if (comment.isOp) {
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+                                            ) {
+                                                Text(
+                                                    text = "OP",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.tertiary,
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                )
+                                            }
+                                        }
+
+                                        if (comment.score > 0) {
+                                            Surface(
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                            ) {
+                                                Text(
+                                                    text = "▲ ${comment.score}",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+
+                                        if (comment.childCount > 0) {
+                                            Text(
+                                                text = if (isCollapsed) "[+${comment.childCount}]" else "[-]",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+
+                                    IconButton(
+                                        onClick = { onCopyComment(comment.bodyText) },
+                                        modifier = Modifier.size(22.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.ContentCopy,
+                                            contentDescription = "Copy comment",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(13.dp)
+                                        )
+                                    }
+                                }
+
+                                if (!isCollapsed) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = comment.bodyText,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        lineHeight = 17.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Fallback to legacy flat list if source_comments not yet populated
+                val displayComments = if (isExpanded) legacyComments else legacyComments.take(3)
+                displayComments.forEachIndexed { index, comment ->
+                    if (index > 0) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
                             Row(
+                                modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
                                     text = comment.author,
@@ -968,43 +1109,26 @@ fun SavedCommentsSection(
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
-                                if (comment.score != null && comment.score > 0) {
-                                    Surface(
-                                        shape = RoundedCornerShape(6.dp),
-                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                                    ) {
-                                        Text(
-                                            text = "▲ ${comment.score}",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                        )
-                                    }
+                                IconButton(
+                                    onClick = { onCopyComment(comment.text) },
+                                    modifier = Modifier.size(22.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.ContentCopy,
+                                        contentDescription = "Copy comment",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(13.dp)
+                                    )
                                 }
                             }
-
-                            IconButton(
-                                onClick = { onCopyComment(comment.text) },
-                                modifier = Modifier.size(24.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.ContentCopy,
-                                    contentDescription = "Copy comment",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = comment.text,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                lineHeight = 17.sp
+                            )
                         }
-
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        Text(
-                            text = comment.text,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            lineHeight = 18.sp
-                        )
                     }
                 }
             }
