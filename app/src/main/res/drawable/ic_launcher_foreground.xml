@@ -1,0 +1,26 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.8"
+        android:scaleY="0.8"
+        android:translateX="10.8"
+        android:translateY="10.8">
+        <!-- Modern Tuck Drawer / Box Icon -->
+        <path
+            android:fillColor="#6366F1"
+            android:pathData="M24,32 C24,27.58 27.58,24 32,24 L76,24 C80.42,24 84,27.58 84,32 L84,46 C84,50.42 80.42,54 76,54 L32,54 C27.58,54 24,50.42 24,46 Z" />
+        <path
+            android:fillColor="#4F46E5"
+            android:pathData="M24,58 C24,53.58 27.58,50 32,50 L76,50 C80.42,50 84,53.58 84,58 L84,76 C84,80.42 80.42,84 76,84 L32,84 C27.58,84 24,80.42 24,76 Z" />
+        <!-- Drawer Handles -->
+        <path
+            android:fillColor="#EEF2FF"
+            android:pathData="M46,37 L62,37 C63.1,37 64,37.9 64,39 C64,40.1 63.1,41 62,41 L46,41 C44.9,41 44,40.1 44,39 C44,37.9 44.9,37 46,37 Z" />
+        <path
+            android:fillColor="#EEF2FF"
+            android:pathData="M46,65 L62,65 C63.1,65 64,65.9 64,67 C64,68.1 63.1,69 62,69 L46,69 C44.9,69 44,68.1 44,67 C44,65.9 44.9,65 46,65 Z" />
+    </group>
+</vector>
