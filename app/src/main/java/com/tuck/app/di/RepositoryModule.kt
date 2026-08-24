@@ -1,10 +1,14 @@
 package com.tuck.app.di
 
+import com.tuck.app.data.ai.NoOpAiProvider
+import com.tuck.app.data.memory.RelatedItemsEngineImpl
 import com.tuck.app.data.repository.CollectionRepositoryImpl
 import com.tuck.app.data.repository.SavedItemRepositoryImpl
 import com.tuck.app.data.repository.SearchRepositoryImpl
 import com.tuck.app.data.repository.SettingsRepositoryImpl
+import com.tuck.app.domain.ai.AiProvider
 import com.tuck.app.domain.classifier.ContentClassifier
+import com.tuck.app.domain.memory.RelatedItemsEngine
 import com.tuck.app.domain.repository.CollectionRepository
 import com.tuck.app.domain.repository.SavedItemRepository
 import com.tuck.app.domain.repository.SearchRepository
@@ -49,4 +53,16 @@ abstract class RepositoryModule {
     abstract fun bindContentClassifier(
         impl: RuleBasedContentClassifier
     ): ContentClassifier
+
+    @Binds
+    @Singleton
+    abstract fun bindAiProvider(
+        impl: NoOpAiProvider
+    ): AiProvider
+
+    @Binds
+    @Singleton
+    abstract fun bindRelatedItemsEngine(
+        impl: RelatedItemsEngineImpl
+    ): RelatedItemsEngine
 }

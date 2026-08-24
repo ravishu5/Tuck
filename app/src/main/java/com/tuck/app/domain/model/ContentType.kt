@@ -9,6 +9,8 @@ enum class ContentType {
     VIDEO,
     AUDIO,
     MULTI_IMAGE,
+    CONTACT,
+    LOCATION,
     UNKNOWN;
 
     val displayName: String
@@ -21,6 +23,8 @@ enum class ContentType {
             VIDEO -> "Video"
             AUDIO -> "Audio"
             MULTI_IMAGE -> "Gallery"
+            CONTACT -> "Contact"
+            LOCATION -> "Location"
             UNKNOWN -> "Item"
         }
 }

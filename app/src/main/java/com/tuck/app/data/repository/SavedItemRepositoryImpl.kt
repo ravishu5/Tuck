@@ -132,9 +132,12 @@ class SavedItemRepositoryImpl @Inject constructor(
             updatedAt = item.updatedAt,
             lastOpenedAt = item.lastOpenedAt,
             isFavorite = item.isFavorite,
+            isPinned = item.isPinned,
             isArchived = item.isArchived,
             isDeleted = item.isDeleted,
-            processingStatus = item.processingStatus
+            processingStatus = item.processingStatus,
+            userNote = item.userNote,
+            captureNote = item.captureNote
         )
         val generatedId = savedItemDao.insert(entity)
 
@@ -176,9 +179,12 @@ class SavedItemRepositoryImpl @Inject constructor(
             updatedAt = System.currentTimeMillis(),
             lastOpenedAt = item.lastOpenedAt,
             isFavorite = item.isFavorite,
+            isPinned = item.isPinned,
             isArchived = item.isArchived,
             isDeleted = item.isDeleted,
-            processingStatus = item.processingStatus
+            processingStatus = item.processingStatus,
+            userNote = item.userNote,
+            captureNote = item.captureNote
         )
         savedItemDao.update(entity)
 
@@ -311,9 +317,12 @@ class SavedItemRepositoryImpl @Inject constructor(
         updatedAt = updatedAt,
         lastOpenedAt = lastOpenedAt,
         isFavorite = isFavorite,
+        isPinned = isPinned,
         isArchived = isArchived,
         isDeleted = isDeleted,
         processingStatus = processingStatus,
+        userNote = userNote,
+        captureNote = captureNote,
         entities = entities,
         tags = tags,
         collections = collections

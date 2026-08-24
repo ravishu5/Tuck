@@ -27,9 +27,12 @@ data class SavedItem(
     val updatedAt: Long = System.currentTimeMillis(),
     val lastOpenedAt: Long? = null,
     val isFavorite: Boolean = false,
+    val isPinned: Boolean = false,
     val isArchived: Boolean = false,
     val isDeleted: Boolean = false,
     val processingStatus: ProcessingStatus = ProcessingStatus.PENDING,
+    val userNote: String? = null,
+    val captureNote: String? = null,
     val entities: List<ExtractedEntity> = emptyList(),
     val tags: List<Tag> = emptyList(),
     val collections: List<Collection> = emptyList()
