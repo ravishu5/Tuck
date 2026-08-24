@@ -26,6 +26,8 @@ import com.tuck.app.data.local.db.entity.SourcePostEntity
 import com.tuck.app.data.local.db.entity.TagEntity
 import com.tuck.app.data.local.storage.FileStorageService
 import com.tuck.app.domain.ai.AiProvider
+import com.tuck.app.processing.extractors.SourceContentFetcher
+import com.tuck.app.processing.extractors.SourceExtractorRegistry
 import com.tuck.app.domain.model.ContentType
 import com.tuck.app.domain.model.ProcessingStatus
 import com.tuck.app.domain.model.SavedItem
@@ -52,6 +54,8 @@ class ItemProcessingWorker @AssistedInject constructor(
     private val derivedContentDao: DerivedContentDao,
     private val fileStorageService: FileStorageService,
     private val urlMetadataProcessor: UrlMetadataProcessor,
+    private val sourceExtractorRegistry: SourceExtractorRegistry,
+    private val sourceContentFetcher: SourceContentFetcher,
     private val imageOcrProcessor: ImageOcrProcessor,
     private val pdfProcessor: PdfProcessor,
     private val entityExtractor: EntityExtractor,
@@ -109,55 +113,99 @@ class ItemProcessingWorker @AssistedInject constructor(
                             finalContentType = meta.inferredContentType
                         }
 
-                        // Save structured comments and source post if present
-                        if (saveCommentsEnabled && meta.comments.isNotEmpty()) {
-                            val commentsArray = JSONArray()
-                            val sourceComments = mutableListOf<SourceCommentEntity>()
-                            var commentOrdinal = 0
+                        // Structured source capture: real post + nested comment tree.
+                        // Falls back to the flat comments UrlMetadataProcessor already found.
+                        if (saveCommentsEnabled) {
+                            val extractor = sourceExtractorRegistry.getExtractor(url)
+                            val rawPayload = sourceContentFetcher.fetch(url, extractor.platformName)
+                            val extracted = try {
+                                extractor.extract(url, rawPayload)
+                            } catch (e: Exception) {
+                                null
+                            }
 
-                            for (c in meta.comments) {
-                                val cObj = JSONObject()
-                                cObj.put("author", c.author)
-                                cObj.put("text", c.text)
-                                c.score?.let { cObj.put("score", it) }
-                                c.timestamp?.let { cObj.put("timestamp", it) }
-                                commentsArray.put(cObj)
+                            val treeComments = extracted?.comments.orEmpty()
 
-                                commentOrdinal++
-                                sourceComments.add(
-                                    SourceCommentEntity(
+                            if (extracted != null && (treeComments.isNotEmpty() || !extracted.title.isNullOrBlank())) {
+                                // Re-running the worker must not duplicate rows.
+                                sourceContentDao.deleteCommentsForItem(itemId)
+
+                                sourceContentDao.insertPost(
+                                    SourcePostEntity(
                                         itemId = itemId,
-                                        depth = 0,
-                                        path = "%04d".format(commentOrdinal),
-                                        authorHandle = c.author,
-                                        bodyText = c.text,
-                                        score = c.score ?: 0,
-                                        postedAt = c.timestamp ?: System.currentTimeMillis(),
-                                        ordinal = commentOrdinal
+                                        platform = extracted.platform,
+                                        community = extracted.community,
+                                        authorHandle = extracted.authorHandle,
+                                        authorDisplay = extracted.authorDisplay,
+                                        title = extracted.title ?: finalTitle,
+                                        bodyText = extracted.bodyText,
+                                        score = extracted.score,
+                                        commentCount = extracted.commentCount,
+                                        postedAt = extracted.postedAt,
+                                        permalink = url,
+                                        rawJson = extracted.rawJson,
+                                        extractorVersion = extractor.platformName,
+                                        fetchedAt = System.currentTimeMillis()
                                     )
                                 )
-                            }
-                            finalCommentsJson = commentsArray.toString()
 
-                            // Save to source_posts and source_comments
-                            val platform = when {
-                                finalDomain?.contains("reddit") == true -> "REDDIT"
-                                finalDomain?.contains("youtube") == true || finalDomain?.contains("youtu.be") == true -> "YOUTUBE"
-                                finalDomain?.contains("instagram") == true -> "INSTAGRAM"
-                                finalDomain?.contains("twitter") == true || finalDomain?.contains("x.com") == true -> "TWITTER"
-                                else -> "WEB"
-                            }
-                            sourceContentDao.insertPost(
-                                SourcePostEntity(
-                                    itemId = itemId,
-                                    platform = platform,
-                                    title = finalTitle,
-                                    rawJson = finalCommentsJson,
-                                    commentCount = meta.comments.size,
-                                    fetchedAt = System.currentTimeMillis()
+                                if (treeComments.isNotEmpty()) {
+                                    sourceContentDao.insertComments(flattenComments(treeComments, itemId))
+                                    finalCommentsJson = legacyCommentsJson(treeComments)
+                                }
+
+                                if (!extracted.bodyText.isNullOrBlank() && finalExtractedText.isNullOrBlank()) {
+                                    finalExtractedText = extracted.bodyText
+                                }
+                            } else if (meta.comments.isNotEmpty()) {
+                                val commentsArray = JSONArray()
+                                val sourceComments = mutableListOf<SourceCommentEntity>()
+                                var commentOrdinal = 0
+
+                                for (c in meta.comments) {
+                                    val cObj = JSONObject()
+                                    cObj.put("author", c.author)
+                                    cObj.put("text", c.text)
+                                    c.score?.let { cObj.put("score", it) }
+                                    c.timestamp?.let { cObj.put("timestamp", it) }
+                                    commentsArray.put(cObj)
+
+                                    commentOrdinal++
+                                    sourceComments.add(
+                                        SourceCommentEntity(
+                                            itemId = itemId,
+                                            depth = 0,
+                                            path = "%04d".format(commentOrdinal),
+                                            authorHandle = c.author,
+                                            bodyText = c.text,
+                                            score = c.score ?: 0,
+                                            postedAt = c.timestamp ?: System.currentTimeMillis(),
+                                            ordinal = commentOrdinal
+                                        )
+                                    )
+                                }
+                                finalCommentsJson = commentsArray.toString()
+
+                                val platform = when {
+                                    finalDomain?.contains("reddit") == true -> "REDDIT"
+                                    finalDomain?.contains("youtube") == true || finalDomain?.contains("youtu.be") == true -> "YOUTUBE"
+                                    finalDomain?.contains("instagram") == true -> "INSTAGRAM"
+                                    finalDomain?.contains("twitter") == true || finalDomain?.contains("x.com") == true -> "TWITTER"
+                                    else -> "WEB"
+                                }
+                                sourceContentDao.deleteCommentsForItem(itemId)
+                                sourceContentDao.insertPost(
+                                    SourcePostEntity(
+                                        itemId = itemId,
+                                        platform = platform,
+                                        title = finalTitle,
+                                        rawJson = finalCommentsJson,
+                                        commentCount = meta.comments.size,
+                                        fetchedAt = System.currentTimeMillis()
+                                    )
                                 )
-                            )
-                            sourceContentDao.insertComments(sourceComments)
+                                sourceContentDao.insertComments(sourceComments)
+                            }
                         }
 
                         // Download and save thumbnail locally for preview cards

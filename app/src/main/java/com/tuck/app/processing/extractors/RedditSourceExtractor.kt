@@ -28,7 +28,7 @@ class RedditSourceExtractor @Inject constructor() : SourceExtractor {
             return ExtractedSourceData(
                 platform = platformName,
                 title = "Reddit Discussion",
-                community = extractSubredditFromUrl(url)
+                community = communityLabel(extractSubredditFromUrl(url))
             )
         }
 
@@ -68,7 +68,7 @@ class RedditSourceExtractor @Inject constructor() : SourceExtractor {
                     description = body?.take(300),
                     bodyText = body,
                     authorHandle = author,
-                    community = if (!subreddit.isNullOrBlank()) "r/$subreddit" else null,
+                    community = communityLabel(subreddit),
                     score = score,
                     commentCount = commentCount,
                     postedAt = createdUtc,
@@ -83,7 +83,7 @@ class RedditSourceExtractor @Inject constructor() : SourceExtractor {
         return ExtractedSourceData(
             platform = platformName,
             title = "Reddit Discussion",
-            community = extractSubredditFromUrl(url)
+            community = communityLabel(extractSubredditFromUrl(url))
         )
     }
 
@@ -130,6 +130,10 @@ class RedditSourceExtractor @Inject constructor() : SourceExtractor {
     private fun extractSubredditFromUrl(url: String): String? {
         val regex = Regex("reddit\\.com/r/([^/]+)", RegexOption.IGNORE_CASE)
         val match = regex.find(url)
-        return match?.groupValues?.get(1)?.let { "r/$it" }
+        return match?.groupValues?.get(1)
     }
+
+    /** Normalizes a subreddit name to a single `r/` prefix. */
+    private fun communityLabel(name: String?): String? =
+        name?.trim()?.takeIf { it.isNotBlank() }?.let { if (it.startsWith("r/")) it else "r/$it" }
 }
