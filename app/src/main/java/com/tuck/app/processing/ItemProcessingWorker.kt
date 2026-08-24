@@ -5,17 +5,27 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.tuck.app.data.local.db.dao.CollectionDao
+import com.tuck.app.data.local.db.dao.DerivedContentDao
 import com.tuck.app.data.local.db.dao.EntityDao
+import com.tuck.app.data.local.db.dao.MediaAssetDao
 import com.tuck.app.data.local.db.dao.SavedItemDao
 import com.tuck.app.data.local.db.dao.SavedItemFtsDao
+import com.tuck.app.data.local.db.dao.SourceContentDao
 import com.tuck.app.data.local.db.dao.TagDao
 import com.tuck.app.data.local.db.entity.CollectionEntity
+import com.tuck.app.data.local.db.entity.DerivedPointEntity
+import com.tuck.app.data.local.db.entity.DerivedSummaryEntity
 import com.tuck.app.data.local.db.entity.EntityEntity
+import com.tuck.app.data.local.db.entity.MediaAssetEntity
+import com.tuck.app.data.local.db.entity.OcrBlockEntity
 import com.tuck.app.data.local.db.entity.SavedItemCollectionCrossRef
 import com.tuck.app.data.local.db.entity.SavedItemFtsEntity
 import com.tuck.app.data.local.db.entity.SavedItemTagCrossRef
+import com.tuck.app.data.local.db.entity.SourceCommentEntity
+import com.tuck.app.data.local.db.entity.SourcePostEntity
 import com.tuck.app.data.local.db.entity.TagEntity
 import com.tuck.app.data.local.storage.FileStorageService
+import com.tuck.app.domain.ai.AiProvider
 import com.tuck.app.domain.model.ContentType
 import com.tuck.app.domain.model.ProcessingStatus
 import com.tuck.app.domain.model.SavedItem
@@ -37,12 +47,16 @@ class ItemProcessingWorker @AssistedInject constructor(
     private val entityDao: EntityDao,
     private val tagDao: TagDao,
     private val collectionDao: CollectionDao,
+    private val mediaAssetDao: MediaAssetDao,
+    private val sourceContentDao: SourceContentDao,
+    private val derivedContentDao: DerivedContentDao,
     private val fileStorageService: FileStorageService,
     private val urlMetadataProcessor: UrlMetadataProcessor,
     private val imageOcrProcessor: ImageOcrProcessor,
     private val pdfProcessor: PdfProcessor,
     private val entityExtractor: EntityExtractor,
     private val classifier: RuleBasedContentClassifier,
+    private val aiProvider: AiProvider,
     private val settingsRepository: SettingsRepository
 ) : CoroutineWorker(appContext, workerParams) {
 
@@ -95,9 +109,12 @@ class ItemProcessingWorker @AssistedInject constructor(
                             finalContentType = meta.inferredContentType
                         }
 
-                        // Save comments if enabled and present
+                        // Save structured comments and source post if present
                         if (saveCommentsEnabled && meta.comments.isNotEmpty()) {
                             val commentsArray = JSONArray()
+                            val sourceComments = mutableListOf<SourceCommentEntity>()
+                            var commentOrdinal = 0
+
                             for (c in meta.comments) {
                                 val cObj = JSONObject()
                                 cObj.put("author", c.author)
@@ -105,14 +122,59 @@ class ItemProcessingWorker @AssistedInject constructor(
                                 c.score?.let { cObj.put("score", it) }
                                 c.timestamp?.let { cObj.put("timestamp", it) }
                                 commentsArray.put(cObj)
+
+                                commentOrdinal++
+                                sourceComments.add(
+                                    SourceCommentEntity(
+                                        itemId = itemId,
+                                        depth = 0,
+                                        path = "%04d".format(commentOrdinal),
+                                        authorHandle = c.author,
+                                        bodyText = c.text,
+                                        score = c.score ?: 0,
+                                        postedAt = c.timestamp ?: System.currentTimeMillis(),
+                                        ordinal = commentOrdinal
+                                    )
+                                )
                             }
                             finalCommentsJson = commentsArray.toString()
+
+                            // Save to source_posts and source_comments
+                            val platform = when {
+                                finalDomain?.contains("reddit") == true -> "REDDIT"
+                                finalDomain?.contains("youtube") == true || finalDomain?.contains("youtu.be") == true -> "YOUTUBE"
+                                finalDomain?.contains("instagram") == true -> "INSTAGRAM"
+                                finalDomain?.contains("twitter") == true || finalDomain?.contains("x.com") == true -> "TWITTER"
+                                else -> "WEB"
+                            }
+                            sourceContentDao.insertPost(
+                                SourcePostEntity(
+                                    itemId = itemId,
+                                    platform = platform,
+                                    title = finalTitle,
+                                    rawJson = finalCommentsJson,
+                                    commentCount = meta.comments.size,
+                                    fetchedAt = System.currentTimeMillis()
+                                )
+                            )
+                            sourceContentDao.insertComments(sourceComments)
                         }
 
                         // Download and save thumbnail locally for preview cards
                         if (finalThumbnailPath.isNullOrBlank() && !meta.ogImageUrl.isNullOrBlank()) {
                             val savedThumb = fileStorageService.downloadAndSaveThumbnail(meta.ogImageUrl)
                             finalThumbnailPath = savedThumb ?: meta.ogImageUrl
+                            if (savedThumb != null) {
+                                mediaAssetDao.insert(
+                                    MediaAssetEntity(
+                                        itemId = itemId,
+                                        role = "THUMBNAIL",
+                                        localPath = savedThumb,
+                                        thumbnailPath = savedThumb,
+                                        downloadState = "COMPLETE"
+                                    )
+                                )
+                            }
                         }
 
                         // Extract entities from title, description, and full text
@@ -127,7 +189,8 @@ class ItemProcessingWorker @AssistedInject constructor(
                                     savedItemId = itemId,
                                     type = it.type,
                                     value = it.value,
-                                    normalizedValue = it.normalizedValue
+                                    normalizedValue = it.normalizedValue,
+                                    producer = "rule-based"
                                 )
                             )
                         }
@@ -136,21 +199,50 @@ class ItemProcessingWorker @AssistedInject constructor(
 
                 ContentType.IMAGE, ContentType.MULTI_IMAGE -> {
                     itemEntity.localFilePath?.let { imagePath ->
-                        val ocr = imageOcrProcessor.extractTextFromImageFile(imagePath)
-                        if (!ocr.isNullOrBlank()) {
-                            finalOcrText = ocr
+                        val ocrResult = imageOcrProcessor.extractOcrBlocks(imagePath)
+                        if (!ocrResult.fullText.isNullOrBlank()) {
+                            finalOcrText = ocrResult.fullText
+                            // Save OCR blocks
+                            val blocks = ocrResult.blocks.map { b ->
+                                OcrBlockEntity(
+                                    itemId = itemId,
+                                    text = b.text,
+                                    confidence = b.confidence,
+                                    bboxX = b.bboxX,
+                                    bboxY = b.bboxY,
+                                    bboxW = b.bboxW,
+                                    bboxH = b.bboxH,
+                                    blockIndex = b.blockIndex,
+                                    producer = "mlkit-ocr"
+                                )
+                            }
+                            derivedContentDao.insertOcrBlocks(blocks)
+
                             // Extract entities from OCR text
-                            entityExtractor.extractEntities(ocr, itemId).forEach {
+                            entityExtractor.extractEntities(ocrResult.fullText, itemId).forEach {
                                 extractedEntities.add(
                                     EntityEntity(
                                         savedItemId = itemId,
                                         type = it.type,
                                         value = it.value,
-                                        normalizedValue = it.normalizedValue
+                                        normalizedValue = it.normalizedValue,
+                                        producer = "mlkit-ocr"
                                     )
                                 )
                             }
                         }
+
+                        // Ensure primary media asset exists
+                        mediaAssetDao.insert(
+                            MediaAssetEntity(
+                                itemId = itemId,
+                                role = "PRIMARY",
+                                localPath = imagePath,
+                                thumbnailPath = itemEntity.thumbnailPath,
+                                mimeType = itemEntity.mimeType ?: "image/jpeg",
+                                downloadState = "COMPLETE"
+                            )
+                        )
                     }
                 }
 
@@ -166,11 +258,23 @@ class ItemProcessingWorker @AssistedInject constructor(
                                         savedItemId = itemId,
                                         type = it.type,
                                         value = it.value,
-                                        normalizedValue = it.normalizedValue
+                                        normalizedValue = it.normalizedValue,
+                                        producer = "pdf-processor"
                                     )
                                 )
                             }
                         }
+
+                        mediaAssetDao.insert(
+                            MediaAssetEntity(
+                                itemId = itemId,
+                                role = "PRIMARY",
+                                localPath = pdfPath,
+                                thumbnailPath = itemEntity.thumbnailPath,
+                                mimeType = "application/pdf",
+                                downloadState = "COMPLETE"
+                            )
+                        )
                     }
                 }
 
@@ -182,7 +286,8 @@ class ItemProcessingWorker @AssistedInject constructor(
                                     savedItemId = itemId,
                                     type = it.type,
                                     value = it.value,
-                                    normalizedValue = it.normalizedValue
+                                    normalizedValue = it.normalizedValue,
+                                    producer = "rule-based"
                                 )
                             )
                         }
@@ -261,7 +366,41 @@ class ItemProcessingWorker @AssistedInject constructor(
                 tagsJoined.append(tagName).append(" ")
             }
 
-            // 5. Index into FTS
+            // 5. Pluggable AI enrichment (optional, off by default via NoOpAiProvider)
+            if (aiProvider.isAvailable) {
+                val textForAi = finalExtractedText ?: finalOcrText ?: itemEntity.originalText
+                if (!textForAi.isNullOrBlank()) {
+                    val summary = aiProvider.summarize(textForAi)
+                    if (!summary.isNullOrBlank()) {
+                        derivedContentDao.insertSummaries(
+                            listOf(
+                                DerivedSummaryEntity(
+                                    itemId = itemId,
+                                    kind = "TLDR",
+                                    text = summary,
+                                    producer = aiProvider.providerId
+                                )
+                            )
+                        )
+                    }
+
+                    val keyPoints = aiProvider.extractKeyPoints(textForAi)
+                    if (keyPoints.isNotEmpty()) {
+                        val pointEntities = keyPoints.mapIndexed { idx, pt ->
+                            DerivedPointEntity(
+                                itemId = itemId,
+                                kind = "KEY_POINT",
+                                text = pt,
+                                ordinal = idx,
+                                producer = aiProvider.providerId
+                            )
+                        }
+                        derivedContentDao.insertPoints(pointEntities)
+                    }
+                }
+            }
+
+            // 6. Index into FTS
             val entitiesJoined = extractedEntities.joinToString(" ") { it.value }
             val ftsEntity = SavedItemFtsEntity(
                 rowid = itemId,
@@ -277,7 +416,7 @@ class ItemProcessingWorker @AssistedInject constructor(
             )
             savedItemFtsDao.insertOrUpdate(ftsEntity)
 
-            // 6. Update SavedItemEntity to READY with all enriched fields
+            // 7. Update SavedItemEntity to READY with all enriched fields
             savedItemDao.updateProcessingResult(
                 id = itemId,
                 status = ProcessingStatus.READY,
@@ -294,7 +433,7 @@ class ItemProcessingWorker @AssistedInject constructor(
 
             Result.success()
         } catch (e: Exception) {
-            // Keep original item intact even if enrichment fails
+            // Keep original item intact even if enrichment fails (Tuck Product Law 2)
             savedItemDao.updateStatus(itemId, ProcessingStatus.FAILED)
             Result.success()
         }
