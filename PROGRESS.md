@@ -97,7 +97,9 @@ Wired the two dead components and replaced the mocked migration test. What was a
 - [x] PDF text extraction and first-page thumbnail
 - [x] Entity extraction (URLs, emails, phones, money, dates, hashtags)
 - [x] Rule-based content classifier
-- [x] Pluggable `AiProvider` abstraction, NoOp by default
+- ~~Pluggable `AiProvider` abstraction~~ — **cut 2026-08-25.** No AI in v1; the stub providers and the
+  pipeline call site were removed. `derived_summaries` / `derived_points` tables kept so it can return
+  without a schema change. See `DECISIONS.md`
 - [x] Golden fixtures under `app/src/test/resources/fixtures/` (reddit, article, youtube)
 - [x] `SourceExtractor` registry wired into `ItemProcessingWorker` via `SourceContentFetcher`, verified on device
 - [x] Nested comment trees flattened to `source_comments` with materialized paths, capped at 500, idempotent on retry
@@ -136,7 +138,8 @@ Wired the two dead components and replaced the mocked migration test. What was a
 - [x] Cache cleanup and local data management
 - [ ] Weighted relevance ranking
 - [ ] Query DSL (`source:reddit`, `in:research`, `after:last-month`)
-- [ ] Semantic search / embeddings
+- ~~Semantic search / embeddings~~ — **cut 2026-08-25** with the rest of the AI scope.
+  Keyword search is now the only retrieval path, which makes ranking quality (below) the top priority
 
 ---
 
@@ -170,7 +173,8 @@ Wired the two dead components and replaced the mocked migration test. What was a
 - [x] Locked collections gated by `BiometricPrompt` — wired at `CollectionsScreen.kt:228`
 - [ ] Byte-identical restore verified on a second device
 - [ ] Nested collections (the `parentId` column exists; no UI)
-- [ ] Cross-device sync
+- ~~Cross-device sync, accounts, shared collections~~ — **deferred 2026-08-25.** Local export/import and
+  the `.tuck` pack stay as the foundation a future cloud layer sits on top of
 
 ---
 
@@ -187,14 +191,24 @@ Wired the two dead components and replaced the mocked migration test. What was a
 
 ## Next up, in order
 
-1. **Solve Reddit access.** The extractor parses a real payload correctly (fixture-tested), but the
-   public `.json` endpoint 403s unauthenticated. Without this the flagship feature captures no
-   comments. Options: OAuth app credentials, or user-supplied credentials.
-2. **Delete `RoomMigrationTest`** (the mocked one) now that `TuckMigrationTest` covers it for real —
-   keeping both invites someone to trust the wrong one.
-3. **Release hardening** — real signing config from a git-ignored `keystore.properties`, turn on
-   `isMinifyEnabled`, test the R8 rules, add a baseline profile.
-4. **Decide on FTS.** Either accept FTS4 and drop the BM25/relevance-ranking goals from M2/M6, or
-   move to a raw FTS5 external-content table with triggers.
-5. **Finish the source/derived split** — `saved_items` still carries the text columns the v3 tables
+Scope as of 2026-08-25: no AI, no cloud. v1 is a local archive whose value is **capture quality plus
+retrieval quality**. Everything below is ordered against that.
+
+1. **Fix the three decorative Settings switches.** `ocrEnabled`, `autoCategorizeEnabled` and
+   `wifiOnlyMetadata` are persisted and rendered but never read by `ItemProcessingWorker` — turning
+   OCR off still runs OCR. A visible broken promise, roughly an hour.
+2. **Delete the mocked `RoomMigrationTest`** now that `TuckMigrationTest` covers it for real.
+   Keeping both invites someone to trust the one that cannot fail.
+3. **Search ranking.** With semantic search cut, FTS4 + plain `MATCH` with no BM25 is the whole
+   retrieval story. Either move to a raw FTS5 external-content table with triggers and weighted BM25,
+   or build explicit scoring on top of FTS4. This is now the highest-leverage work in the app.
+4. **Solve Reddit access.** The extractor parses real payloads (fixture-tested) but the public
+   `.json` endpoint 403s unauthenticated, so the flagship capture saves posts without comments.
+5. **Retrieval and organisation gaps** — query DSL (`source:`, `in:`, `after:`), grid view (there is
+   no `LazyVerticalGrid` anywhere), bulk selection outside Inbox, dedupe merge UI, per-item
+   Markdown/HTML/JSON export, nested-collection UI for the existing `parentId` column.
+6. **Release hardening** — real signing config from a git-ignored `keystore.properties`, turn on
+   `isMinifyEnabled`, test the R8 rules, add a baseline profile, measure against the performance
+   budgets with a 10k-item seed.
+7. **Finish the source/derived split** — `saved_items` still carries the text columns the v3 tables
    were meant to own.

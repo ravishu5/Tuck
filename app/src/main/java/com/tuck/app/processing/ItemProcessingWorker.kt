@@ -13,8 +13,6 @@ import com.tuck.app.data.local.db.dao.SavedItemFtsDao
 import com.tuck.app.data.local.db.dao.SourceContentDao
 import com.tuck.app.data.local.db.dao.TagDao
 import com.tuck.app.data.local.db.entity.CollectionEntity
-import com.tuck.app.data.local.db.entity.DerivedPointEntity
-import com.tuck.app.data.local.db.entity.DerivedSummaryEntity
 import com.tuck.app.data.local.db.entity.EntityEntity
 import com.tuck.app.data.local.db.entity.MediaAssetEntity
 import com.tuck.app.data.local.db.entity.OcrBlockEntity
@@ -25,7 +23,6 @@ import com.tuck.app.data.local.db.entity.SourceCommentEntity
 import com.tuck.app.data.local.db.entity.SourcePostEntity
 import com.tuck.app.data.local.db.entity.TagEntity
 import com.tuck.app.data.local.storage.FileStorageService
-import com.tuck.app.domain.ai.AiProvider
 import com.tuck.app.processing.extractors.SourceContentFetcher
 import com.tuck.app.processing.extractors.SourceExtractorRegistry
 import com.tuck.app.domain.model.ContentType
@@ -60,7 +57,6 @@ class ItemProcessingWorker @AssistedInject constructor(
     private val pdfProcessor: PdfProcessor,
     private val entityExtractor: EntityExtractor,
     private val classifier: RuleBasedContentClassifier,
-    private val aiProvider: AiProvider,
     private val settingsRepository: SettingsRepository
 ) : CoroutineWorker(appContext, workerParams) {
 
@@ -414,41 +410,7 @@ class ItemProcessingWorker @AssistedInject constructor(
                 tagsJoined.append(tagName).append(" ")
             }
 
-            // 5. Pluggable AI enrichment (optional, off by default via NoOpAiProvider)
-            if (aiProvider.isAvailable) {
-                val textForAi = finalExtractedText ?: finalOcrText ?: itemEntity.originalText
-                if (!textForAi.isNullOrBlank()) {
-                    val summary = aiProvider.summarize(textForAi)
-                    if (!summary.isNullOrBlank()) {
-                        derivedContentDao.insertSummaries(
-                            listOf(
-                                DerivedSummaryEntity(
-                                    itemId = itemId,
-                                    kind = "TLDR",
-                                    text = summary,
-                                    producer = aiProvider.providerId
-                                )
-                            )
-                        )
-                    }
-
-                    val keyPoints = aiProvider.extractKeyPoints(textForAi)
-                    if (keyPoints.isNotEmpty()) {
-                        val pointEntities = keyPoints.mapIndexed { idx, pt ->
-                            DerivedPointEntity(
-                                itemId = itemId,
-                                kind = "KEY_POINT",
-                                text = pt,
-                                ordinal = idx,
-                                producer = aiProvider.providerId
-                            )
-                        }
-                        derivedContentDao.insertPoints(pointEntities)
-                    }
-                }
-            }
-
-            // 6. Index into FTS
+            // 5. Index into FTS
             val entitiesJoined = extractedEntities.joinToString(" ") { it.value }
             val ftsEntity = SavedItemFtsEntity(
                 rowid = itemId,
@@ -464,7 +426,7 @@ class ItemProcessingWorker @AssistedInject constructor(
             )
             savedItemFtsDao.insertOrUpdate(ftsEntity)
 
-            // 7. Update SavedItemEntity to READY with all enriched fields
+            // 6. Update SavedItemEntity to READY with all enriched fields
             savedItemDao.updateProcessingResult(
                 id = itemId,
                 status = ProcessingStatus.READY,
