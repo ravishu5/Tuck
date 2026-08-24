@@ -78,10 +78,9 @@ class RelatedItemsEngineImpl @Inject constructor(
     override fun getRediscoverItems(limit: Int): Flow<List<SavedItem>> {
         return savedItemRepository.getAllActiveItems().map { allItems ->
             val now = System.currentTimeMillis()
-            val thirtyDaysAgo = now - (30L * 24 * 60 * 60 * 1000)
             val sevenDaysAgo = now - (7L * 24 * 60 * 60 * 1000)
 
-            // Prefer items tucked over 7-30 days ago that are unarchived
+            // Prefer items tucked over 7 days ago that are unarchived
             val olderItems = allItems.filter { item ->
                 item.createdAt < sevenDaysAgo && !item.isArchived
             }
@@ -91,6 +90,18 @@ class RelatedItemsEngineImpl @Inject constructor(
             } else {
                 allItems.filter { !it.isArchived }.takeLast(limit)
             }
+        }
+    }
+
+    override fun getForgottenSaves(limit: Int): Flow<List<SavedItem>> {
+        return savedItemRepository.getAllActiveItems().map { allItems ->
+            val now = System.currentTimeMillis()
+            val thirtyDaysAgo = now - (30L * 24 * 60 * 60 * 1000)
+
+            // Strictly items saved > 30 days ago with 0 opens
+            allItems.filter { item ->
+                item.createdAt < thirtyDaysAgo && item.openCount == 0 && !item.isArchived
+            }.sortedBy { it.createdAt }.take(limit)
         }
     }
 

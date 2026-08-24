@@ -26,6 +26,7 @@ data class SavedItem(
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
     val lastOpenedAt: Long? = null,
+    val openCount: Int = 0,
     val isFavorite: Boolean = false,
     val isPinned: Boolean = false,
     val isArchived: Boolean = false,
