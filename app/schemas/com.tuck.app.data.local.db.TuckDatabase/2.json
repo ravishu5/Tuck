@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 2,
-    "identityHash": "9822f8353a889a0a87afad8fcf34dd52",
+    "identityHash": "8fbac306180270282b864ae39f7eb116",
     "entities": [
       {
         "tableName": "saved_items",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `contentType` TEXT NOT NULL, `title` TEXT NOT NULL, `titleIsUserEdited` INTEGER NOT NULL, `description` TEXT, `originalUrl` TEXT, `canonicalUrl` TEXT, `sourceDomain` TEXT, `sourceApp` TEXT, `mimeType` TEXT, `localFilePath` TEXT, `thumbnailPath` TEXT, `originalText` TEXT, `extractedText` TEXT, `ocrText` TEXT, `commentsJson` TEXT, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `lastOpenedAt` INTEGER, `openCount` INTEGER NOT NULL, `isPinned` INTEGER NOT NULL, `isFavorite` INTEGER NOT NULL, `isArchived` INTEGER NOT NULL, `isDeleted` INTEGER NOT NULL, `deletedAt` INTEGER, `processingStatus` TEXT NOT NULL, `captureNote` TEXT, `userNote` TEXT, `dedupeGroupId` TEXT, `textHash` TEXT, `imageSha256` TEXT)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `contentType` TEXT NOT NULL, `title` TEXT NOT NULL, `description` TEXT, `originalUrl` TEXT, `canonicalUrl` TEXT, `sourceDomain` TEXT, `sourceApp` TEXT, `mimeType` TEXT, `localFilePath` TEXT, `thumbnailPath` TEXT, `originalText` TEXT, `extractedText` TEXT, `ocrText` TEXT, `commentsJson` TEXT, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `lastOpenedAt` INTEGER, `isFavorite` INTEGER NOT NULL, `isArchived` INTEGER NOT NULL, `isDeleted` INTEGER NOT NULL, `processingStatus` TEXT NOT NULL, `textHash` TEXT, `imageSha256` TEXT)",
         "fields": [
           {
             "fieldPath": "id",
@@ -24,12 +24,6 @@
             "fieldPath": "title",
             "columnName": "title",
             "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "titleIsUserEdited",
-            "columnName": "titleIsUserEdited",
-            "affinity": "INTEGER",
             "notNull": true
           },
           {
@@ -123,18 +117,6 @@
             "notNull": false
           },
           {
-            "fieldPath": "openCount",
-            "columnName": "openCount",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "isPinned",
-            "columnName": "isPinned",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
             "fieldPath": "isFavorite",
             "columnName": "isFavorite",
             "affinity": "INTEGER",
@@ -153,34 +135,10 @@
             "notNull": true
           },
           {
-            "fieldPath": "deletedAt",
-            "columnName": "deletedAt",
-            "affinity": "INTEGER",
-            "notNull": false
-          },
-          {
             "fieldPath": "processingStatus",
             "columnName": "processingStatus",
             "affinity": "TEXT",
             "notNull": true
-          },
-          {
-            "fieldPath": "captureNote",
-            "columnName": "captureNote",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "userNote",
-            "columnName": "userNote",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "dedupeGroupId",
-            "columnName": "dedupeGroupId",
-            "affinity": "TEXT",
-            "notNull": false
           },
           {
             "fieldPath": "textHash",
@@ -248,15 +206,6 @@
             "createSql": "CREATE INDEX IF NOT EXISTS `index_saved_items_isFavorite` ON `${TABLE_NAME}` (`isFavorite`)"
           },
           {
-            "name": "index_saved_items_isPinned",
-            "unique": false,
-            "columnNames": [
-              "isPinned"
-            ],
-            "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_saved_items_isPinned` ON `${TABLE_NAME}` (`isPinned`)"
-          },
-          {
             "name": "index_saved_items_isDeleted",
             "unique": false,
             "columnNames": [
@@ -291,15 +240,6 @@
             ],
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_saved_items_imageSha256` ON `${TABLE_NAME}` (`imageSha256`)"
-          },
-          {
-            "name": "index_saved_items_dedupeGroupId",
-            "unique": false,
-            "columnNames": [
-              "dedupeGroupId"
-            ],
-            "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_saved_items_dedupeGroupId` ON `${TABLE_NAME}` (`dedupeGroupId`)"
           }
         ],
         "foreignKeys": []
@@ -386,7 +326,7 @@
       },
       {
         "tableName": "entities",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `savedItemId` INTEGER NOT NULL, `type` TEXT NOT NULL, `value` TEXT NOT NULL, `normalizedValue` TEXT NOT NULL, `charStart` INTEGER NOT NULL, `charEnd` INTEGER NOT NULL, `producer` TEXT NOT NULL, FOREIGN KEY(`savedItemId`) REFERENCES `saved_items`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `savedItemId` INTEGER NOT NULL, `type` TEXT NOT NULL, `value` TEXT NOT NULL, `normalizedValue` TEXT NOT NULL, FOREIGN KEY(`savedItemId`) REFERENCES `saved_items`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
@@ -415,24 +355,6 @@
           {
             "fieldPath": "normalizedValue",
             "columnName": "normalizedValue",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "charStart",
-            "columnName": "charStart",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "charEnd",
-            "columnName": "charEnd",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "producer",
-            "columnName": "producer",
             "affinity": "TEXT",
             "notNull": true
           }
@@ -593,7 +515,7 @@
       },
       {
         "tableName": "collections",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `isAutoGenerated` INTEGER NOT NULL, `icon` TEXT, `color` TEXT, `parentId` INTEGER, `isSmart` INTEGER NOT NULL, `smartQuery` TEXT, `sortOrdinal` INTEGER NOT NULL, `isLocked` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `isAutoGenerated` INTEGER NOT NULL, `icon` TEXT, `createdAt` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -618,42 +540,6 @@
             "columnName": "icon",
             "affinity": "TEXT",
             "notNull": false
-          },
-          {
-            "fieldPath": "color",
-            "columnName": "color",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "parentId",
-            "columnName": "parentId",
-            "affinity": "INTEGER",
-            "notNull": false
-          },
-          {
-            "fieldPath": "isSmart",
-            "columnName": "isSmart",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "smartQuery",
-            "columnName": "smartQuery",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "sortOrdinal",
-            "columnName": "sortOrdinal",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "isLocked",
-            "columnName": "isLocked",
-            "affinity": "INTEGER",
-            "notNull": true
           },
           {
             "fieldPath": "createdAt",
@@ -686,31 +572,13 @@
             ],
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_collections_isAutoGenerated` ON `${TABLE_NAME}` (`isAutoGenerated`)"
-          },
-          {
-            "name": "index_collections_parentId",
-            "unique": false,
-            "columnNames": [
-              "parentId"
-            ],
-            "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_collections_parentId` ON `${TABLE_NAME}` (`parentId`)"
-          },
-          {
-            "name": "index_collections_sortOrdinal",
-            "unique": false,
-            "columnNames": [
-              "sortOrdinal"
-            ],
-            "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_collections_sortOrdinal` ON `${TABLE_NAME}` (`sortOrdinal`)"
           }
         ],
         "foreignKeys": []
       },
       {
         "tableName": "saved_item_collections",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`savedItemId` INTEGER NOT NULL, `collectionId` INTEGER NOT NULL, `addedAt` INTEGER NOT NULL, `ordinal` INTEGER NOT NULL, PRIMARY KEY(`savedItemId`, `collectionId`), FOREIGN KEY(`savedItemId`) REFERENCES `saved_items`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`collectionId`) REFERENCES `collections`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`savedItemId` INTEGER NOT NULL, `collectionId` INTEGER NOT NULL, PRIMARY KEY(`savedItemId`, `collectionId`), FOREIGN KEY(`savedItemId`) REFERENCES `saved_items`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`collectionId`) REFERENCES `collections`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "savedItemId",
@@ -721,18 +589,6 @@
           {
             "fieldPath": "collectionId",
             "columnName": "collectionId",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "addedAt",
-            "columnName": "addedAt",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "ordinal",
-            "columnName": "ordinal",
             "affinity": "INTEGER",
             "notNull": true
           }
@@ -844,7 +700,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '9822f8353a889a0a87afad8fcf34dd52')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '8fbac306180270282b864ae39f7eb116')"
     ]
   }
 }
