@@ -9,9 +9,9 @@ Living tracker of milestone completion. Tasks are marked `[x]` only when all acc
 - [x] Propose exact deletion list for abandoned Expo/RN prototype and execute removal
 - [x] Schema v3 migration plan artifact written and approved
 - [x] Android `.gitignore` added and repository initialized with clean baseline commit
-- [ ] `./gradlew assembleDebug` passes cleanly with 0 errors
-- [ ] `./gradlew testDebugUnitTest` passes cleanly with all unit tests green
-- [ ] Emulator baseline run captured and documented in `walkthrough.md`
+- [x] `./gradlew assembleDebug` passes cleanly with 0 errors
+- [x] `./gradlew testDebugUnitTest` passes cleanly with all unit tests green
+- [x] Emulator baseline run captured and documented in `walkthrough.md`
 - [x] Living files initialized: `PROGRESS.md` and `DECISIONS.md`
 
 ---
