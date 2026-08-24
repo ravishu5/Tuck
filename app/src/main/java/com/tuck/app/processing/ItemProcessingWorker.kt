@@ -56,6 +56,7 @@ class ItemProcessingWorker @AssistedInject constructor(
     private val imageOcrProcessor: ImageOcrProcessor,
     private val pdfProcessor: PdfProcessor,
     private val entityExtractor: EntityExtractor,
+    private val networkPolicy: NetworkPolicy,
     private val classifier: RuleBasedContentClassifier,
     private val settingsRepository: SettingsRepository
 ) : CoroutineWorker(appContext, workerParams) {
@@ -75,6 +76,9 @@ class ItemProcessingWorker @AssistedInject constructor(
 
             val settings = try { settingsRepository.getSettings().first() } catch (e: Exception) { null }
             val saveCommentsEnabled = settings?.saveCommentsEnabled ?: true
+            val ocrEnabled = settings?.ocrEnabled ?: true
+            val autoCategorizeEnabled = settings?.autoCategorizeEnabled ?: true
+            val wifiOnlyMetadata = settings?.wifiOnlyMetadata ?: false
 
             var finalTitle = itemEntity.title
             var finalDescription = itemEntity.description
@@ -91,6 +95,11 @@ class ItemProcessingWorker @AssistedInject constructor(
             // 1. Process based on content type
             when (itemEntity.contentType) {
                 ContentType.URL, ContentType.VIDEO -> {
+                    if (!networkPolicy.allowsRemoteFetch(wifiOnlyMetadata)) {
+                        // Leave the item exactly as saved and try again when unmetered.
+                        savedItemDao.updateStatus(itemId, ProcessingStatus.PENDING)
+                        return@withContext Result.retry()
+                    }
                     itemEntity.originalUrl?.let { url ->
                         val meta = urlMetadataProcessor.extractMetadata(url)
                         if (!meta.title.isNullOrBlank() && (finalTitle.isBlank() || finalTitle == finalDomain || finalTitle == "Shared Link" || finalTitle == "Instagram Reel" || finalTitle == "Reddit Post" || finalTitle == "LinkedIn Post")) {
@@ -243,8 +252,8 @@ class ItemProcessingWorker @AssistedInject constructor(
 
                 ContentType.IMAGE, ContentType.MULTI_IMAGE -> {
                     itemEntity.localFilePath?.let { imagePath ->
-                        val ocrResult = imageOcrProcessor.extractOcrBlocks(imagePath)
-                        if (!ocrResult.fullText.isNullOrBlank()) {
+                        val ocrResult = if (ocrEnabled) imageOcrProcessor.extractOcrBlocks(imagePath) else null
+                        if (ocrResult != null && !ocrResult.fullText.isNullOrBlank()) {
                             finalOcrText = ocrResult.fullText
                             // Save OCR blocks
                             val blocks = ocrResult.blocks.map { b ->
@@ -376,7 +385,7 @@ class ItemProcessingWorker @AssistedInject constructor(
             val classification = classifier.classify(domainItem)
 
             // Link to Smart Collection
-            if (classification.primaryCategory.isNotBlank()) {
+            if (autoCategorizeEnabled && classification.primaryCategory.isNotBlank()) {
                 val collection = collectionDao.getByName(classification.primaryCategory)
                 if (collection == null) {
                     val newColId = collectionDao.insert(
