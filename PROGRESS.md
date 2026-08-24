@@ -138,7 +138,9 @@ Wired the two dead components and replaced the mocked migration test. What was a
 - [x] Search history
 - [x] Offline vault JSON backup export and import
 - [x] Cache cleanup and local data management
-- [ ] Query DSL (`source:reddit`, `in:research`, `after:last-month`)
+- [x] Query DSL: `source:` `domain:` `type:` `in:` `tag:` `is:favorite` `is:archived` `after:` `before:`,
+  with absolute (`2026-03-14`, `2026-03`, `2026`) and relative (`last-month`) dates, removable chips,
+  and unknown operators falling through to free text
 - ~~Semantic search / embeddings~~ — **cut 2026-08-25** with the rest of the AI scope.
   Keyword search is now the only retrieval path, which makes ranking quality (below) the top priority
 
@@ -202,9 +204,9 @@ retrieval quality**. Everything below is ordered against that.
    Keeping both invites someone to trust the one that cannot fail.
 3. **Solve Reddit access.** The extractor parses real payloads (fixture-tested) but the public
    `.json` endpoint 403s unauthenticated, so the flagship capture saves posts without comments.
-4. **Retrieval and organisation gaps** — query DSL (`source:`, `in:`, `after:`), grid view (there is
-   no `LazyVerticalGrid` anywhere), bulk selection outside Inbox, dedupe merge UI, per-item
-   Markdown/HTML/JSON export, nested-collection UI for the existing `parentId` column.
+4. **Retrieval and organisation gaps** — grid view (there is no `LazyVerticalGrid` anywhere), bulk
+   selection outside Inbox, dedupe merge UI, per-item Markdown/HTML/JSON export, nested-collection UI
+   for the existing `parentId` column.
 5. **Release hardening** — real signing config from a git-ignored `keystore.properties`, turn on
    `isMinifyEnabled`, test the R8 rules, add a baseline profile, measure against the performance
    budgets with a 10k-item seed.

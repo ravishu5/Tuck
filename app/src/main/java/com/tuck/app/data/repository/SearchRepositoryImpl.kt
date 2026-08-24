@@ -45,7 +45,14 @@ class KeywordSearchEngine @Inject constructor(
         val itemIdsOrdered = mutableListOf<Long>()
 
         // 1. Primary: FTS4 match, ordered by weighted matchinfo relevance
-        val ftsQuery = formatFtsQuery(query)
+        val ftsQuery = buildString {
+            append(formatFtsQuery(query))
+            // FTS4 supports `column:token`, so a tag filter needs no extra join.
+            filter.tag?.let { tag ->
+                if (isNotEmpty()) append(" ")
+                append("tags:").append(tag.replace(Regex("[^a-zA-Z0-9_]"), "")).append("*")
+            }
+        }.trim()
         if (ftsQuery.isNotBlank()) {
             try {
                 val ftsResults = savedItemFtsDao.searchFtsWithSnippet(ftsQuery)
@@ -92,12 +99,16 @@ class KeywordSearchEngine @Inject constructor(
             if (filter.contentType != null && entity.contentType != filter.contentType) return@filter false
             if (filter.sourceDomain != null && entity.sourceDomain != filter.sourceDomain) return@filter false
             if (minDate > 0L && entity.createdAt < minDate) return@filter false
+            filter.createdAfter?.let { if (entity.createdAt < it) return@filter false }
+            filter.createdBefore?.let { if (entity.createdAt > it) return@filter false }
             true
         }
 
-        // Apply collection filter if specified
-        val collectionFiltered = if (filter.collectionId != null) {
-            val targetColId = filter.collectionId
+        // Apply collection filter if specified, resolving `in:<name>` to an id first
+        val resolvedCollectionId = filter.collectionId
+            ?: filter.collectionName?.let { name -> collectionDao.getByName(name)?.id }
+        val collectionFiltered = if (resolvedCollectionId != null) {
+            val targetColId = resolvedCollectionId
             filtered.filter { entity ->
                 val cols = collectionDao.getCollectionsForSavedItem(entity.id)
                 cols.any { it.id == targetColId }

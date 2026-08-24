@@ -119,6 +119,19 @@ class FtsIndexTest {
     }
 
     @Test
+    fun columnScopedQueryRestrictsMatchesToThatColumn() = runBlocking {
+        fts.insertOrUpdate(row(1L, body = "shopping came up in conversation"))
+        fts.insertOrUpdate(row(2L, title = "Sneaker research", tags = "shopping nike"))
+
+        // What `tag:shopping` compiles to. FTS4 supports `column:token` natively.
+        assertEquals(
+            "a body mention must not satisfy a tag filter",
+            listOf(2L),
+            fts.searchFtsWithSnippet("tags:shopping*").map { it.rowid }
+        )
+    }
+
+    @Test
     fun tagsAreSearchableAndOutrankBodyText() = runBlocking {
         fts.insertOrUpdate(row(1L, body = "shopping came up in conversation"))
         fts.insertOrUpdate(row(2L, title = "Sneaker research", tags = "shopping nike"))

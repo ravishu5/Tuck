@@ -3,7 +3,9 @@ package com.tuck.app.ui.search
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tuck.app.domain.model.ContentType
+import com.tuck.app.domain.model.QueryToken
 import com.tuck.app.domain.model.SearchFilter
+import com.tuck.app.domain.model.SearchQueryParser
 import com.tuck.app.domain.model.SearchResult
 import com.tuck.app.domain.model.SortOrder
 import com.tuck.app.domain.repository.SavedItemRepository
@@ -32,7 +34,9 @@ data class SearchUiState(
     val isFavoriteOnly: Boolean = false,
     val selectedDateDays: Int? = null, // null, 7, 30
     val sortOrder: SortOrder = SortOrder.RELEVANCE,
-    val isSearching: Boolean = false
+    val isSearching: Boolean = false,
+    /** Operators recognised in the query box, shown as removable chips. */
+    val activeTokens: List<QueryToken> = emptyList()
 )
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
@@ -58,17 +62,31 @@ class SearchViewModel @Inject constructor(
         _dateDays,
         _sortOrder
     ) { query, type, fav, days, sort ->
+        // Operators typed into the box take precedence over the chip selections.
+        val parsed = SearchQueryParser.parse(query)
         SearchFilter(
-            query = query,
-            contentType = type,
-            isFavoriteOnly = fav,
+            query = parsed.freeText,
+            contentType = parsed.contentType ?: type,
+            sourceDomain = parsed.sourceDomain,
+            collectionName = parsed.collectionName,
+            tag = parsed.tag,
+            isFavoriteOnly = parsed.isFavoriteOnly || fav,
+            isArchivedOnly = parsed.isArchivedOnly,
             dateRangeDays = days,
+            createdAfter = parsed.createdAfter,
+            createdBefore = parsed.createdBefore,
             sortOrder = sort
         )
     }
 
     val searchResults: StateFlow<List<SearchResult>> = filterFlow.flatMapLatest { filter ->
-        if (filter.query.isBlank()) {
+        val hasOnlyOperators = filter.query.isBlank() && (
+            filter.contentType != null || filter.sourceDomain != null ||
+                filter.collectionName != null || filter.tag != null ||
+                filter.isFavoriteOnly || filter.isArchivedOnly ||
+                filter.createdAfter != null || filter.createdBefore != null
+            )
+        if (filter.query.isBlank() && !hasOnlyOperators) {
             flowOf(emptyList())
         } else {
             searchRepository.search(filter)
@@ -101,6 +119,7 @@ class SearchViewModel @Inject constructor(
         SearchUiState(
             query = state.query,
             results = results,
+            activeTokens = SearchQueryParser.parse(state.query).tokens,
             recentQueries = recents,
             selectedContentType = state.type,
             isFavoriteOnly = state.fav,
@@ -109,6 +128,11 @@ class SearchViewModel @Inject constructor(
             isSearching = false
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SearchUiState())
+
+    /** Removes one operator chip by deleting its text from the query. */
+    fun removeToken(token: QueryToken) {
+        _query.value = _query.value.replace(token.raw, "").replace(Regex("\\s+"), " ").trim()
+    }
 
     fun onQueryChange(newQuery: String) {
         _query.value = newQuery
