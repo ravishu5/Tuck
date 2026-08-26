@@ -82,7 +82,6 @@ fun SearchScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(tuckColors.background)
-            .statusBarsPadding()
     ) {
         // 1. Hero Search Input Bar
         Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {

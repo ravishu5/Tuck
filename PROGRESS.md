@@ -26,16 +26,13 @@ app on a device. Not when the code merely exists, and not when a class exists bu
 
 ---
 
-## Verification baseline — 2026-08-25 (third audit)
-
-Wired the two dead components and replaced the mocked migration test. What was actually run:
+## Verification baseline — 2026-08-26 (Task T1 complete)
 
 - `./gradlew assembleDebug testDebugUnitTest connectedDebugAndroidTest` → **BUILD SUCCESSFUL**
-- **61 unit tests, 0 failures**
-- **3 instrumentation tests, 0 failures, on a booted Pixel_10a (API 37) emulator**
-- End-to-end share verified on device: a Reddit URL shared via `ACTION_SEND` produced a
-  `source_posts` row with `platform=REDDIT`, `community=r/androidapps`, `extractorVersion=REDDIT`,
-  read back out of the on-device database
+- **77 unit tests, 0 failures**
+- **15 instrumentation tests, 0 failures, on a booted Pixel_10a (API 37) emulator**
+- Emits deterministic `PERSON` entities with platform-qualified handles (`reddit:handle`, `youtube:channel`, `twitter:handle`, `web:author`) and `source-metadata` producer from structured post/comment metadata.
+- Backfill tested and verified idempotent on device.
 
 ### Corrections applied in this audit
 
@@ -97,7 +94,7 @@ Wired the two dead components and replaced the mocked migration test. What was a
 ## Milestone 3: Enrichment Pipeline
 - [x] ML Kit on-device OCR for images and screenshots
 - [x] PDF text extraction and first-page thumbnail
-- [x] Entity extraction (URLs, emails, phones, money, dates, hashtags)
+- [x] Entity extraction (regex for URLs, emails, phones, money, dates, hashtags + deterministic PERSON entities from structured source metadata with platform-qualified handles)
 - [x] Rule-based content classifier
 - ~~Pluggable `AiProvider` abstraction~~ — **cut 2026-08-25.** No AI in v1; the stub providers and the
   pipeline call site were removed. `derived_summaries` / `derived_points` tables kept so it can return

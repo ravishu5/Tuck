@@ -458,6 +458,12 @@ abstract class TuckDatabase : RoomDatabase() {
         }
 
         val DEFAULT_SMART_COLLECTIONS = listOf(
+            "LinkedIn" to "work",
+            "Instagram" to "photo_camera",
+            "Reddit" to "forum",
+            "YouTube" to "smart_display",
+            "Twitter / X" to "tag",
+            "GitHub" to "code",
             "Articles" to "article",
             "Programming" to "code",
             "Research" to "school",

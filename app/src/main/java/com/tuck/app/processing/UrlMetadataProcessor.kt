@@ -259,6 +259,22 @@ class UrlMetadataProcessor @Inject constructor() {
         }
     }
 
+    private fun isValidInstagramMedia(imgUrl: String?): Boolean {
+        if (imgUrl.isNullOrBlank()) return false
+        val lower = imgUrl.lowercase()
+        if (lower.contains("rsrc.php") ||
+            lower.contains("static.cdninstagram") ||
+            lower.contains("favicon") ||
+            lower.contains("glyph") ||
+            lower.contains("app_icon") ||
+            lower.contains("instagram.com/static") ||
+            lower.contains("/static/images/")
+        ) {
+            return false
+        }
+        return lower.contains("cdninstagram.com") || lower.contains("fbcdn.net") || lower.startsWith("http")
+    }
+
     private fun fetchInstagramMetadata(url: String, domain: String): UrlMetadata? {
         val isReel = url.contains("/reel/") || url.contains("/reels/") || url.contains("/tv/") || url.contains("share/reel")
         val isStory = url.contains("/stories/")
@@ -295,7 +311,7 @@ class UrlMetadataProcessor @Inject constructor() {
                     .execute()
 
                 val finalUrl = response.url().toString()
-                if (finalUrl.contains("cdninstagram.com") || finalUrl.contains("fbcdn.net")) {
+                if (isValidInstagramMedia(finalUrl)) {
                     previewImage = finalUrl
                 }
             } catch (e: Exception) {
@@ -304,7 +320,7 @@ class UrlMetadataProcessor @Inject constructor() {
         }
 
         // Strategy 2: Instagram Embed Captioned HTML & Script unescaping
-        if (!shortcode.isNullOrBlank() && (previewImage.isNullOrBlank() || description.isNullOrBlank())) {
+        if (!shortcode.isNullOrBlank() && (!isValidInstagramMedia(previewImage) || description.isNullOrBlank())) {
             try {
                 val embedUrl = "https://www.instagram.com/p/$shortcode/embed/captioned/"
                 val embedDoc = Jsoup.connect(embedUrl)
@@ -318,7 +334,7 @@ class UrlMetadataProcessor @Inject constructor() {
                 val imgTag = embedDoc.select("img.EmbeddedMediaImage, img.CoverImage, img[src*=\"cdninstagram\"], img[src*=\"fbcdn\"]").first()
                 if (imgTag != null) {
                     val src = imgTag.attr("src").replace("&amp;", "&")
-                    if (src.isNotBlank() && previewImage.isNullOrBlank()) {
+                    if (isValidInstagramMedia(src) && !isValidInstagramMedia(previewImage)) {
                         previewImage = src
                     }
                 }
@@ -345,7 +361,7 @@ class UrlMetadataProcessor @Inject constructor() {
                 }
 
                 // Deep regex scan on unescaped HTML scripts for display_url / cdn image
-                if (previewImage.isNullOrBlank()) {
+                if (!isValidInstagramMedia(previewImage)) {
                     val rawHtml = embedDoc.html().replace("\\/", "/").replace("\\u0026", "&")
                     val displayUrlMatch = Regex(""""display_url"\s*:\s*"([^"]+)"""").find(rawHtml)
                         ?: Regex(""""thumbnail_src"\s*:\s*"([^"]+)"""").find(rawHtml)
@@ -353,7 +369,10 @@ class UrlMetadataProcessor @Inject constructor() {
                         ?: Regex("""https://[a-zA-Z0-9._-]+(?:\.cdninstagram\.com|\.fbcdn\.net)/[^\s"'<>\\]+""").find(rawHtml)
 
                     if (displayUrlMatch != null) {
-                        previewImage = displayUrlMatch.groupValues.lastOrNull() ?: displayUrlMatch.value
+                        val candidate = displayUrlMatch.groupValues.lastOrNull() ?: displayUrlMatch.value
+                        if (isValidInstagramMedia(candidate)) {
+                            previewImage = candidate
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -362,7 +381,7 @@ class UrlMetadataProcessor @Inject constructor() {
         }
 
         // Strategy 3: Instagram public oEmbed API
-        if (!shortcode.isNullOrBlank() && (previewImage.isNullOrBlank() || description.isNullOrBlank())) {
+        if (!shortcode.isNullOrBlank() && (!isValidInstagramMedia(previewImage) || description.isNullOrBlank())) {
             try {
                 val oEmbedUrl = "https://api.instagram.com/oembed/?url=https://www.instagram.com/p/$shortcode/"
                 val response = Jsoup.connect(oEmbedUrl)
@@ -373,8 +392,11 @@ class UrlMetadataProcessor @Inject constructor() {
                     .execute()
 
                 val json = JSONObject(response.body())
-                if (json.has("thumbnail_url") && previewImage.isNullOrBlank()) {
-                    previewImage = json.getString("thumbnail_url")
+                if (json.has("thumbnail_url") && !isValidInstagramMedia(previewImage)) {
+                    val candidate = json.getString("thumbnail_url")
+                    if (isValidInstagramMedia(candidate)) {
+                        previewImage = candidate
+                    }
                 }
                 if (json.has("author_name") && author.isNullOrBlank()) {
                     author = "@${json.getString("author_name")}"
@@ -391,8 +413,8 @@ class UrlMetadataProcessor @Inject constructor() {
             }
         }
 
-        // Strategy 4: Facebook / OpenGraph Crawler Headers
-        if (previewImage.isNullOrBlank() || description.isNullOrBlank()) {
+        // Strategy 4: Facebook / OpenGraph Crawler Headers (strictly validating candidate)
+        if (!isValidInstagramMedia(previewImage) || description.isNullOrBlank()) {
             try {
                 val doc = Jsoup.connect(url)
                     .userAgent("facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)")
@@ -405,7 +427,7 @@ class UrlMetadataProcessor @Inject constructor() {
                 val ogDesc = doc.select("meta[property=og:description]").attr("content").trim()
                 val ogImage = doc.select("meta[property=og:image], meta[property=og:image:secure_url], meta[name=twitter:image]").attr("content").trim().replace("&amp;", "&")
 
-                if (ogImage.isNotBlank() && previewImage.isNullOrBlank()) {
+                if (isValidInstagramMedia(ogImage) && !isValidInstagramMedia(previewImage)) {
                     previewImage = ogImage
                 }
                 if (ogDesc.isNotBlank() && description.isNullOrBlank()) {
@@ -419,13 +441,15 @@ class UrlMetadataProcessor @Inject constructor() {
             }
         }
 
+        val finalImage = if (isValidInstagramMedia(previewImage)) previewImage else null
+
         return UrlMetadata(
             normalizedUrl = url,
             canonicalUrl = url.substringBefore('?'),
             domain = "Instagram",
             title = title,
             description = description,
-            ogImageUrl = previewImage,
+            ogImageUrl = finalImage,
             faviconUrl = "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png",
             inferredContentType = if (isReel || isStory) ContentType.VIDEO else ContentType.IMAGE,
             author = author,

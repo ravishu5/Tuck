@@ -23,13 +23,18 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Folder
@@ -100,6 +105,13 @@ class ShareActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val caller = callingPackage ?: intent.getStringExtra("android.intent.extra.REFERRER_NAME")
+        viewModel.handleIncomingIntent(intent, caller)
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -112,22 +124,13 @@ fun ShareDialogOverlay(
     onOpenItem: (Long) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var userInteracted by remember { mutableStateOf(false) }
     val tuckColors = TuckTheme.colors
     val tuckShapes = TuckTheme.shapes
-
-    // Auto-dismiss after 3.5 seconds if user has not interacted with categories
-    LaunchedEffect(uiState, userInteracted) {
-        if (uiState is ShareUiState.Saved && !uiState.isCustomCategoryDialogOpen && !userInteracted) {
-            delay(3500)
-            onDismiss()
-        }
-    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.6f))
+            .background(Color.Black.copy(alpha = 0.55f))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -142,7 +145,7 @@ fun ShareDialogOverlay(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(16.dp)
+                .padding(horizontal = 16.dp, vertical = 20.dp)
         ) {
             Card(
                 shape = tuckShapes.extraLarge,
@@ -203,71 +206,67 @@ fun ShareDialogOverlay(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "✓ Tucked",
+                                        text = "✓ Tucked into Vault",
                                         style = MaterialTheme.typography.titleMedium,
                                         color = tuckColors.textPrimary,
-                                        fontWeight = FontWeight.ExtraBold
+                                        fontWeight = FontWeight.Bold
                                     )
                                     Text(
                                         text = uiState.title,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = tuckColors.textSecondary,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = tuckColors.textPrimary,
+                                        fontWeight = FontWeight.SemiBold,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
+                                    if (uiState.subtitle.isNotBlank()) {
+                                        Text(
+                                            text = uiState.subtitle,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = tuckColors.textSecondary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
                                 }
                             }
 
                             Spacer(modifier = Modifier.height(14.dp))
 
-                            // Category Selector Section: 1 Tap Category
+                            // Category Selector Section
                             Text(
-                                text = "Choose category:",
+                                text = "Add to collection:",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = tuckColors.textPrimary
+                                color = tuckColors.textSecondary
                             )
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            FlowRow(
-                                modifier = Modifier.fillMaxWidth(),
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                uiState.collections.forEach { col ->
-                                    val isSelected = uiState.selectedCollectionIds.contains(col.id)
-                                    TuckCategoryChip(
-                                        label = col.name,
-                                        isSelected = isSelected,
-                                        onClick = {
-                                            userInteracted = true
-                                            onToggleCollection(col.id)
-                                        },
-                                        icon = if (isSelected) "✓" else null
-                                    )
-                                }
-
                                 // "+ New Category" Chip
                                 Surface(
                                     shape = tuckShapes.pill,
                                     color = tuckColors.surfaceCard,
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.accent.copy(alpha = 0.4f)),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.accent.copy(alpha = 0.5f)),
                                     modifier = Modifier
                                         .clip(tuckShapes.pill)
-                                        .clickable {
-                                            userInteracted = true
-                                            onOpenCustomCategoryDialog(true)
-                                        }
+                                        .clickable { onOpenCustomCategoryDialog(true) }
                                 ) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
                                     ) {
                                         Icon(
                                             imageVector = Icons.Filled.Add,
                                             contentDescription = null,
                                             tint = tuckColors.accent,
-                                            modifier = Modifier.size(14.dp)
+                                            modifier = Modifier.size(15.dp)
                                         )
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Text(
@@ -278,37 +277,59 @@ fun ShareDialogOverlay(
                                         )
                                     }
                                 }
+
+                                uiState.collections.forEach { col ->
+                                    val isSelected = uiState.selectedCollectionIds.contains(col.id)
+                                    TuckCategoryChip(
+                                        label = col.name,
+                                        isSelected = isSelected,
+                                        onClick = { onToggleCollection(col.id) },
+                                        icon = if (isSelected) "✓" else null
+                                    )
+                                }
                             }
 
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(20.dp))
 
                             // Action Buttons: Done / Open in Tuck
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 Button(
                                     onClick = onDismiss,
-                                    shape = tuckShapes.small,
+                                    shape = tuckShapes.medium,
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = tuckColors.accent,
                                         contentColor = tuckColors.textOnAccent
                                     ),
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(46.dp)
                                 ) {
                                     Text("Done", fontWeight = FontWeight.Bold)
                                 }
 
                                 Button(
                                     onClick = { onOpenItem(uiState.savedItemId) },
-                                    shape = tuckShapes.small,
+                                    shape = tuckShapes.medium,
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = tuckColors.surfaceCard,
                                         contentColor = tuckColors.textPrimary
                                     ),
-                                    modifier = Modifier.weight(1f)
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.border),
+                                    modifier = Modifier
+                                        .weight(1.2f)
+                                        .height(46.dp)
                                 ) {
-                                    Text("Open in Tuck", fontWeight = FontWeight.Bold)
+                                    Text("Open in Tuck", fontWeight = FontWeight.SemiBold)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                        contentDescription = null,
+                                        tint = tuckColors.textSecondary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
                                 }
                             }
                         }

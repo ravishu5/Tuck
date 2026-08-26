@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -37,16 +38,20 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tuck.app.domain.model.SavedItem
 import com.tuck.app.ui.components.EmptyState
 import com.tuck.app.ui.components.TuckContentCard
 import com.tuck.app.ui.theme.TuckTheme
+import java.util.concurrent.TimeUnit
 
 @Composable
 fun InboxScreen(
@@ -58,40 +63,58 @@ fun InboxScreen(
     val tuckSpacing = TuckTheme.spacing
     val tuckShapes = TuckTheme.shapes
 
+    // Group items into Day buckets: TODAY, YESTERDAY, THIS WEEK, EARLIER
+    val groupedItems = remember(uiState.inboxItems) {
+        val now = System.currentTimeMillis()
+        val oneDay = TimeUnit.DAYS.toMillis(1)
+        val twoDays = TimeUnit.DAYS.toMillis(2)
+        val sevenDays = TimeUnit.DAYS.toMillis(7)
+
+        val groups = linkedMapOf<String, MutableList<SavedItem>>()
+        for (item in uiState.inboxItems) {
+            val diff = now - item.createdAt
+            val groupKey = when {
+                diff < oneDay -> "TODAY"
+                diff < twoDays -> "YESTERDAY"
+                diff < sevenDays -> "THIS WEEK"
+                else -> "EARLIER"
+            }
+            groups.getOrPut(groupKey) { mutableListOf() }.add(item)
+        }
+        groups
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(tuckColors.background)
-            .statusBarsPadding()
     ) {
         // Header
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = tuckSpacing.m, vertical = tuckSpacing.s),
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
                 Text(
                     text = "Inbox",
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = tuckColors.textPrimary
-                    )
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = tuckColors.textPrimary
                 )
                 Text(
-                    text = if (uiState.inboxItems.isEmpty()) "All caught up" else "${uiState.inboxItems.size} items to triage",
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        color = tuckColors.textSecondary
-                    )
+                    text = if (uiState.inboxItems.isEmpty()) "All caught up" else "${uiState.inboxItems.size} items to review",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = tuckColors.textSecondary
                 )
             }
 
             Surface(
                 shape = CircleShape,
                 color = tuckColors.accentContainer,
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(42.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
@@ -112,33 +135,46 @@ fun InboxScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(tuckSpacing.l),
+                    .padding(24.dp),
                 contentAlignment = Alignment.Center
             ) {
                 EmptyState(
                     title = "Inbox Zero",
-                    description = "All saved items have been organized and reviewed. Great job!",
+                    description = "Everything saved has been reviewed and filed.\nNew saves will appear here first.",
                     icon = Icons.Default.Check
                 )
             }
         } else {
             LazyColumn(
-                contentPadding = PaddingValues(tuckSpacing.m),
-                verticalArrangement = Arrangement.spacedBy(tuckSpacing.m)
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 88.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                items(
-                    items = uiState.inboxItems,
-                    key = { it.id }
-                ) { item ->
-                    InboxTriageItemCard(
-                        item = item,
-                        onClick = { onNavigateToDetail(item.id) },
-                        onToggleFavorite = { viewModel.toggleFavorite(item) },
-                        onKeep = { viewModel.keepItem(item) },
-                        onArchive = { viewModel.archiveItem(item) },
-                        onCategorize = { viewModel.openCategorizeDialog(item) },
-                        onDelete = { viewModel.deleteItem(item) }
-                    )
+                groupedItems.forEach { (header, items) ->
+                    item(key = "header_$header") {
+                        Text(
+                            text = header,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = tuckColors.textMuted,
+                            letterSpacing = 1.sp,
+                            modifier = Modifier.padding(top = 10.dp, bottom = 4.dp)
+                        )
+                    }
+
+                    items(
+                        items = items,
+                        key = { it.id }
+                    ) { item ->
+                        InboxTriageItemCard(
+                            item = item,
+                            onClick = { onNavigateToDetail(item.id) },
+                            onToggleFavorite = { viewModel.toggleFavorite(item) },
+                            onKeep = { viewModel.keepItem(item) },
+                            onArchive = { viewModel.archiveItem(item) },
+                            onCategorize = { viewModel.openCategorizeDialog(item) },
+                            onDelete = { viewModel.deleteItem(item) }
+                        )
+                    }
                 }
             }
         }
@@ -150,11 +186,10 @@ fun InboxScreen(
             onDismissRequest = { viewModel.closeCategorizeDialog() },
             title = {
                 Text(
-                    text = "Add to Collection",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = tuckColors.textPrimary
-                    )
+                    text = "File into Collection",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = tuckColors.textPrimary
                 )
             },
             text = {
@@ -166,6 +201,7 @@ fun InboxScreen(
                         Surface(
                             shape = tuckShapes.small,
                             color = tuckColors.surfaceCard,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.border),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
@@ -185,10 +221,9 @@ fun InboxScreen(
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(
                                     text = collection.name,
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        color = tuckColors.textPrimary,
-                                        fontWeight = FontWeight.Medium
-                                    )
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = tuckColors.textPrimary,
+                                    fontWeight = FontWeight.Medium
                                 )
                             }
                         }
@@ -201,7 +236,8 @@ fun InboxScreen(
                     Text("Cancel", color = tuckColors.textSecondary)
                 }
             },
-            containerColor = tuckColors.surface
+            containerColor = tuckColors.surface,
+            shape = tuckShapes.large
         )
     }
 }
@@ -217,59 +253,58 @@ private fun InboxTriageItemCard(
     onDelete: () -> Unit
 ) {
     val tuckColors = TuckTheme.colors
-    val tuckSpacing = TuckTheme.spacing
     val tuckShapes = TuckTheme.shapes
 
     Card(
         shape = tuckShapes.medium,
         colors = CardDefaults.cardColors(containerColor = tuckColors.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.border),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Main card content preview
+            // Main card preview
             TuckContentCard(
                 item = item,
                 onClick = onClick,
                 onToggleFavorite = onToggleFavorite
             )
 
-            // Triage Action Strip
+            // Triage Action Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(tuckColors.surfaceVariant.copy(alpha = 0.5f))
-                    .padding(horizontal = tuckSpacing.s, vertical = 6.dp),
+                    .background(tuckColors.surfaceCard)
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Keep Button
-                IconButton(
-                    onClick = onKeep,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = "Keep",
-                        tint = tuckColors.accent,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-
-                // Categorize Button
+                // File to Collection
                 IconButton(
                     onClick = onCategorize,
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Folder,
-                        contentDescription = "Categorize",
-                        tint = tuckColors.textSecondary,
+                        contentDescription = "Collection",
+                        tint = tuckColors.accent,
                         modifier = Modifier.size(18.dp)
                     )
                 }
 
-                // Archive Button
+                // Favorite / Keep
+                IconButton(
+                    onClick = onToggleFavorite,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = if (item.isFavorite) Icons.Default.Star else Icons.Outlined.StarBorder,
+                        contentDescription = "Favorite",
+                        tint = if (item.isFavorite) Color(0xFFF59E0B) else tuckColors.textSecondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                // Archive
                 IconButton(
                     onClick = onArchive,
                     modifier = Modifier.size(36.dp)
@@ -282,7 +317,7 @@ private fun InboxTriageItemCard(
                     )
                 }
 
-                // Delete Button
+                // Delete
                 IconButton(
                     onClick = onDelete,
                     modifier = Modifier.size(36.dp)

@@ -292,6 +292,38 @@ class FileStorageService @Inject constructor(
         }
     }
 
+    suspend fun downloadAndCacheImage(imageUrl: String): String? = withContext(Dispatchers.IO) {
+        if (imageUrl.isBlank()) return@withContext null
+        try {
+            val url = java.net.URL(imageUrl)
+            val conn = url.openConnection() as java.net.HttpURLConnection
+            conn.connectTimeout = 6000
+            conn.readTimeout = 6000
+            conn.instanceFollowRedirects = true
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile)")
+            conn.connect()
+
+            if (conn.responseCode in 200..299) {
+                val fileName = "thumb_${UUID.randomUUID()}.jpg"
+                val thumbFile = File(thumbnailsDir, fileName)
+                conn.inputStream.use { input ->
+                    FileOutputStream(thumbFile).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                if (thumbFile.exists() && thumbFile.length() > 0) {
+                    thumbFile.absolutePath
+                } else {
+                    null
+                }
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     suspend fun deleteFile(path: String?): Boolean = withContext(Dispatchers.IO) {
         if (path.isNullOrBlank()) return@withContext false
         try {

@@ -19,6 +19,9 @@ interface SourceContentDao {
     @Query("SELECT * FROM source_posts WHERE itemId = :itemId")
     fun getPostFlow(itemId: Long): Flow<SourcePostEntity?>
 
+    @Query("SELECT * FROM source_posts")
+    suspend fun getAllPosts(): List<SourcePostEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertComments(comments: List<SourceCommentEntity>): List<Long>
 

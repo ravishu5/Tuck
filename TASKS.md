@@ -84,11 +84,11 @@ the false-positive risk of name detection in prose.
 **Out of scope:** detecting names in body text or OCR. That is T3's problem and it is not solved here.
 
 **Acceptance criteria**
-- [ ] Saving a Reddit post creates a `PERSON` entity for its author, and one per comment author
-- [ ] The same author across two saves resolves to one `normalizedValue`
-- [ ] Same display name on different platforms produces two distinct entities
-- [ ] Unit tests for normalisation; instrumentation test asserting entity rows after a full worker run
-- [ ] Backfill leaves an already-processed library unchanged when run twice (idempotent)
+- [x] Saving a Reddit post creates a `PERSON` entity for its author, and one per comment author
+- [x] The same author across two saves resolves to one `normalizedValue`
+- [x] Same display name on different platforms produces two distinct entities
+- [x] Unit tests for normalisation; instrumentation test asserting entity rows after a full worker run
+- [x] Backfill leaves an already-processed library unchanged when run twice (idempotent)
 
 ---
 
@@ -232,7 +232,7 @@ on `item_entities`.
 
 ---
 
-## T8 — Grid view and view toggle
+## T8 — Grid view and view toggle  *(absorbed by REDESIGN_TASKS.md R4 — do not build twice)*
 
 **Goal:** The brief and the original spec both promise "visual boards". There is no `LazyVerticalGrid`
 anywhere in the codebase; everything is a list.
@@ -375,6 +375,12 @@ keep the pre-v3 fallback path only where a real device could still hold old rows
 | Graph visualisation | Only meaningful after T5. Optional even then — the brief itself says the graph should be a view of the system, not the system |
 
 ---
+
+# Related documents
+
+`REDESIGN_TASKS.md` holds the visual redesign. Do not run both queues at once — they touch the same
+UI files. Finish the redesign through R4 before resuming Phase A, so entity pages (T4) are built in
+the new design system rather than retrofitted into it.
 
 # Suggested order
 

@@ -50,6 +50,8 @@
             android:name=".ui.share.ShareActivity"
             android:exported="true"
             android:excludeFromRecents="true"
+            android:launchMode="singleTop"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.Tuck.ShareDialog">
 
             <!-- Highlighted Text Ingestion (PROCESS_TEXT in any Android app) -->

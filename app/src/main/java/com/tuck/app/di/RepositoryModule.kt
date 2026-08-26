@@ -57,4 +57,10 @@ abstract class RepositoryModule {
     abstract fun bindRelatedItemsEngine(
         impl: RelatedItemsEngineImpl
     ): RelatedItemsEngine
+
+    @Binds
+    @Singleton
+    abstract fun bindMaintenanceRepository(
+        impl: com.tuck.app.data.repository.MaintenanceRepositoryImpl
+    ): com.tuck.app.domain.repository.MaintenanceRepository
 }

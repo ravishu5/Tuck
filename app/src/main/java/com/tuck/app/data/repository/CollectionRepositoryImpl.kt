@@ -107,9 +107,9 @@ class CollectionRepositoryImpl @Inject constructor(
     }
 
     override suspend fun ensureDefaultCollections() = withContext(Dispatchers.IO) {
-        val count = collectionDao.getCollectionCount()
-        if (count == 0) {
-            for ((name, icon) in TuckDatabase.DEFAULT_SMART_COLLECTIONS) {
+        for ((name, icon) in TuckDatabase.DEFAULT_SMART_COLLECTIONS) {
+            val existing = collectionDao.getByName(name)
+            if (existing == null) {
                 collectionDao.insert(
                     CollectionEntity(
                         name = name,

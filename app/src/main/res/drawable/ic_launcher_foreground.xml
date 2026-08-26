@@ -3,24 +3,79 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <group
-        android:scaleX="0.8"
-        android:scaleY="0.8"
-        android:translateX="10.8"
-        android:translateY="10.8">
-        <!-- Modern Tuck Drawer / Box Icon -->
-        <path
-            android:fillColor="#6366F1"
-            android:pathData="M24,32 C24,27.58 27.58,24 32,24 L76,24 C80.42,24 84,27.58 84,32 L84,46 C84,50.42 80.42,54 76,54 L32,54 C27.58,54 24,50.42 24,46 Z" />
-        <path
-            android:fillColor="#4F46E5"
-            android:pathData="M24,58 C24,53.58 27.58,50 32,50 L76,50 C80.42,50 84,53.58 84,58 L84,76 C84,80.42 80.42,84 76,84 L32,84 C27.58,84 24,80.42 24,76 Z" />
-        <!-- Drawer Handles -->
-        <path
-            android:fillColor="#EEF2FF"
-            android:pathData="M46,37 L62,37 C63.1,37 64,37.9 64,39 C64,40.1 63.1,41 62,41 L46,41 C44.9,41 44,40.1 44,39 C44,37.9 44.9,37 46,37 Z" />
-        <path
-            android:fillColor="#EEF2FF"
-            android:pathData="M46,65 L62,65 C63.1,65 64,65.9 64,67 C64,68.1 63.1,69 62,69 L46,69 C44.9,69 44,68.1 44,67 C44,65.9 44.9,65 46,65 Z" />
-    </group>
+
+    <!-- Outer Vault Ring Ambient Glow Shadow -->
+    <path
+        android:fillColor="#15000000"
+        android:pathData="M54,54m-26,0a26,26 0,1,1 52,0a26,26 0,1,1 -52,0"/>
+
+    <!-- Brushed Brass Vault Outer Ring -->
+    <path
+        android:fillColor="#B88A44"
+        android:pathData="M54,54m-23,0a23,23 0,1,1 46,0a23,23 0,1,1 -46,0"/>
+
+    <!-- Vault Rim Highlight -->
+    <path
+        android:fillColor="#D8AC5E"
+        android:pathData="M54,54m-21,0a21,21 0,1,1 42,0a21,21 0,1,1 -42,0"/>
+
+    <!-- Vault Dial Recessed Track -->
+    <path
+        android:fillColor="#8C6328"
+        android:pathData="M54,54m-17,0a17,17 0,1,1 34,0a17,17 0,1,1 -34,0"/>
+
+    <!-- Vault Core Center Knob -->
+    <path
+        android:fillColor="#C4974E"
+        android:pathData="M54,54m-12,0a12,12 0,1,1 24,0a12,12 0,1,1 -24,0"/>
+
+    <!-- Vault Center Spindle -->
+    <path
+        android:fillColor="#E5BE72"
+        android:pathData="M54,54m-6.5,0a6.5,6.5 0,1,1 13,0a6.5,6.5 0,1,1 -13,0"/>
+
+    <!-- Dial Index Marks (Ticks) -->
+    <path
+        android:strokeColor="#F3D99E"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round"
+        android:pathData="M54,38 L54,41 M54,67 L54,70 M70,54 L67,54 M38,54 L41,54 M65,43 L63,45 M65,65 L63,63 M43,43 L45,45 M43,65 L45,63"/>
+
+    <!-- Vault Dial Latch Indicator Dot -->
+    <path
+        android:fillColor="#5A3E14"
+        android:pathData="M54,45m-1.5,0a1.5,1.5 0,1,1 3,0a1.5,1.5 0,1,1 -3,0"/>
+
+    <!-- FOLDED MEMORY SLIP FORMING 'T' -->
+
+    <!-- Drop Shadow behind folded paper slip -->
+    <path
+        android:fillColor="#28000000"
+        android:pathData="M27,33 L52,33 A4,4 0 0,1 56,37 L56,66 C56,71.5 49,74.5 43,73 L40,71 C45,72 50.5,69 50.5,64.5 L50.5,43 L29,43 A3,3 0 0,1 26,40 L26,35 A2,2 0 0,1 27,33 Z"/>
+
+    <!-- Horizontal Top Bar of 'T' (Crisp Linen Cream) -->
+    <path
+        android:fillColor="#F8F5EE"
+        android:pathData="M28,34 L52,34 A3,3 0 0,1 55,37 L55,43 L28,43 A2,2 0 0,1 26,41 L26,36 A2,2 0 0,1 28,34 Z"/>
+
+    <!-- Diagonal Envelope Fold on Left Flap -->
+    <path
+        android:fillColor="#EDE5D6"
+        android:pathData="M26,36 L37,43 L26,43 Z"/>
+
+    <!-- Vertical Stem of 'T' Curving Around Vault Dial -->
+    <path
+        android:fillColor="#FAF7F0"
+        android:pathData="M41.5,40 L53,40 L53,65 C53,71 46.5,74.5 41,73.5 C36.5,72.2 33.5,69 33.5,69 C33.5,69 37.5,71 42,71 C46.5,71 49,68 49,64 L49,43 L41.5,43 Z"/>
+
+    <!-- Folded Paper Edge Highlight -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M28,34 L52,34 A3,3 0 0,1 55,37 L53,37 A1,1 0 0,0 52,36 L28,36 Z"/>
+
+    <!-- Subtle Crease Shadow on Stem -->
+    <path
+        android:fillColor="#DDD3C1"
+        android:pathData="M41.5,40 L53,40 L49,45 L41.5,43 Z"/>
+
 </vector>

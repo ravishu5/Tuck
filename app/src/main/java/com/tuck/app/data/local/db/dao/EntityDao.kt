@@ -14,6 +14,18 @@ interface EntityDao {
     @Query("SELECT * FROM entities WHERE savedItemId = :savedItemId")
     suspend fun getEntitiesForItem(savedItemId: Long): List<EntityEntity>
 
+    @Query("SELECT * FROM entities WHERE savedItemId = :savedItemId AND producer = :producer")
+    suspend fun getEntitiesByProducer(savedItemId: Long, producer: String): List<EntityEntity>
+
+    @Query("SELECT * FROM entities WHERE type = :type")
+    suspend fun getEntitiesByType(type: com.tuck.app.domain.model.EntityType): List<EntityEntity>
+
+    @Query("SELECT * FROM entities")
+    suspend fun getAllEntities(): List<EntityEntity>
+
     @Query("DELETE FROM entities WHERE savedItemId = :savedItemId")
     suspend fun deleteForSavedItem(savedItemId: Long)
+
+    @Query("DELETE FROM entities WHERE savedItemId = :savedItemId AND producer = :producer")
+    suspend fun deleteForSavedItemByProducer(savedItemId: Long, producer: String)
 }

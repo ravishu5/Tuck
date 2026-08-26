@@ -29,12 +29,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Notes
 import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -65,16 +69,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tuck.app.R
+import com.tuck.app.domain.model.SavedItem
+import com.tuck.app.ui.components.QuickCaptureSpeedDialSheet
 import com.tuck.app.ui.components.TuckCategoryChip
 import com.tuck.app.ui.components.TuckContentCard
+import com.tuck.app.ui.components.TuckCoverMosaic
 import com.tuck.app.ui.components.TuckEmptyState
+import com.tuck.app.ui.components.TuckResurfacingCard
 import com.tuck.app.ui.components.TuckSectionHeader
+import com.tuck.app.ui.theme.AccentAmber
+import com.tuck.app.ui.theme.AccentEmerald
+import com.tuck.app.ui.theme.AccentOrange
+import com.tuck.app.ui.theme.AccentPurple
+import com.tuck.app.ui.theme.AccentSky
 import com.tuck.app.ui.theme.TuckTheme
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,12 +101,12 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val tuckColors = TuckTheme.colors
-    val tuckSpacing = TuckTheme.spacing
     val tuckShapes = TuckTheme.shapes
 
     var showQuickAddSheet by remember { mutableStateOf(false) }
     var showPasteDialog by remember { mutableStateOf(false) }
     var pasteContent by remember { mutableStateOf("") }
+    var isDismissedResurface by remember { mutableStateOf(false) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 20)
@@ -100,44 +116,52 @@ fun HomeScreen(
         }
     }
 
-    Scaffold(
-        containerColor = tuckColors.background,
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showQuickAddSheet = true },
-                containerColor = tuckColors.accent,
-                contentColor = tuckColors.textOnAccent,
-                shape = CircleShape,
-                modifier = Modifier.padding(bottom = 68.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Add,
-                    contentDescription = "Quick Stash",
-                    modifier = Modifier.size(24.dp)
-                )
-            }
+    val docPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.importDocumentFromUri(uri)
         }
-    ) { paddingValues ->
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(tuckColors.background)
+    ) {
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(tuckColors.background)
-                .statusBarsPadding()
-                .padding(bottom = paddingValues.calculateBottomPadding()),
-            contentPadding = PaddingValues(bottom = 80.dp)
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(top = 4.dp, bottom = 80.dp)
         ) {
-            // 1. Hero Brand Header & Tagline
+            // 1. Hero Brand Header & Search Trigger
             item {
-                HomeHeroHeader(onNavigateToSearch = onNavigateToSearch)
+                HomeHeroHeader(
+                    itemCount = uiState.items.size,
+                    onNavigateToSearch = onNavigateToSearch
+                )
             }
 
-            // 2. Platform Filter Chips Row
+            // 2. Quick Action Buttons Row
             item {
-                HomePlatformChipsRow(
-                    selectedSource = uiState.selectedSource,
-                    onSelectSource = { viewModel.selectSource(it) }
+                HomeQuickActionRow(
+                    onNote = {
+                        pasteContent = ""
+                        showPasteDialog = true
+                    },
+                    onScan = {
+                        photoPickerLauncher.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
+                    },
+                    onPdf = {
+                        docPickerLauncher.launch(arrayOf("application/pdf", "text/*"))
+                    },
+                    onPaste = {
+                        pasteContent = ""
+                        showPasteDialog = true
+                    }
                 )
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(14.dp))
             }
 
             // 3. Screenshot Detection Banner
@@ -153,31 +177,62 @@ fun HomeScreen(
                 }
             }
 
-            // 3.5. Rediscover from your vault (Memory Layer)
-            if (uiState.rediscoverItems.isNotEmpty() && uiState.selectedSource == null) {
+            // 4. Resurfaced Memory / Intent Recall Card
+            if (!isDismissedResurface && uiState.rediscoverItems.isNotEmpty() && uiState.selectedSource == null) {
+                val itemToResurface = uiState.rediscoverItems.first()
                 item {
-                    RediscoverMemorySection(
-                        items = uiState.rediscoverItems,
-                        onItemClick = onNavigateToDetail
-                    )
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                        TuckResurfacingCard(
+                            item = itemToResurface,
+                            onOpen = { onNavigateToDetail(itemToResurface.id) },
+                            onDismiss = { isDismissedResurface = true }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
                 }
             }
 
-            // 4. Recently Tucked Section Title
+            // 5. Platform Filter Chips Row
+            item {
+                HomePlatformChipsRow(
+                    selectedSource = uiState.selectedSource,
+                    onSelectSource = { viewModel.selectSource(it) }
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            // 6. Horizontal "Recently Saved" Carousel (when viewing All and items exist)
+            if (uiState.selectedSource == null && uiState.items.isNotEmpty()) {
+                item {
+                    TuckSectionHeader(
+                        title = "Recently Tucked",
+                        actionText = "See All (${uiState.items.size})"
+                    )
+                    RecentlySavedRail(
+                        items = uiState.items.take(6),
+                        onItemClick = onNavigateToDetail,
+                        onToggleFavorite = { id, isFav ->
+                            viewModel.toggleFavorite(id, isFav)
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+
+            // 7. Feed Title
             item {
                 TuckSectionHeader(
-                    title = if (uiState.selectedSource != null) "${uiState.selectedSource} Items" else "Recently Tucked"
+                    title = if (uiState.selectedSource != null) "${uiState.selectedSource} Items" else "All Tucked Items"
                 )
             }
 
-            // 5. Saved Items Feed or Empty State
+            // 8. Saved Items Feed or Empty State
             if (uiState.items.isEmpty()) {
                 item {
                     TuckEmptyState(
-                        title = "Your drawer is empty.",
-                        description = "Find something worth keeping and tuck it away.\nShare articles, reels, tweets, screenshots, or notes.",
-                        actionLabel = "Quick Stash (+)",
+                        title = if (uiState.selectedSource != null) "No ${uiState.selectedSource} items found" else "Your drawer is empty.",
+                        description = if (uiState.selectedSource != null) "Tuck items from ${uiState.selectedSource} to see them here." else "Save articles, screenshots, PDFs, notes, or links.\nEverything is indexed locally and private.",
+                        actionLabel = "Quick Save (+)",
                         onAction = { showQuickAddSheet = true },
                         modifier = Modifier.padding(top = 24.dp)
                     )
@@ -196,33 +251,49 @@ fun HomeScreen(
                 }
             }
         }
-    }
 
-    // Quick Stash Bottom Sheet
-    if (showQuickAddSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showQuickAddSheet = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            containerColor = tuckColors.surface,
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        // Floating Action Button anchored to bottom-end
+        FloatingActionButton(
+            onClick = { showQuickAddSheet = true },
+            containerColor = tuckColors.accent,
+            contentColor = tuckColors.textOnAccent,
+            shape = CircleShape,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = 16.dp)
         ) {
-            QuickStashSheetContent(
-                onPasteLink = {
-                    showQuickAddSheet = false
-                    showPasteDialog = true
-                },
-                onPickPhotos = {
-                    showQuickAddSheet = false
-                    photoPickerLauncher.launch(
-                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                    )
-                },
-                onWriteNote = {
-                    showQuickAddSheet = false
-                    showPasteDialog = true
-                }
+            Icon(
+                imageVector = Icons.Filled.Add,
+                contentDescription = "Quick Save",
+                modifier = Modifier.size(26.dp)
             )
         }
+    }
+
+    // Quick Capture Speed Dial Bottom Sheet
+    if (showQuickAddSheet) {
+        QuickCaptureSpeedDialSheet(
+            onDismiss = { showQuickAddSheet = false },
+            onCaptureNote = {
+                pasteContent = ""
+                showPasteDialog = true
+            },
+            onScanOcr = {
+                photoPickerLauncher.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                )
+            },
+            onImportPdf = {
+                docPickerLauncher.launch(arrayOf("application/pdf", "text/*"))
+            },
+            onPasteLink = {
+                pasteContent = ""
+                showPasteDialog = true
+            },
+            onRecordAudio = {
+                // Audio memo trigger
+            }
+        )
     }
 
     // Paste / Write Note Dialog
@@ -234,7 +305,7 @@ fun HomeScreen(
             },
             title = {
                 Text(
-                    text = "Quick Stash",
+                    text = "Quick Save",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.ExtraBold,
                     color = tuckColors.textPrimary
@@ -243,7 +314,7 @@ fun HomeScreen(
             text = {
                 Column {
                     Text(
-                        text = "Paste a URL, tweet, reel, or write a quick note to tuck away:",
+                        text = "Paste a URL, Reddit thread, tweet, or write a quick note:",
                         style = MaterialTheme.typography.bodySmall,
                         color = tuckColors.textSecondary
                     )
@@ -308,44 +379,80 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HomeHeroHeader(onNavigateToSearch: () -> Unit) {
+private fun HomeHeroHeader(
+    itemCount: Int,
+    onNavigateToSearch: () -> Unit
+) {
     val tuckColors = TuckTheme.colors
     val tuckShapes = TuckTheme.shapes
+
+    val greeting = remember {
+        val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+        when (hour) {
+            in 5..11 -> "Good morning"
+            in 12..17 -> "Good afternoon"
+            else -> "Good evening"
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        Text(
-            text = "Tuck",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.ExtraBold,
-            color = tuckColors.textPrimary
-        )
-        Text(
-            text = "Everything you've tucked away.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = tuckColors.textSecondary
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = greeting,
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = tuckColors.textPrimary
+                )
+                Text(
+                    text = "$itemCount items tucked away safely",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = tuckColors.textSecondary
+                )
+            }
+
+            Surface(
+                shape = tuckShapes.medium,
+                color = tuckColors.surfaceCard,
+                border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.border),
+                modifier = Modifier.size(46.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                        contentDescription = "Tuck Logo",
+                        tint = Color.Unspecified,
+                        modifier = Modifier.size(38.dp)
+                    )
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // Large Beautiful Search Field Trigger
+        // Large Search Field Trigger
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp)
-                .clip(tuckShapes.medium)
+                .clip(tuckShapes.pill)
                 .clickable { onNavigateToSearch() },
             color = tuckColors.surfaceCard,
-            shape = tuckShapes.medium,
+            shape = tuckShapes.pill,
             border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.border)
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = 18.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
@@ -356,11 +463,96 @@ private fun HomeHeroHeader(onNavigateToSearch: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = "Search anything...",
+                    text = "Search anything, OCR text, or tags...",
                     style = MaterialTheme.typography.bodyMedium,
                     color = tuckColors.textMuted
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun HomeQuickActionRow(
+    onNote: () -> Unit,
+    onScan: () -> Unit,
+    onPdf: () -> Unit,
+    onPaste: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        QuickActionButton(
+            label = "Note",
+            icon = Icons.Filled.Notes,
+            tint = AccentPurple,
+            modifier = Modifier.weight(1f),
+            onClick = onNote
+        )
+        QuickActionButton(
+            label = "Scan",
+            icon = Icons.Filled.CameraAlt,
+            tint = AccentEmerald,
+            modifier = Modifier.weight(1f),
+            onClick = onScan
+        )
+        QuickActionButton(
+            label = "Doc/PDF",
+            icon = Icons.Filled.PictureAsPdf,
+            tint = AccentOrange,
+            modifier = Modifier.weight(1f),
+            onClick = onPdf
+        )
+        QuickActionButton(
+            label = "Paste",
+            icon = Icons.Filled.ContentPaste,
+            tint = AccentSky,
+            modifier = Modifier.weight(1f),
+            onClick = onPaste
+        )
+    }
+}
+
+@Composable
+private fun QuickActionButton(
+    label: String,
+    icon: ImageVector,
+    tint: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val tuckColors = TuckTheme.colors
+    val shapes = TuckTheme.shapes
+
+    Surface(
+        shape = shapes.small,
+        color = tuckColors.surfaceCard,
+        border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.border),
+        modifier = modifier
+            .clip(shapes.small)
+            .clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier.padding(vertical = 10.dp, horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = tuckColors.textPrimary
+            )
         }
     }
 }
@@ -372,15 +564,19 @@ private fun HomePlatformChipsRow(
 ) {
     val platforms = listOf(
         "All" to null,
-        "📸 Screenshots" to "Screenshots",
-        "💼 LinkedIn" to "LinkedIn",
-        "📱 Instagram" to "Instagram",
-        "💬 Reddit" to "Reddit",
-        "▶️ YouTube" to "YouTube",
-        "🐦 X / Twitter" to "Twitter",
-        "🌐 Web" to "Web",
-        "📝 Notes" to "Notes",
-        "📄 PDFs" to "PDFs"
+        "Screenshots" to "Screenshots",
+        "Reddit" to "Reddit",
+        "YouTube" to "YouTube",
+        "Twitter / X" to "Twitter",
+        "LinkedIn" to "LinkedIn",
+        "Instagram" to "Instagram",
+        "Articles" to "Articles",
+        "Education" to "Education",
+        "Finance" to "Finance",
+        "Programming" to "Programming",
+        "Web" to "Web",
+        "Notes" to "Notes",
+        "PDFs" to "PDFs"
     )
 
     LazyRow(
@@ -393,6 +589,28 @@ private fun HomePlatformChipsRow(
                 isSelected = selectedSource == key,
                 onClick = { onSelectSource(key) }
             )
+        }
+    }
+}
+
+@Composable
+private fun RecentlySavedRail(
+    items: List<SavedItem>,
+    onItemClick: (Long) -> Unit,
+    onToggleFavorite: (Long, Boolean) -> Unit
+) {
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(items, key = { "rail_${it.id}" }) { item ->
+            Box(modifier = Modifier.width(260.dp)) {
+                TuckContentCard(
+                    item = item,
+                    onClick = { onItemClick(item.id) },
+                    onToggleFavorite = { onToggleFavorite(item.id, item.isFavorite) }
+                )
+            }
         }
     }
 }
@@ -485,189 +703,3 @@ private fun ScreenshotSyncBanner(
         }
     }
 }
-
-@Composable
-private fun QuickStashSheetContent(
-    onPasteLink: () -> Unit,
-    onPickPhotos: () -> Unit,
-    onWriteNote: () -> Unit
-) {
-    val tuckColors = TuckTheme.colors
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 12.dp)
-    ) {
-        Text(
-            text = "Tuck Away",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.ExtraBold,
-            color = tuckColors.textPrimary
-        )
-        Text(
-            text = "Save links, screenshots, or thoughts to find later",
-            style = MaterialTheme.typography.bodySmall,
-            color = tuckColors.textSecondary
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        QuickStashOptionRow(
-            icon = Icons.Filled.Link,
-            title = "Paste Link or Article",
-            subtitle = "Saves web pages, Reddit, Instagram, YouTube",
-            onClick = onPasteLink
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        QuickStashOptionRow(
-            icon = Icons.Filled.Image,
-            title = "Import Screenshots / Photos",
-            subtitle = "Extracts and indexes text with OCR",
-            onClick = onPickPhotos
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        QuickStashOptionRow(
-            icon = Icons.Filled.Notes,
-            title = "Write a Note",
-            subtitle = "Keep quick thoughts, ideas, or snippets",
-            onClick = onWriteNote
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-    }
-}
-
-@Composable
-private fun QuickStashOptionRow(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    onClick: () -> Unit
-) {
-    val tuckColors = TuckTheme.colors
-    val tuckShapes = TuckTheme.shapes
-
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(tuckShapes.medium)
-            .clickable(onClick = onClick),
-        shape = tuckShapes.medium,
-        color = tuckColors.surfaceCard,
-        border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.border)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .clip(CircleShape)
-                    .background(tuckColors.accentContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = tuckColors.accent,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(14.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = tuckColors.textPrimary
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = tuckColors.textSecondary
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun RediscoverMemorySection(
-    items: List<com.tuck.app.domain.model.SavedItem>,
-    onItemClick: (Long) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val tuckColors = TuckTheme.colors
-    val tuckShapes = TuckTheme.shapes
-
-    Column(modifier = modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Notes,
-                    contentDescription = null,
-                    tint = tuckColors.accent,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Rediscover from your vault",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = tuckColors.textPrimary
-                )
-            }
-        }
-
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(items, key = { "rediscover_${it.id}" }) { item ->
-                Surface(
-                    shape = tuckShapes.medium,
-                    color = tuckColors.surfaceCard,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.border),
-                    modifier = Modifier
-                        .width(220.dp)
-                        .clip(tuckShapes.medium)
-                        .clickable { onItemClick(item.id) }
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text(
-                            text = item.title,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = tuckColors.textPrimary,
-                            maxLines = 2,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = item.sourceDomain ?: item.contentType.name,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = tuckColors.accent
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-

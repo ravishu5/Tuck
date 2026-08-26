@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material3.AlertDialog
@@ -46,11 +47,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tuck.app.domain.model.Collection
 import com.tuck.app.ui.components.TuckCategoryCard
 import com.tuck.app.ui.components.TuckContentCard
 import com.tuck.app.ui.components.TuckEmptyState
@@ -72,35 +75,14 @@ fun CollectionsScreen(
     var showCreateDialog by remember { mutableStateOf(false) }
     var newCollectionName by remember { mutableStateOf("") }
     var categorySearchQuery by remember { mutableStateOf("") }
+    var activeTab by remember { mutableStateOf(0) } // 0: Curated, 1: Smart
 
-    Scaffold(
-        containerColor = tuckColors.background,
-        floatingActionButton = {
-            if (uiState.selectedCollection == null) {
-                FloatingActionButton(
-                    onClick = { showCreateDialog = true },
-                    containerColor = tuckColors.accent,
-                    contentColor = tuckColors.textOnAccent,
-                    shape = CircleShape,
-                    modifier = Modifier.padding(bottom = 68.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Add,
-                        contentDescription = "New Category",
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-        }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(tuckColors.background)
-                .statusBarsPadding()
-                .padding(bottom = paddingValues.calculateBottomPadding())
-        ) {
-            if (uiState.selectedCollection != null) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(tuckColors.background)
+    ) {
+        if (uiState.selectedCollection != null) {
                 // Category Detail View
                 val currentSelected = uiState.selectedCollection!!
                 val filteredItems = uiState.collectionItems.filter { item ->
@@ -146,7 +128,7 @@ fun CollectionsScreen(
                             IconButton(onClick = { viewModel.deleteCollection(currentSelected.id) }) {
                                 Icon(
                                     imageVector = Icons.Filled.Delete,
-                                    contentDescription = "Delete Folder",
+                                    contentDescription = "Delete Collection",
                                     tint = tuckColors.accent.copy(alpha = 0.8f)
                                 )
                             }
@@ -169,14 +151,14 @@ fun CollectionsScreen(
                     if (filteredItems.isEmpty()) {
                         TuckEmptyState(
                             title = "Nothing here yet.",
-                            description = "Share something to Tuck\nand choose this category.",
+                            description = "Share something to Tuck\nand file it into ${currentSelected.name}.",
                             icon = Icons.Filled.Folder,
                             modifier = Modifier.padding(top = 40.dp)
                         )
                     } else {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 80.dp),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             items(filteredItems, key = { it.id }) { item ->
@@ -192,62 +174,119 @@ fun CollectionsScreen(
                     }
                 }
             } else {
-                // All Categories View
+                // All Collections View
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 80.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 88.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     item {
                         Column {
                             Text(
-                                text = "Categories",
+                                text = "Collections",
                                 style = MaterialTheme.typography.headlineLarge,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = tuckColors.textPrimary
                             )
                             Text(
-                                text = "Smart auto-organized digital folders.",
+                                text = "Organized boards and smart categories.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = tuckColors.textSecondary
                             )
                         }
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
                     }
 
-                    val allCollections = uiState.autoCollections + uiState.customCollections
+                    // Tab Selector: Curated vs Smart
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(tuckShapes.pill)
+                                .background(tuckColors.surfaceCard)
+                                .padding(4.dp)
+                        ) {
+                            CollectionTabButton(
+                                title = "Curated (${uiState.customCollections.size})",
+                                isSelected = activeTab == 0,
+                                onClick = { activeTab = 0 },
+                                modifier = Modifier.weight(1f)
+                            )
+                            CollectionTabButton(
+                                title = "Smart Auto (${uiState.autoCollections.size})",
+                                isSelected = activeTab == 1,
+                                onClick = { activeTab = 1 },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
 
-                    items(allCollections, key = { it.id }) { col ->
-                        TuckCategoryCard(
-                            name = col.name,
-                            count = col.itemCount ?: 0,
-                            icon = col.icon,
-                            isAutoGenerated = col.isAutoGenerated,
-                            isLocked = col.isLocked,
-                            onClick = {
-                                if (col.isLocked && fragmentActivity != null) {
-                                    val authManager = com.tuck.app.ui.security.BiometricAuthManager(context)
-                                    authManager.authenticate(
-                                        activity = fragmentActivity,
-                                        title = "Unlock ${col.name}",
-                                        onSuccess = { viewModel.selectCollection(col) },
-                                        onError = { err ->
-                                            android.widget.Toast.makeText(context, err, android.widget.Toast.LENGTH_SHORT).show()
-                                        }
-                                    )
-                                } else {
-                                    viewModel.selectCollection(col)
+                    val displayCollections = if (activeTab == 0) {
+                        uiState.customCollections
+                    } else {
+                        uiState.autoCollections
+                    }
+
+                    if (displayCollections.isEmpty()) {
+                        item {
+                            TuckEmptyState(
+                                title = if (activeTab == 0) "No custom collections" else "No smart categories",
+                                description = if (activeTab == 0) "Create your first collection with (+)" else "Smart categories will appear automatically as you save items.",
+                                icon = Icons.Filled.Folder,
+                                modifier = Modifier.padding(top = 32.dp)
+                            )
+                        }
+                    } else {
+                        items(displayCollections, key = { it.id }) { col ->
+                            TuckCategoryCard(
+                                name = col.name,
+                                count = col.itemCount ?: 0,
+                                icon = col.icon,
+                                isAutoGenerated = col.isAutoGenerated,
+                                isLocked = col.isLocked,
+                                onClick = {
+                                    if (col.isLocked && fragmentActivity != null) {
+                                        val authManager = com.tuck.app.ui.security.BiometricAuthManager(context)
+                                        authManager.authenticate(
+                                            activity = fragmentActivity,
+                                            title = "Unlock ${col.name}",
+                                            onSuccess = { viewModel.selectCollection(col) },
+                                            onError = { err ->
+                                                android.widget.Toast.makeText(context, err, android.widget.Toast.LENGTH_SHORT).show()
+                                            }
+                                        )
+                                    } else {
+                                        viewModel.selectCollection(col)
+                                    }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }
-        }
-    }
 
-    // Create New Category Dialog
-    if (showCreateDialog) {
+            if (uiState.selectedCollection == null) {
+                FloatingActionButton(
+                    onClick = { showCreateDialog = true },
+                    containerColor = tuckColors.accent,
+                    contentColor = tuckColors.textOnAccent,
+                    shape = CircleShape,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 16.dp, bottom = 16.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Add,
+                        contentDescription = "New Collection",
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+        }
+
+        // Create New Category Dialog
+        if (showCreateDialog) {
         AlertDialog(
             onDismissRequest = {
                 showCreateDialog = false
@@ -255,7 +294,7 @@ fun CollectionsScreen(
             },
             title = {
                 Text(
-                    text = "New Category",
+                    text = "New Collection",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.ExtraBold,
                     color = tuckColors.textPrimary
@@ -264,7 +303,7 @@ fun CollectionsScreen(
             text = {
                 Column {
                     Text(
-                        text = "Create a custom category for saving items:",
+                        text = "Create a custom collection for organizing your saves:",
                         style = MaterialTheme.typography.bodySmall,
                         color = tuckColors.textSecondary
                     )
@@ -274,7 +313,7 @@ fun CollectionsScreen(
                         onValueChange = { newCollectionName = it },
                         placeholder = {
                             Text(
-                                text = "e.g. Recipes, Work, Reading",
+                                text = "e.g. Research, Tech, Recipes",
                                 color = tuckColors.textMuted,
                                 style = MaterialTheme.typography.bodyMedium
                             )
@@ -323,5 +362,36 @@ fun CollectionsScreen(
             containerColor = tuckColors.surface,
             shape = tuckShapes.large
         )
+    }
+}
+
+@Composable
+private fun CollectionTabButton(
+    title: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val tuckColors = TuckTheme.colors
+    val shapes = TuckTheme.shapes
+
+    Surface(
+        shape = shapes.pill,
+        color = if (isSelected) tuckColors.surface else Color.Transparent,
+        modifier = modifier
+            .clip(shapes.pill)
+            .clickable(onClick = onClick)
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.padding(vertical = 8.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                color = if (isSelected) tuckColors.accent else tuckColors.textSecondary
+            )
+        }
     }
 }

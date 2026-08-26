@@ -22,34 +22,68 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.Article
+import androidx.compose.material.icons.automirrored.filled.Message
+import androidx.compose.material.icons.automirrored.filled.Notes
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.ArrowOutward
+import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Message
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notes
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.Work
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,17 +92,18 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.tuck.app.domain.model.ContentType
 import com.tuck.app.domain.model.SavedItem
 import com.tuck.app.domain.repository.TuckThemeFlavor
-import com.tuck.app.ui.theme.TuckTheme
-import com.tuck.app.ui.theme.getTuckColors
+import com.tuck.app.ui.theme.*
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -149,22 +184,30 @@ fun TuckPlatformBadge(
     val domain = (item.sourceDomain ?: "").lowercase()
 
     val (badgeText, badgeColor, icon) = when {
-        domain.contains("linkedin") -> Triple("LinkedIn", Color(0xFF0A66C2), Icons.Filled.Language)
-        domain.contains("instagram") -> Triple("Instagram", Color(0xFFE4405F), Icons.Filled.Videocam)
-        domain.contains("reddit") || domain.startsWith("r/") -> Triple("Reddit", Color(0xFFFF4500), Icons.Filled.Message)
-        domain.contains("youtube") || domain.contains("youtu.be") -> Triple("YouTube", Color(0xFFFF0000), Icons.Filled.PlayArrow)
-        domain.contains("twitter") || domain.contains("x.com") -> Triple("X", Color(0xFF1DA1F2), Icons.Filled.Language)
-        item.contentType == ContentType.IMAGE -> Triple("Screenshot", Color(0xFF10B981), Icons.Filled.Image)
-        item.contentType == ContentType.PDF -> Triple("PDF", Color(0xFFEF4444), Icons.Filled.PictureAsPdf)
-        item.contentType == ContentType.TEXT -> Triple("Note", Color(0xFF8B5CF6), Icons.Filled.Notes)
-        item.contentType == ContentType.CONTACT -> Triple("Contact", Color(0xFFF59E0B), Icons.Filled.Description)
-        item.contentType == ContentType.LOCATION -> Triple("Location", Color(0xFF10B981), Icons.Filled.Language)
-        else -> Triple(item.sourceDomain ?: "Web", tuckColors.accent, Icons.Filled.Language)
+        domain.contains("linkedin") -> Triple("LinkedIn", BrandLinkedIn, Icons.Filled.Language)
+        domain.contains("instagram") -> Triple("Instagram", BrandInstagram, Icons.Filled.Videocam)
+        domain.contains("reddit") || domain.startsWith("r/") -> Triple("Reddit", BrandReddit, Icons.Filled.Message)
+        domain.contains("youtube") || domain.contains("youtu.be") -> Triple("YouTube", BrandYouTube, Icons.Filled.PlayArrow)
+        domain.contains("twitter") || domain.contains("x.com") -> Triple("X", BrandTwitter, Icons.Filled.Language)
+        domain.contains("github") -> Triple("GitHub", BrandGitHub, Icons.Filled.Code)
+        domain.contains("medium.com") -> Triple("Medium", BrandMedium, Icons.Filled.Description)
+        domain.contains("substack.com") -> Triple("Substack", BrandSubstack, Icons.Filled.Bookmark)
+        domain.contains("arxiv.org") -> Triple("ArXiv", BrandArXiv, Icons.Filled.Description)
+        domain.contains("wikipedia.org") -> Triple("Wikipedia", BrandWikipedia, Icons.Filled.Language)
+        domain.contains("amazon.") -> Triple("Amazon", BrandAmazon, Icons.Filled.ShoppingCart)
+        item.contentType == ContentType.IMAGE -> Triple("Screenshot", AccentEmerald, Icons.Filled.Image)
+        item.contentType == ContentType.PDF -> Triple("PDF", AccentCrimson, Icons.Filled.PictureAsPdf)
+        item.contentType == ContentType.TEXT -> Triple("Note", AccentPurple, Icons.Filled.Notes)
+        item.contentType == ContentType.CONTACT -> Triple("Contact", AccentAmber, Icons.Filled.Description)
+        item.contentType == ContentType.LOCATION -> Triple("Location", AccentTeal, Icons.Filled.Language)
+        item.contentType == ContentType.VIDEO -> Triple("Video", AccentRose, Icons.Filled.PlayArrow)
+        else -> Triple(item.sourceDomain ?: item.contentType.displayName, tuckColors.accent, Icons.Filled.Language)
     }
 
     Surface(
         color = badgeColor.copy(alpha = 0.12f),
         shape = tuckShapes.small,
+        border = androidx.compose.foundation.BorderStroke(1.dp, badgeColor.copy(alpha = 0.25f)),
         modifier = modifier
     ) {
         Row(
@@ -188,7 +231,68 @@ fun TuckPlatformBadge(
     }
 }
 
-// 3. Category Chip
+// 3. Collection Visual Information Model
+data class CollectionVisual(
+    val icon: ImageVector,
+    val color: Color,
+    val emoji: String
+)
+
+@Composable
+fun getCollectionVisual(name: String, iconHint: String? = null): CollectionVisual {
+    val tuckColors = TuckTheme.colors
+    val lower = name.lowercase().trim()
+    val hint = (iconHint ?: "").lowercase().trim()
+
+    return when {
+        lower.contains("article") || hint == "article" -> 
+            CollectionVisual(Icons.AutoMirrored.Filled.Article, AccentTeal, "📰")
+        lower.contains("education") || lower.contains("course") || hint == "school" || hint == "menu_book" -> 
+            CollectionVisual(Icons.Filled.School, AccentAmber, "🎓")
+        lower.contains("finance") || lower.contains("money") || lower.contains("crypto") || hint == "attach_money" -> 
+            CollectionVisual(Icons.Filled.AttachMoney, AccentEmerald, "💰")
+        lower.contains("programming") || lower.contains("code") || lower.contains("dev") || hint == "code" -> 
+            CollectionVisual(Icons.Filled.Code, AccentIndigo, "💻")
+        lower.contains("research") || lower.contains("paper") || hint == "science" -> 
+            CollectionVisual(Icons.Filled.AutoAwesome, AccentPurple, "🔬")
+        lower.contains("shopping") || lower.contains("product") || hint == "shopping_cart" -> 
+            CollectionVisual(Icons.Filled.ShoppingCart, AccentRose, "🛍️")
+        lower.contains("travel") || lower.contains("trip") || lower.contains("flight") || hint == "flight" -> 
+            CollectionVisual(Icons.Filled.Flight, AccentSky, "✈️")
+        lower.contains("food") || lower.contains("dining") || lower.contains("recipe") || hint == "restaurant" -> 
+            CollectionVisual(Icons.Filled.Restaurant, AccentOrange, "🍽️")
+        lower.contains("work") || hint == "work" -> 
+            CollectionVisual(Icons.Filled.Work, AccentSlate, "💼")
+        lower.contains("personal") || hint == "person" -> 
+            CollectionVisual(Icons.Filled.Person, AccentRose, "👤")
+        lower.contains("video") || hint == "videocam" -> 
+            CollectionVisual(Icons.Filled.Videocam, AccentRose, "🎬")
+        lower.contains("image") || lower.contains("photo") || hint == "image" || hint == "photo_camera" -> 
+            CollectionVisual(Icons.Filled.Image, AccentEmerald, "🖼️")
+        lower.contains("pdf") || hint == "picture_as_pdf" -> 
+            CollectionVisual(Icons.Filled.PictureAsPdf, AccentCrimson, "📄")
+        lower.contains("linkedin") -> 
+            CollectionVisual(Icons.Filled.Language, BrandLinkedIn, "💼")
+        lower.contains("instagram") -> 
+            CollectionVisual(Icons.Filled.Videocam, BrandInstagram, "📱")
+        lower.contains("reddit") -> 
+            CollectionVisual(Icons.AutoMirrored.Filled.Message, BrandReddit, "💬")
+        lower.contains("youtube") -> 
+            CollectionVisual(Icons.Filled.PlayArrow, BrandYouTube, "▶️")
+        lower.contains("twitter") || lower.contains("x") -> 
+            CollectionVisual(Icons.Filled.Tag, BrandTwitter, "🐦")
+        lower.contains("github") -> 
+            CollectionVisual(Icons.Filled.Code, BrandGitHub, "🐙")
+        lower.contains("note") -> 
+            CollectionVisual(Icons.AutoMirrored.Filled.Notes, AccentPurple, "📝")
+        lower.contains("screenshot") -> 
+            CollectionVisual(Icons.Filled.CameraAlt, AccentIndigo, "📸")
+        else -> 
+            CollectionVisual(Icons.Filled.Folder, tuckColors.accent, "📁")
+    }
+}
+
+// 4. Category Chip
 @Composable
 fun TuckCategoryChip(
     label: String,
@@ -199,6 +303,7 @@ fun TuckCategoryChip(
 ) {
     val tuckColors = TuckTheme.colors
     val tuckShapes = TuckTheme.shapes
+    val visual = getCollectionVisual(label, icon)
 
     val backgroundColor by animateColorAsState(
         targetValue = if (isSelected) tuckColors.accent else tuckColors.surfaceCard,
@@ -212,6 +317,7 @@ fun TuckCategoryChip(
         targetValue = if (isSelected) tuckColors.accent else tuckColors.border,
         label = "chipBorder"
     )
+    val iconTint = if (isSelected) tuckColors.textOnAccent else visual.color
 
     Surface(
         color = backgroundColor,
@@ -225,10 +331,13 @@ fun TuckCategoryChip(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
         ) {
-            if (!icon.isNullOrBlank()) {
-                Text(text = icon, fontSize = 13.sp)
-                Spacer(modifier = Modifier.width(6.dp))
-            }
+            Icon(
+                imageVector = visual.icon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(15.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelMedium,
@@ -239,7 +348,7 @@ fun TuckCategoryChip(
     }
 }
 
-// 4. Category Card
+// 5. Category Card
 @Composable
 fun TuckCategoryCard(
     name: String,
@@ -252,6 +361,7 @@ fun TuckCategoryCard(
 ) {
     val tuckColors = TuckTheme.colors
     val tuckShapes = TuckTheme.shapes
+    val visual = getCollectionVisual(name, icon)
 
     Card(
         shape = tuckShapes.medium,
@@ -271,34 +381,36 @@ fun TuckCategoryCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .size(42.dp)
+                        .size(44.dp)
                         .clip(CircleShape)
-                        .background(tuckColors.accentContainer),
+                        .background(visual.color.copy(alpha = 0.14f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (!icon.isNullOrBlank()) {
-                        Text(text = icon, fontSize = 18.sp)
-                    } else {
-                        Icon(
-                            imageVector = Icons.Filled.Folder,
-                            contentDescription = null,
-                            tint = tuckColors.accent,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                    Icon(
+                        imageVector = visual.icon,
+                        contentDescription = null,
+                        tint = visual.color,
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
 
                 Spacer(modifier = Modifier.width(14.dp))
 
                 Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = tuckColors.textPrimary
+                        )
+                        if (isLocked) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(text = "🔒", fontSize = 12.sp)
+                        }
+                    }
                     Text(
-                        text = name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = tuckColors.textPrimary
-                    )
-                    Text(
-                        text = "$count ${if (count == 1) "item" else "items"}${if (isAutoGenerated) " • Auto" else ""}",
+                        text = "$count ${if (count == 1) "item" else "items"}${if (isAutoGenerated) " • Smart Board" else ""}",
                         style = MaterialTheme.typography.bodySmall,
                         color = tuckColors.textMuted
                     )
@@ -306,7 +418,7 @@ fun TuckCategoryCard(
             }
 
             Icon(
-                imageVector = Icons.Filled.ArrowForward,
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = null,
                 tint = tuckColors.textMuted,
                 modifier = Modifier.size(16.dp)
@@ -454,14 +566,21 @@ fun TuckContentCard(
                         .height(160.dp)
                         .background(tuckColors.surfaceCard)
                 ) {
-                    val model: Any = if (previewImage.startsWith("/") || previewImage.startsWith("file://")) {
-                        File(previewImage.removePrefix("file://"))
-                    } else {
-                        previewImage
+                    val context = LocalContext.current
+                    val imageRequest = remember(previewImage) {
+                        val imageModel: Any = when {
+                            previewImage.startsWith("content://") -> Uri.parse(previewImage)
+                            previewImage.startsWith("/") || previewImage.startsWith("file://") -> File(previewImage.removePrefix("file://"))
+                            else -> previewImage
+                        }
+                        ImageRequest.Builder(context)
+                            .data(imageModel)
+                            .crossfade(true)
+                            .build()
                     }
 
                     AsyncImage(
-                        model = model,
+                        model = imageRequest,
                         contentDescription = item.title,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
@@ -796,6 +915,371 @@ fun TuckThemePreviewCard(
                 }
             }
         }
+    }
+}
+
+// 9. Cover Mosaic 4-Cell Preview for Collections
+@Composable
+fun TuckCoverMosaic(
+    thumbnails: List<String?>,
+    modifier: Modifier = Modifier,
+    backgroundColor: Color = TuckTheme.colors.surfaceCard
+) {
+    val shapes = TuckTheme.shapes
+    val validThumbs = thumbnails.filter { !it.isNullOrBlank() }.take(4)
+
+    Surface(
+        shape = shapes.medium,
+        color = backgroundColor,
+        border = androidx.compose.foundation.BorderStroke(1.dp, TuckTheme.colors.border),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(130.dp)
+    ) {
+        if (validThumbs.isEmpty()) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Folder,
+                    contentDescription = null,
+                    tint = TuckTheme.colors.accent.copy(alpha = 0.5f),
+                    modifier = Modifier.size(36.dp)
+                )
+            }
+        } else {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxSize()
+                            .padding(1.dp)
+                            .clip(RoundedCornerShape(topStart = 14.dp))
+                    ) {
+                        MosaicCell(path = validThumbs.getOrNull(0))
+                    }
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxSize()
+                            .padding(1.dp)
+                            .clip(RoundedCornerShape(topEnd = 14.dp))
+                    ) {
+                        MosaicCell(path = validThumbs.getOrNull(1))
+                    }
+                }
+                Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxSize()
+                            .padding(1.dp)
+                            .clip(RoundedCornerShape(bottomStart = 14.dp))
+                    ) {
+                        MosaicCell(path = validThumbs.getOrNull(2))
+                    }
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxSize()
+                            .padding(1.dp)
+                            .clip(RoundedCornerShape(bottomEnd = 14.dp))
+                    ) {
+                        MosaicCell(path = validThumbs.getOrNull(3))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MosaicCell(path: String?) {
+    if (path.isNullOrBlank()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(TuckTheme.colors.surfaceVariant.copy(alpha = 0.5f))
+        )
+    } else {
+        val model: Any = if (path.startsWith("/") || path.startsWith("file://")) {
+            File(path.removePrefix("file://"))
+        } else {
+            path
+        }
+        AsyncImage(
+            model = model,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+    }
+}
+
+// 10. Resurfaced Memory / Intent Recall Card
+@Composable
+fun TuckResurfacingCard(
+    item: SavedItem,
+    onOpen: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val tuckColors = TuckTheme.colors
+    val shapes = TuckTheme.shapes
+
+    Card(
+        shape = shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = tuckColors.surface),
+        border = androidx.compose.foundation.BorderStroke(1.5.dp, tuckColors.accent.copy(alpha = 0.4f)),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onOpen)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp)
+        ) {
+            // Header Row: Sparkle badge + Dismiss
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        shape = shapes.small,
+                        color = tuckColors.accentContainer,
+                        modifier = Modifier.padding(end = 6.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.AutoAwesome,
+                                contentDescription = null,
+                                tint = tuckColors.accent,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "RESURFACED MEMORY",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = tuckColors.accent,
+                                fontSize = 10.sp
+                            )
+                        }
+                    }
+                }
+
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "Dismiss",
+                        tint = tuckColors.textMuted,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // User Intent Note or Resurface Prompt
+            val intentText = if (!item.userNote.isNullOrBlank()) {
+                "\"${item.userNote}\""
+            } else {
+                "You saved this ${formatRelativeTime(item.createdAt)}: \"${item.title}\""
+            }
+
+            Text(
+                text = intentText,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = tuckColors.textPrimary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Footer info
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TuckPlatformBadge(item = item)
+
+                Text(
+                    text = "Tap to review ›",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = tuckColors.accent
+                )
+            }
+        }
+    }
+}
+
+// 11. Quick Capture Speed Dial Bottom Sheet
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun QuickCaptureSpeedDialSheet(
+    onDismiss: () -> Unit,
+    onCaptureNote: () -> Unit,
+    onScanOcr: () -> Unit,
+    onImportPdf: () -> Unit,
+    onPasteLink: () -> Unit,
+    onRecordAudio: () -> Unit
+) {
+    val tuckColors = TuckTheme.colors
+    val shapes = TuckTheme.shapes
+    val sheetState = rememberModalBottomSheetState()
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = tuckColors.surface,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 12.dp)
+        ) {
+            Text(
+                text = "QUICK CAPTURE",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = tuckColors.textMuted,
+                letterSpacing = 1.sp
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            QuickCaptureOption(
+                title = "Take a Quick Note",
+                subtitle = "Save a formatted thought or markdown note",
+                icon = Icons.Filled.Notes,
+                iconTint = Color(0xFFA855F7),
+                onClick = {
+                    onDismiss()
+                    onCaptureNote()
+                }
+            )
+
+            QuickCaptureOption(
+                title = "Scan Document / Screenshot",
+                subtitle = "Local ML Kit OCR extracts all text instantly",
+                icon = Icons.Filled.CameraAlt,
+                iconTint = Color(0xFF10B981),
+                onClick = {
+                    onDismiss()
+                    onScanOcr()
+                }
+            )
+
+            QuickCaptureOption(
+                title = "Import PDF or Research Paper",
+                subtitle = "Extract text & generate first-page thumbnail",
+                icon = Icons.Filled.PictureAsPdf,
+                iconTint = Color(0xFFE11D48),
+                onClick = {
+                    onDismiss()
+                    onImportPdf()
+                }
+            )
+
+            QuickCaptureOption(
+                title = "Paste from Clipboard",
+                subtitle = "Save copied links, Reddit URLs, or text",
+                icon = Icons.Filled.ContentPaste,
+                iconTint = Color(0xFF0EA5E9),
+                onClick = {
+                    onDismiss()
+                    onPasteLink()
+                }
+            )
+
+            QuickCaptureOption(
+                title = "Record Audio Voice Memo",
+                subtitle = "App-private local audio note",
+                icon = Icons.Filled.Mic,
+                iconTint = Color(0xFF6366F1),
+                onClick = {
+                    onDismiss()
+                    onRecordAudio()
+                }
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun QuickCaptureOption(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    iconTint: Color,
+    onClick: () -> Unit
+) {
+    val tuckColors = TuckTheme.colors
+    val shapes = TuckTheme.shapes
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shapes.medium)
+            .clickable(onClick = onClick)
+            .padding(vertical = 10.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            shape = shapes.small,
+            color = iconTint.copy(alpha = 0.12f),
+            modifier = Modifier.size(44.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(14.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = tuckColors.textPrimary
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = tuckColors.textSecondary
+            )
+        }
+
+        Icon(
+            imageVector = Icons.Filled.ArrowForward,
+            contentDescription = null,
+            tint = tuckColors.textMuted,
+            modifier = Modifier.size(16.dp)
+        )
     }
 }
 

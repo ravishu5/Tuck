@@ -56,6 +56,7 @@ class ItemProcessingWorker @AssistedInject constructor(
     private val imageOcrProcessor: ImageOcrProcessor,
     private val pdfProcessor: PdfProcessor,
     private val entityExtractor: EntityExtractor,
+    private val sourcePersonExtractor: SourcePersonExtractor,
     private val networkPolicy: NetworkPolicy,
     private val classifier: RuleBasedContentClassifier,
     private val settingsRepository: SettingsRepository
@@ -118,6 +119,14 @@ class ItemProcessingWorker @AssistedInject constructor(
                             finalContentType = meta.inferredContentType
                         }
 
+                        if (!meta.ogImageUrl.isNullOrBlank() && finalThumbnailPath.isNullOrBlank()) {
+                            finalThumbnailPath = try {
+                                fileStorageService.downloadAndCacheImage(meta.ogImageUrl) ?: meta.ogImageUrl
+                            } catch (e: Exception) {
+                                meta.ogImageUrl
+                            }
+                        }
+
                         // Structured source capture: real post + nested comment tree.
                         // Falls back to the flat comments UrlMetadataProcessor already found.
                         if (saveCommentsEnabled) {
@@ -162,6 +171,15 @@ class ItemProcessingWorker @AssistedInject constructor(
                                 if (!extracted.bodyText.isNullOrBlank() && finalExtractedText.isNullOrBlank()) {
                                     finalExtractedText = extracted.bodyText
                                 }
+
+                                val personEntities = sourcePersonExtractor.extractEntities(
+                                    savedItemId = itemId,
+                                    platform = extracted.platform,
+                                    postAuthor = extracted.authorHandle ?: meta.author,
+                                    postAuthorDisplay = extracted.authorDisplay ?: meta.author,
+                                    comments = treeComments
+                                )
+                                extractedEntities.addAll(personEntities)
                             } else if (meta.comments.isNotEmpty()) {
                                 val commentsArray = JSONArray()
                                 val sourceComments = mutableListOf<SourceCommentEntity>()
@@ -210,7 +228,43 @@ class ItemProcessingWorker @AssistedInject constructor(
                                     )
                                 )
                                 sourceContentDao.insertComments(sourceComments)
+
+                                val personEntities = sourcePersonExtractor.extractEntities(
+                                    savedItemId = itemId,
+                                    platform = platform,
+                                    postAuthor = meta.author,
+                                    fallbackCommentAuthors = meta.comments.map { it.author }
+                                )
+                                extractedEntities.addAll(personEntities)
+                            } else if (!meta.author.isNullOrBlank()) {
+                                val platform = when {
+                                    finalDomain?.contains("reddit") == true -> "REDDIT"
+                                    finalDomain?.contains("youtube") == true || finalDomain?.contains("youtu.be") == true -> "YOUTUBE"
+                                    finalDomain?.contains("instagram") == true -> "INSTAGRAM"
+                                    finalDomain?.contains("twitter") == true || finalDomain?.contains("x.com") == true -> "TWITTER"
+                                    else -> "WEB"
+                                }
+                                val personEntities = sourcePersonExtractor.extractEntities(
+                                    savedItemId = itemId,
+                                    platform = platform,
+                                    postAuthor = meta.author
+                                )
+                                extractedEntities.addAll(personEntities)
                             }
+                        } else if (!meta.author.isNullOrBlank()) {
+                            val platform = when {
+                                finalDomain?.contains("reddit") == true -> "REDDIT"
+                                finalDomain?.contains("youtube") == true || finalDomain?.contains("youtu.be") == true -> "YOUTUBE"
+                                finalDomain?.contains("instagram") == true -> "INSTAGRAM"
+                                finalDomain?.contains("twitter") == true || finalDomain?.contains("x.com") == true -> "TWITTER"
+                                else -> "WEB"
+                            }
+                            val personEntities = sourcePersonExtractor.extractEntities(
+                                savedItemId = itemId,
+                                platform = platform,
+                                postAuthor = meta.author
+                            )
+                            extractedEntities.addAll(personEntities)
                         }
 
                         // Download and save thumbnail locally for preview cards
@@ -384,22 +438,40 @@ class ItemProcessingWorker @AssistedInject constructor(
             // 4. Automatic Classification
             val classification = classifier.classify(domainItem)
 
-            // Link to Smart Collection
-            if (autoCategorizeEnabled && classification.primaryCategory.isNotBlank()) {
-                val collection = collectionDao.getByName(classification.primaryCategory)
-                if (collection == null) {
-                    val newColId = collectionDao.insert(
+            // Link to Smart Collections (all matched high-confidence categories & platform boards)
+            if (autoCategorizeEnabled) {
+                val categoriesToLink = mutableSetOf<String>()
+                if (classification.primaryCategory.isNotBlank() && classification.primaryCategory != "Other") {
+                    categoriesToLink.add(classification.primaryCategory)
+                }
+
+                // Explicit mutually exclusive platform board detection
+                val lowerDomain = (finalDomain ?: "").lowercase()
+                val lowerUrl = (itemEntity.originalUrl ?: "").lowercase()
+                val lowerApp = (itemEntity.sourceApp ?: "").lowercase()
+                val platformBoard = when {
+                    lowerDomain.contains("reddit") || lowerDomain.contains("redd.it") || lowerUrl.contains("reddit.com") || lowerUrl.contains("redd.it") || lowerApp.contains("reddit") -> "Reddit"
+                    lowerDomain.contains("linkedin") || lowerDomain.contains("lnkd.in") || lowerUrl.contains("linkedin.com") || lowerUrl.contains("lnkd.in") || lowerApp.contains("linkedin") -> "LinkedIn"
+                    lowerDomain.contains("instagram") || lowerDomain.contains("instagr.am") || lowerDomain.contains("ig.me") || lowerUrl.contains("instagram.com") || lowerApp.contains("instagram") -> "Instagram"
+                    lowerDomain.contains("youtube") || lowerDomain.contains("youtu.be") || lowerUrl.contains("youtube.com") || lowerUrl.contains("youtu.be") || lowerApp.contains("youtube") -> "YouTube"
+                    lowerDomain.contains("twitter") || lowerDomain == "x.com" || lowerDomain == "t.co" || lowerUrl.contains("twitter.com") || lowerUrl.contains("x.com/") || lowerUrl.contains("t.co/") || lowerApp.contains("twitter") -> "Twitter / X"
+                    lowerDomain.contains("github") || lowerUrl.contains("github.com") || lowerApp.contains("github") -> "GitHub"
+                    else -> null
+                }
+                if (platformBoard != null) {
+                    categoriesToLink.add(platformBoard)
+                }
+
+                for (categoryName in categoriesToLink) {
+                    val collection = collectionDao.getByName(categoryName)
+                    val targetColId = collection?.id ?: collectionDao.insert(
                         CollectionEntity(
-                            name = classification.primaryCategory,
+                            name = categoryName,
                             isAutoGenerated = true
                         )
                     )
                     collectionDao.insertItemCollectionCrossRef(
-                        SavedItemCollectionCrossRef(savedItemId = itemId, collectionId = newColId)
-                    )
-                } else {
-                    collectionDao.insertItemCollectionCrossRef(
-                        SavedItemCollectionCrossRef(savedItemId = itemId, collectionId = collection.id)
+                        SavedItemCollectionCrossRef(savedItemId = itemId, collectionId = targetColId)
                     )
                 }
             }

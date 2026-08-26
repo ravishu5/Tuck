@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -89,6 +90,19 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             collectionRepository.ensureDefaultCollections()
             checkGalleryScreenshots()
+
+            // Heal any previously saved URLs missing thumbnails
+            try {
+                val active = savedItemRepository.getAllActiveItems().first()
+                for (item in active) {
+                    if ((item.contentType == ContentType.URL || item.contentType == ContentType.VIDEO) && item.thumbnailPath.isNullOrBlank() && !item.originalUrl.isNullOrBlank()) {
+                        val workRequest = OneTimeWorkRequestBuilder<ItemProcessingWorker>()
+                            .setInputData(workDataOf(ItemProcessingWorker.KEY_ITEM_ID to item.id))
+                            .build()
+                        WorkManager.getInstance(context).enqueue(workRequest)
+                    }
+                }
+            } catch (_: Exception) {}
         }
     }
 
@@ -101,18 +115,36 @@ class HomeViewModel @Inject constructor(
         val filtered = baseData.allItems.filter { item ->
             val matchesType = filter.type == null || item.contentType == filter.type
             val matchesCat = filter.category == null || item.collections.any { it.name.equals(filter.category, ignoreCase = true) }
-            val domain = item.sourceDomain ?: ""
+            val domain = (item.sourceDomain ?: "").lowercase()
+            val url = (item.originalUrl ?: "").lowercase()
+            val text = (item.originalText ?: item.extractedText ?: "").lowercase()
+            val app = (item.sourceApp ?: "").lowercase()
+            val collectionNames = item.collections.map { it.name.lowercase() }
+
             val matchesSource = when (filter.source) {
                 null -> true
-                "Screenshots" -> item.contentType == ContentType.IMAGE || domain.contains("Screenshot", ignoreCase = true)
-                "LinkedIn" -> domain.contains("LinkedIn", ignoreCase = true) || item.originalUrl?.contains("linkedin.com") == true
-                "Instagram" -> domain.contains("Instagram", ignoreCase = true) || item.originalUrl?.contains("instagram.com") == true
-                "Reddit" -> domain.contains("Reddit", ignoreCase = true) || item.originalUrl?.contains("reddit.com") == true || domain.startsWith("r/")
-                "YouTube" -> domain.contains("YouTube", ignoreCase = true) || item.originalUrl?.contains("youtube") == true || item.originalUrl?.contains("youtu.be") == true
-                "Twitter" -> domain.contains("Twitter", ignoreCase = true) || domain.contains("X.com", ignoreCase = true) || item.originalUrl?.contains("twitter.com") == true || item.originalUrl?.contains("x.com") == true
-                "Web" -> item.contentType == ContentType.URL && !domain.contains("Instagram", ignoreCase = true) && !domain.contains("Reddit", ignoreCase = true) && !domain.contains("LinkedIn", ignoreCase = true)
-                "PDFs" -> item.contentType == ContentType.PDF
+                "Screenshots" -> item.contentType == ContentType.IMAGE || domain.contains("screenshot") || app.contains("screenshot")
+                "LinkedIn" -> domain.contains("linkedin") || domain.contains("lnkd.in") || url.contains("linkedin.com") || url.contains("lnkd.in") || app.contains("linkedin") || collectionNames.contains("linkedin")
+                "Instagram" -> domain.contains("instagram") || domain.contains("instagr.am") || domain.contains("ig.me") || url.contains("instagram.com") || url.contains("instagr.am") || url.contains("ig.me") || app.contains("instagram") || collectionNames.contains("instagram")
+                "Reddit" -> domain.contains("reddit") || domain.contains("redd.it") || domain.startsWith("r/") || url.contains("reddit.com") || url.contains("redd.it") || app.contains("reddit") || collectionNames.contains("reddit")
+                "YouTube" -> domain.contains("youtube") || domain.contains("youtu.be") || url.contains("youtube.com") || url.contains("youtu.be") || app.contains("youtube") || collectionNames.contains("youtube")
+                "Twitter" -> !domain.contains("reddit") && !url.contains("reddit.com") && !app.contains("reddit") && (domain.contains("twitter") || domain == "x.com" || domain == "t.co" || url.contains("twitter.com") || url.contains("x.com/") || url.contains("t.co/") || app.contains("twitter") || collectionNames.contains("twitter") || collectionNames.contains("twitter / x"))
+                "GitHub" -> domain.contains("github") || url.contains("github.com") || app.contains("github") || collectionNames.contains("github")
+                "Web" -> item.contentType == ContentType.URL && !domain.contains("instagram") && !domain.contains("reddit") && !domain.contains("linkedin") && !domain.contains("youtube") && !domain.contains("twitter") && !domain.contains("x.com") && !url.contains("reddit.com") && !url.contains("instagram.com") && !url.contains("linkedin.com") && !url.contains("twitter.com") && !url.contains("youtube.com")
+                "PDFs" -> item.contentType == ContentType.PDF || collectionNames.contains("pdfs")
                 "Notes" -> item.contentType == ContentType.TEXT
+                "Articles" -> collectionNames.contains("articles")
+                "Education" -> collectionNames.contains("education")
+                "Finance" -> collectionNames.contains("finance")
+                "Programming" -> collectionNames.contains("programming") || collectionNames.contains("code")
+                "Research" -> collectionNames.contains("research")
+                "Shopping" -> collectionNames.contains("shopping")
+                "Travel" -> collectionNames.contains("travel")
+                "Food & Dining" -> collectionNames.contains("food & dining") || collectionNames.contains("food")
+                "Work" -> collectionNames.contains("work")
+                "Personal" -> collectionNames.contains("personal")
+                "Videos" -> item.contentType == ContentType.VIDEO || collectionNames.contains("videos")
+                "Images" -> item.contentType == ContentType.IMAGE || collectionNames.contains("images")
                 else -> true
             }
             matchesType && matchesCat && matchesSource
@@ -234,6 +266,33 @@ class HomeViewModel @Inject constructor(
                 // Ignore
             } finally {
                 _isImporting.value = false
+            }
+        }
+    }
+
+    fun importDocumentFromUri(uri: Uri) {
+        viewModelScope.launch {
+            try {
+                val mimeType = context.contentResolver.getType(uri) ?: "application/octet-stream"
+                val isPdf = mimeType.contains("pdf", ignoreCase = true) || uri.toString().endsWith(".pdf", ignoreCase = true)
+                val saveResult = fileStorageService.saveStreamUri(uri, mimeType)
+                val item = SavedItem(
+                    contentType = if (isPdf) ContentType.PDF else ContentType.DOCUMENT,
+                    title = "Imported Document",
+                    localFilePath = saveResult.localFilePath,
+                    thumbnailPath = saveResult.thumbnailPath,
+                    mimeType = mimeType,
+                    sourceDomain = if (isPdf) "PDF" else "Document"
+                )
+                val id = savedItemRepository.insertItem(item)
+                if (id > 0) {
+                    val workRequest = OneTimeWorkRequestBuilder<ItemProcessingWorker>()
+                        .setInputData(workDataOf(ItemProcessingWorker.KEY_ITEM_ID to id))
+                        .build()
+                    WorkManager.getInstance(context).enqueue(workRequest)
+                }
+            } catch (e: Exception) {
+                // Ignore
             }
         }
     }
