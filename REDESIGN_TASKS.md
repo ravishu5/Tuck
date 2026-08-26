@@ -45,8 +45,9 @@ Five real screens are visible. This is the design language to extract:
 
 ### The design language, stated plainly
 
-- **Color is the organising principle.** Every folder owns a saturated color. The grid of colored
-  tiles *is* the navigation. Color carries identity, not decoration.
+- **Color is the organising principle.** Every folder owns a hue from a coordinated family, and the
+  grid of colored tiles *is* the navigation. Color carries identity, not decoration — which only
+  works if the hues visibly belong together.
 - **Warm paper background**, not white and not grey. Cream/bone.
 - **Large corner radii** on tiles and sheets (roughly 20–24dp), consistently.
 - **Chunky, confident type.** Big bold titles; small all-caps section labels with wide letter-spacing
@@ -97,14 +98,37 @@ The redesign must not break these. A beautiful app that regresses any of them is
 Produce a short document answering each, with a recommendation. Do not start R1 until Ravi has
 signed off. Record the outcomes in `DECISIONS.md`.
 
-### R0.1 — How many themes?
-Today there are **five flavors** (Linen, Noir, Forest, Cobalt, Plum) × light/dark = 10 palettes.
-A signature look and five palettes pull against each other: the reference app's identity *is* its
-specific cream-and-saturated-color palette.
+### R0.1 — How many themes, and what *is* a theme?
 
-*Recommendation:* keep **one** signature palette in light and dark, and demote the others to an
-"Appearance" setting for people who want them — but design and QA only the signature one.
-The alternative is that all ten look mediocre.
+**A theme is not an accent color. A theme is a coordinated family of colors.**
+
+The reference app is not "coral". It is a warm cream canvas plus a *set* of saturated hues — coral,
+mustard, blue, purple, green, pink, near-black — that clearly belong together. That set is what makes
+the grid of tiles read as one designed thing instead of a bag of random colors.
+
+So every Tuck theme must define:
+
+| Layer | What it is | Roughly how many |
+|---|---|---|
+| **Neutrals** | canvas, surface, card, border, and the text ramp | ~8 slots |
+| **Palette** | the coordinated hues used for collection tiles, badges and category chips | **8–10 hues** |
+| **Primary** | one hue lifted from the palette for interactive chrome — FAB, selection, links | 1 |
+| **Roles** | destructive, warning, success — must stay distinguishable from the palette | 3 |
+
+The decision here is **how many themes**, not whether they are multi-hue. They all are.
+
+Each flavor keeps its own character through its neutrals and its hue family, for example:
+
+- **Linen** — warm cream canvas; terracotta, mustard, sage, denim, plum, clay, rust, ink
+- **Noir** — near-black canvas; the same hue positions pushed brighter and cleaner so they hold up
+  against dark
+- **Forest** — sage canvas; moss, olive, ochre, rust, deep teal, bark
+
+*Recommendation:* design and QA **two** properly — Linen (light) and Noir (dark) — as the signature
+pair, and either cut the other three or ship them clearly marked as experimental. Five hand-tuned
+multi-hue families, each in light and dark, is ten palettes of roughly nine colors: **around ninety
+colors to balance and contrast-check.** That is not a side quest, and doing it badly is worse than
+not doing it.
 
 ### R0.2 — Dynamic color (Material You)?
 Currently supported. It overrides brand identity with the user's wallpaper.
@@ -121,9 +145,14 @@ check the licence permits bundling.
 ### R0.4 — Per-collection color
 `collections.color` **already exists in the schema and is read by nothing.** The whole colored-tile
 design depends on it.
-Decide: a fixed curated palette of ~12 colors the user picks from (recommended — guarantees harmony
-and contrast), or free color choice (harder to keep accessible).
-Every color must pass contrast against both its own foreground and both theme backgrounds.
+
+Store the collection's **palette slot** (a stable index or name such as `terracotta`), *not* a raw
+hex value. A stored hex would be frozen at whatever the theme was when the collection was created,
+so switching theme — or light to dark — would leave stale, clashing colors behind. Storing the slot
+means every collection re-maps correctly into whatever palette is active.
+
+Free color-picking is out: it guarantees clashes and unreadable tiles. The user picks from the
+active palette.
 
 ### R0.5 — Icon set
 Reference uses custom line glyphs per category. Today: Material Icons Extended.
@@ -137,27 +166,68 @@ a deliberate product decision ("save first, organise later") and I would keep it
 
 ---
 
-# R1 — Foundation: color and tokens
+# R1a — Foundation: theme structure and neutrals
 
 **Files:** `ui/theme/TuckDesignTokens.kt`, `ui/theme/Color.kt`, `ui/theme/Theme.kt`
 
 **Scope**
-- Extend `TuckColors` with the slots this design needs and the current set lacks: `canvas` (the warm
-  paper base), `tileForeground`, `highlight` (search match marker), `badgeBackground`,
-  `dividerHairline`, and a `CollectionPalette` of curated tile colors, each as a
-  (background, foreground) pair validated for contrast in both themes.
-- Keep existing slot names working so screens can migrate incrementally instead of in one commit.
-- Wire `collections.color` end to end: picker on create/edit, stored value, rendered on tiles. Assign
-  a deterministic color from the palette when none is set, so existing collections look intentional
-  after upgrade rather than uniformly grey.
+- Restructure `TuckColors` so a theme carries three groups rather than one flat list: **neutrals**
+  (canvas, surface, card, elevated, border, hairline, and the text ramp), **roles** (destructive,
+  warning, success), and a reference to its **palette** (R1b).
+- Add the slots this design needs and the current set lacks: `canvas` (the warm paper base),
+  `highlight` (search match marker), `badgeBackground`, `dividerHairline`.
+- Keep the existing slot names resolving so screens migrate one at a time instead of in one commit.
 
 **Acceptance criteria**
-- [ ] Every palette entry passes 4.5:1 for its own foreground and against both theme canvases,
-      proven by a unit test over the palette, not by eye
-- [ ] An existing library upgraded from the current build shows colored collections with no user action
-- [ ] Light and dark screenshots of a token gallery screen attached to the walkthrough
+- [ ] Neutrals pass 4.5:1 for body text and 3:1 for large text against canvas and card, in both themes
+- [ ] Role colors are distinguishable from every palette hue (see R1b's separation test)
+- [ ] Existing screens still compile and render unchanged before any screen work begins
 
 ---
+
+# R1b — The collection palette *(the heart of the redesign)*
+
+**Goal:** 8–10 hues per theme that unmistakably belong to one family, stay legible, and stay
+distinguishable from each other — including for colorblind users.
+
+**Build them in a perceptual color space, not by eye.** This is the part that separates a designed
+palette from a bag of colors: pick the hues in **OKLCH**, holding lightness (L) and chroma (C)
+roughly constant across the family and varying only hue (H). In sRGB or HSL, a "same brightness"
+yellow and blue are nowhere near the same perceived lightness, and the tile grid ends up looking
+lumpy — some tiles glaring, others muddy. Fixing L and C fixes that.
+
+**Scope**
+- Define each palette as data: a slot name, an OKLCH triple, and its paired foreground.
+- Convert to sRGB at build or test time, and check the color is actually in gamut — out-of-gamut
+  OKLCH values clip silently and break the family's evenness.
+- Light theme and dark theme keep the **same hue positions and slot names**, at different L/C, so a
+  collection called `terracotta` stays recognisably itself across themes rather than jumping hue.
+- Space hues **perceptually, not by dividing 360 evenly** — the yellow-green region crowds badly, so
+  even mathematical spacing produces several hues that read as "sort of yellow".
+- Deterministic slot assignment for collections with no color set, so an upgraded library looks
+  intentional rather than uniformly grey — and so two adjacent tiles rarely land on neighbouring hues.
+
+**Validation — write these as tests, not as a visual check.** This is the whole reason the palette
+will hold up:
+- **Foreground contrast:** every hue's paired foreground ≥ 4.5:1 on that hue.
+- **Tile separation:** every hue ≥ 3:1 against the canvas, so tiles never dissolve into the background.
+- **Pairwise distinctness:** every pair of hues separated by a perceptual distance floor, so no two
+  tiles read as the same color.
+- **Colorblind safety:** run the palette through deuteranopia, protanopia and tritanopia simulation
+  and assert the pairwise floor still holds. Around 8% of men have some form of color vision
+  deficiency, and a palette of 9 hues is exactly where naive palettes collapse into three.
+- **Gamut:** every color round-trips OKLCH → sRGB → OKLCH within tolerance.
+
+**Acceptance criteria**
+- [ ] All five validation tests pass for every shipped theme, in light and dark
+- [ ] A palette gallery screen renders every hue as a tile with its foreground, in both themes, plus
+      a simulated-colorblind row — attached as screenshots to the walkthrough
+- [ ] Collections store a **slot**, not a hex value, and re-map correctly when the theme changes
+- [ ] An existing library upgraded from the current build shows colored collections with no user action
+- [ ] Switching theme changes every collection tile coherently, with no stale or clashing color
+
+**Out of scope:** letting users define custom hues. If that is ever wanted, it has to run the same
+validation, which is a separate piece of work.
 
 # R2 — Typography
 
@@ -184,7 +254,8 @@ a deliberate product decision ("save first, organise later") and I would keep it
 Build these as previewable, stateless composables **before** touching screens. Every one needs
 `@Preview` in light and dark, with a long-text and empty variant.
 
-- `CollectionTile` — color fill, icon, name, count, selected state, locked badge
+- `CollectionTile` — palette-slot fill with its paired foreground, icon, name, count, selected
+  state, locked badge. Takes a slot, never a raw color
 - `SaveCard` — thumbnail or type glyph, title, source line, type badge
 - `FilterPill` — selected/unselected
 - `SectionLabel` — the all-caps label
@@ -330,6 +401,8 @@ and dark.
 **Acceptance criteria**
 - [ ] Every screen has a designed empty state — none show a blank canvas
 - [ ] Full accessibility pass: TalkBack walkthrough of each screen, 200% type, contrast verified
+- [ ] Every screen checked in every shipped theme, light and dark — palette regressions surface on
+      real screens, not in the gallery
 - [ ] Widget and app icon consistent with the new system
 - [ ] Before/after screenshot set attached
 
