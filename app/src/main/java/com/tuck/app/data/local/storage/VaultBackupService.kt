@@ -72,6 +72,7 @@ class VaultBackupService @Inject constructor(
                         put("userNote", item.userNote ?: "")
                         put("captureNote", item.captureNote ?: "")
                         put("isFavorite", item.isFavorite)
+                        item.capturedAt?.let { put("capturedAt", it) }
                         put("createdAt", item.createdAt)
                     })
                 }
@@ -108,6 +109,7 @@ class VaultBackupService @Inject constructor(
                         put("userNote", item.userNote ?: "")
                         put("captureNote", item.captureNote ?: "")
                         put("isFavorite", item.isFavorite)
+                        item.capturedAt?.let { put("capturedAt", it) }
                         put("createdAt", item.createdAt)
                         if (!item.localFilePath.isNullOrBlank()) {
                             val file = File(item.localFilePath)
@@ -213,6 +215,7 @@ class VaultBackupService @Inject constructor(
                     localFilePath = localPath,
                     isFavorite = obj["isFavorite"]?.jsonPrimitive?.booleanOrNull ?: false,
                     processingStatus = ProcessingStatus.READY,
+                    capturedAt = obj["capturedAt"]?.jsonPrimitive?.longOrNull,
                     createdAt = obj["createdAt"]?.jsonPrimitive?.longOrNull ?: System.currentTimeMillis()
                 )
 
@@ -267,6 +270,7 @@ class VaultBackupService @Inject constructor(
                         put("userNote", item.userNote ?: "")
                         put("captureNote", item.captureNote ?: "")
                         put("isFavorite", item.isFavorite)
+                        item.capturedAt?.let { put("capturedAt", it) }
                         put("createdAt", item.createdAt)
                     })
                 }
@@ -308,7 +312,8 @@ class VaultBackupService @Inject constructor(
                 captureNote = obj["captureNote"]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() },
                 isFavorite = obj["isFavorite"]?.jsonPrimitive?.booleanOrNull ?: false,
                 processingStatus = ProcessingStatus.READY,
-                createdAt = obj["createdAt"]?.jsonPrimitive?.longOrNull ?: System.currentTimeMillis()
+                capturedAt = obj["capturedAt"]?.jsonPrimitive?.longOrNull,
+                    createdAt = obj["createdAt"]?.jsonPrimitive?.longOrNull ?: System.currentTimeMillis()
             )
 
             val newId = savedItemDao.insert(entity)

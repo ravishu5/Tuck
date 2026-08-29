@@ -150,6 +150,9 @@ fun TuckApp(
                         },
                         onNavigateToDetail = { itemId ->
                             navController.navigate(NavRoutes.detail(itemId))
+                        },
+                        onNavigateToSettings = {
+                            navController.navigate(NavRoutes.SETTINGS)
                         }
                     )
                 }
@@ -190,6 +193,9 @@ fun TuckApp(
                     SettingsScreen(
                         onNavigateToTrash = {
                             navController.navigate(NavRoutes.TRASH)
+                        },
+                        onNavigateBack = {
+                            navController.popBackStack()
                         }
                     )
                 }

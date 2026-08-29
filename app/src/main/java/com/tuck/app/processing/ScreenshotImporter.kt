@@ -118,10 +118,12 @@ class ScreenshotImporter @Inject constructor(
             localFilePath = saveResult.localFilePath,
             thumbnailPath = saveResult.thumbnailPath,
             imageSha256 = saveResult.sha256,
-            mimeType = "image/png",
+            // Previously hardcoded to image/png, which mislabelled every JPEG in the gallery.
+            mimeType = saveResult.mimeType ?: "image/*",
             sourceDomain = "Gallery Screenshots",
             sourceApp = "Camera Roll / Screenshots",
             processingStatus = ProcessingStatus.PENDING,
+            capturedAt = saveResult.capturedAt ?: screenshot.dateAdded.takeIf { it > 0 },
             createdAt = screenshot.dateAdded.takeIf { it > 0 } ?: System.currentTimeMillis()
         )
 

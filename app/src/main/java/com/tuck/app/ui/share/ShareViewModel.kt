@@ -151,6 +151,7 @@ class ShareViewModel @Inject constructor(
         var imageSha256: String? = null
         var canonicalUrl: String? = null
         var sourceDomain: String? = null
+        var capturedAt: Long? = null
 
         // 1. Process files / images / PDFs / contacts / streams if present (copy all stream bytes immediately)
         if (parsed.streamUris.isNotEmpty()) {
@@ -160,6 +161,7 @@ class ShareViewModel @Inject constructor(
                 localFilePath = primaryResult.localFilePath
                 thumbnailPath = primaryResult.thumbnailPath
                 imageSha256 = primaryResult.sha256
+                capturedAt = primaryResult.capturedAt
             }
         }
 
@@ -175,6 +177,7 @@ class ShareViewModel @Inject constructor(
         }
 
         val item = SavedItem(
+            capturedAt = capturedAt,
             contentType = parsed.contentType,
             title = parsed.title,
             description = parsed.extraMetadata["query"] ?: parsed.extraMetadata["org"],

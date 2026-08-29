@@ -30,6 +30,11 @@ object TuckTheme {
         @Composable
         @ReadOnlyComposable
         get() = LocalTuckShapes.current
+
+    val typography: TuckTypographyExtension
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalTuckTypographyExtension.current
 }
 
 @Composable
@@ -46,6 +51,7 @@ fun TuckTheme(
     val tuckColors = getTuckColors(themeFlavor, darkTheme)
     val tuckSpacing = TuckSpacing()
     val tuckShapes = TuckShapes()
+    val tuckTypography = TuckTypographyExtension()
 
     val materialColorScheme = if (darkTheme) {
         darkColorScheme(
@@ -95,7 +101,8 @@ fun TuckTheme(
     CompositionLocalProvider(
         LocalTuckColors provides tuckColors,
         LocalTuckSpacing provides tuckSpacing,
-        LocalTuckShapes provides tuckShapes
+        LocalTuckShapes provides tuckShapes,
+        LocalTuckTypographyExtension provides tuckTypography
     ) {
         MaterialTheme(
             colorScheme = materialColorScheme,

@@ -49,7 +49,7 @@ import kotlinx.serialization.json.JsonObject
         DerivedPointEntity::class,
         OcrBlockEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -301,6 +301,22 @@ abstract class TuckDatabase : RoomDatabase() {
                 db.execSQL(com.tuck.app.data.local.db.dao.SavedItemFtsDaoImpl.CREATE_TABLE)
                 db.execSQL(com.tuck.app.data.local.db.dao.SavedItemFtsDaoImpl.CREATE_DELETE_TRIGGER)
                 db.execSQL(com.tuck.app.data.local.db.dao.backfillSql())
+            }
+        }
+
+        /**
+         * Adds `capturedAt`: when the content was originally created, distinct from when
+         * Tuck saved it. A photo taken in 2019 and shared today previously read as if it
+         * were from today, which is the reason competitors' users refused to delete their
+         * originals. Nullable, and backfilled from EXIF by "regenerate derived data".
+         */
+        val MIGRATION_4_5 = object : androidx.room.migration.Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // No DEFAULT clause: a nullable column is implicitly NULL, and an explicit
+                // "DEFAULT NULL" records a default of 'NULL' where Room expects 'undefined',
+                // which fails schema validation on the next open.
+                db.execSQL("ALTER TABLE saved_items ADD COLUMN capturedAt INTEGER")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_saved_items_capturedAt ON saved_items(capturedAt)")
             }
         }
 

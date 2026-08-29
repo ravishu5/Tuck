@@ -6,6 +6,9 @@ import android.graphics.BitmapFactory
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.ParcelFileDescriptor
+import android.provider.OpenableColumns
+import android.webkit.MimeTypeMap
+import androidx.exifinterface.media.ExifInterface
 import com.tuck.app.domain.model.ContentType
 import com.tuck.app.domain.repository.StorageUsage
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -53,15 +56,123 @@ class FileStorageService @Inject constructor(
         }
     }
 
+
+    /**
+     * Resolves the real file extension instead of assuming one.
+     *
+     * Every image was previously written as `.jpg` and every video as `.mp4`, whatever
+     * the bytes actually were. The bytes were always correct - the copy is a verbatim
+     * stream - but a PNG named `.jpg` misleads FileProvider's mime inference, external
+     * viewers, and export.
+     */
+    private fun resolveExtension(uri: Uri, mimeType: String?, fallback: String): String {
+        MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType)?.let { return it }
+
+        displayNameOf(uri)?.substringAfterLast('.', "")?.takeIf { it.isNotBlank() && it.length <= 5 }
+            ?.let { return it.lowercase() }
+
+        return fallback
+    }
+
+    /**
+     * The content resolver is authoritative for `content://`, but returns null for
+     * `file://` - so the caller's hint and then the filename have to fill in, otherwise
+     * every shared file falls back to a guess.
+     */
+    private fun resolveMime(uri: Uri, hint: String?): String? =
+        context.contentResolver.getType(uri)
+            ?: hint
+            ?: displayNameOf(uri)?.substringAfterLast('.', "")?.takeIf { it.isNotBlank() }
+                ?.let { MimeTypeMap.getSingleton().getMimeTypeFromExtension(it.lowercase()) }
+
+    private fun displayNameOf(uri: Uri): String? = try {
+        if (uri.scheme == "content") {
+            context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+                ?.use { cursor ->
+                    if (cursor.moveToFirst()) cursor.getString(0) else null
+                }
+        } else {
+            uri.lastPathSegment
+        }
+    } catch (e: Exception) {
+        null
+    }
+
+    /**
+     * When the content was originally created, as opposed to when Tuck saved it.
+     *
+     * A photo taken in 2019 and shared today should not read as if it is from today -
+     * losing this was the reason one competitor's users refused to delete their originals.
+     */
+    private fun readCapturedAt(file: File, mimeType: String?): Long? = try {
+        if (mimeType?.startsWith("image/") == true) {
+            val exif = ExifInterface(file.absolutePath)
+            val raw = exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL)
+                ?: exif.getAttribute(ExifInterface.TAG_DATETIME)
+            raw?.let {
+                java.text.SimpleDateFormat("yyyy:MM:dd HH:mm:ss", java.util.Locale.US)
+                    .parse(it)?.time
+            }
+        } else {
+            null
+        }
+    } catch (e: Exception) {
+        null
+    }
+
+    /** Intrinsic dimensions, so the detail screen can show real values instead of zeros. */
+    private fun readDimensions(file: File, mimeType: String?): Pair<Int, Int> = try {
+        if (mimeType?.startsWith("image/") == true) {
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(file.absolutePath, options)
+            options.outWidth.coerceAtLeast(0) to options.outHeight.coerceAtLeast(0)
+        } else {
+            0 to 0
+        }
+    } catch (e: Exception) {
+        0 to 0
+    }
+
+    private fun readDurationMs(file: File, mimeType: String?): Long = try {
+        if (mimeType?.startsWith("video/") == true || mimeType?.startsWith("audio/") == true) {
+            android.media.MediaMetadataRetriever().use { retriever ->
+                retriever.setDataSource(file.absolutePath)
+                retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
+                    ?.toLongOrNull() ?: 0L
+            }
+        } else {
+            0L
+        }
+    } catch (e: Exception) {
+        0L
+    }
+
+    private fun copyStream(uri: Uri, destinationFile: File): String {
+        var sha256 = ""
+        openStreamSafely(uri)?.use { input ->
+            val digest = MessageDigest.getInstance("SHA-256")
+            val buffer = ByteArray(16384)
+            var bytesRead: Int
+            FileOutputStream(destinationFile).use { output ->
+                while (input.read(buffer).also { bytesRead = it } != -1) {
+                    output.write(buffer, 0, bytesRead)
+                    digest.update(buffer, 0, bytesRead)
+                }
+            }
+            sha256 = digest.digest().joinToString("") { "%02x".format(it) }
+        } ?: throw IllegalStateException("Cannot open input stream for Uri: $uri")
+        return sha256
+    }
+
     suspend fun saveStreamUri(uri: Uri, mimeType: String? = null): StorageSaveResult = withContext(Dispatchers.IO) {
         takePersistableUriPermissionSafely(uri)
-        val resolvedMime = (mimeType ?: context.contentResolver.getType(uri) ?: "application/octet-stream").lowercase()
+        val resolvedMime = (resolveMime(uri, mimeType) ?: "application/octet-stream").lowercase()
 
         when {
-            resolvedMime.startsWith("image/") -> saveImageFromUri(uri)
+            resolvedMime.startsWith("image/") -> saveImageFromUri(uri, resolvedMime)
             resolvedMime == "application/pdf" -> savePdfFromUri(uri)
             else -> {
-                val ext = when {
+                val fallback = when {
                     resolvedMime.contains("vcard") -> "vcf"
                     resolvedMime.startsWith("video/") -> "mp4"
                     resolvedMime.startsWith("audio/") -> "mp3"
@@ -69,7 +180,7 @@ class FileStorageService @Inject constructor(
                     resolvedMime.contains("text/plain") -> "txt"
                     else -> "bin"
                 }
-                saveDocumentFromUri(uri, ext)
+                saveDocumentFromUri(uri, resolveExtension(uri, resolvedMime, fallback), resolvedMime)
             }
         }
     }
@@ -104,87 +215,60 @@ class FileStorageService @Inject constructor(
         }
     }
 
-    suspend fun saveImageFromUri(uri: Uri): StorageSaveResult = withContext(Dispatchers.IO) {
+    suspend fun saveImageFromUri(uri: Uri, mimeHint: String? = null): StorageSaveResult = withContext(Dispatchers.IO) {
         takePersistableUriPermissionSafely(uri)
-        val fileName = "img_${UUID.randomUUID()}.jpg"
+        val mime = resolveMime(uri, mimeHint) ?: "image/jpeg"
+        val fileName = "img_${UUID.randomUUID()}.${resolveExtension(uri, mime, "jpg")}"
         val destinationFile = File(imagesDir, fileName)
 
-        var sha256 = ""
-        openStreamSafely(uri)?.use { input ->
-            val digest = MessageDigest.getInstance("SHA-256")
-            val buffer = ByteArray(16384)
-            var bytesRead: Int
-            FileOutputStream(destinationFile).use { output ->
-                while (input.read(buffer).also { bytesRead = it } != -1) {
-                    output.write(buffer, 0, bytesRead)
-                    digest.update(buffer, 0, bytesRead)
-                }
-            }
-            sha256 = digest.digest().joinToString("") { "%02x".format(it) }
-        } ?: throw IllegalStateException("Cannot open input stream for Uri: $uri")
-
-        // Generate thumbnail
-        val thumbnailPath = generateImageThumbnail(destinationFile)
+        val sha256 = copyStream(uri, destinationFile)
+        val (width, height) = readDimensions(destinationFile, mime)
 
         StorageSaveResult(
             localFilePath = destinationFile.absolutePath,
-            thumbnailPath = thumbnailPath,
-            sha256 = sha256
+            thumbnailPath = generateImageThumbnail(destinationFile),
+            sha256 = sha256,
+            mimeType = mime,
+            sizeBytes = destinationFile.length(),
+            width = width,
+            height = height,
+            capturedAt = readCapturedAt(destinationFile, mime)
         )
     }
 
     suspend fun savePdfFromUri(uri: Uri): StorageSaveResult = withContext(Dispatchers.IO) {
         takePersistableUriPermissionSafely(uri)
-        val fileName = "doc_${UUID.randomUUID()}.pdf"
-        val destinationFile = File(pdfsDir, fileName)
+        val destinationFile = File(pdfsDir, "doc_${UUID.randomUUID()}.pdf")
 
-        var sha256 = ""
-        openStreamSafely(uri)?.use { input ->
-            val digest = MessageDigest.getInstance("SHA-256")
-            val buffer = ByteArray(16384)
-            var bytesRead: Int
-            FileOutputStream(destinationFile).use { output ->
-                while (input.read(buffer).also { bytesRead = it } != -1) {
-                    output.write(buffer, 0, bytesRead)
-                    digest.update(buffer, 0, bytesRead)
-                }
-            }
-            sha256 = digest.digest().joinToString("") { "%02x".format(it) }
-        } ?: throw IllegalStateException("Cannot open input stream for Uri: $uri")
-
-        // Generate first page PDF thumbnail
-        val thumbnailPath = generatePdfThumbnail(destinationFile)
+        val sha256 = copyStream(uri, destinationFile)
 
         StorageSaveResult(
             localFilePath = destinationFile.absolutePath,
-            thumbnailPath = thumbnailPath,
-            sha256 = sha256
+            thumbnailPath = generatePdfThumbnail(destinationFile),
+            sha256 = sha256,
+            mimeType = "application/pdf",
+            sizeBytes = destinationFile.length()
         )
     }
 
-    suspend fun saveDocumentFromUri(uri: Uri, originalExtension: String = "bin"): StorageSaveResult = withContext(Dispatchers.IO) {
+    suspend fun saveDocumentFromUri(
+        uri: Uri,
+        originalExtension: String = "bin",
+        mimeType: String? = null
+    ): StorageSaveResult = withContext(Dispatchers.IO) {
         takePersistableUriPermissionSafely(uri)
-        val fileName = "doc_${UUID.randomUUID()}.$originalExtension"
-        val destinationFile = File(documentsDir, fileName)
+        val destinationFile = File(documentsDir, "doc_${UUID.randomUUID()}.$originalExtension")
 
-        var sha256 = ""
-        openStreamSafely(uri)?.use { input ->
-            val digest = MessageDigest.getInstance("SHA-256")
-            val buffer = ByteArray(16384)
-            var bytesRead: Int
-            FileOutputStream(destinationFile).use { output ->
-                while (input.read(buffer).also { bytesRead = it } != -1) {
-                    output.write(buffer, 0, bytesRead)
-                    digest.update(buffer, 0, bytesRead)
-                }
-            }
-            sha256 = digest.digest().joinToString("") { "%02x".format(it) }
-        } ?: throw IllegalStateException("Cannot open input stream for Uri: $uri")
+        val sha256 = copyStream(uri, destinationFile)
+        val resolvedMime = resolveMime(uri, mimeType)
 
         StorageSaveResult(
             localFilePath = destinationFile.absolutePath,
             thumbnailPath = null,
-            sha256 = sha256
+            sha256 = sha256,
+            mimeType = resolvedMime,
+            sizeBytes = destinationFile.length(),
+            durationMs = readDurationMs(destinationFile, resolvedMime)
         )
     }
 
@@ -373,5 +457,12 @@ class FileStorageService @Inject constructor(
 data class StorageSaveResult(
     val localFilePath: String,
     val thumbnailPath: String?,
-    val sha256: String
+    val sha256: String,
+    val mimeType: String? = null,
+    val sizeBytes: Long = 0L,
+    val width: Int = 0,
+    val height: Int = 0,
+    val durationMs: Long = 0L,
+    /** Original creation time of the content, distinct from when Tuck saved it. */
+    val capturedAt: Long? = null
 )

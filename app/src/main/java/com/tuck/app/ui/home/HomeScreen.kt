@@ -77,33 +77,43 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tuck.app.R
 import com.tuck.app.domain.model.SavedItem
+import com.tuck.app.ui.components.CountStat
 import com.tuck.app.ui.components.QuickCaptureSpeedDialSheet
+import com.tuck.app.ui.components.SectionLabel
 import com.tuck.app.ui.components.TuckCategoryChip
 import com.tuck.app.ui.components.TuckContentCard
-import com.tuck.app.ui.components.TuckCoverMosaic
 import com.tuck.app.ui.components.TuckEmptyState
 import com.tuck.app.ui.components.TuckResurfacingCard
 import com.tuck.app.ui.components.TuckSectionHeader
+import com.tuck.app.ui.components.TuckThemePreviewCard
 import com.tuck.app.ui.theme.AccentAmber
 import com.tuck.app.ui.theme.AccentEmerald
 import com.tuck.app.ui.theme.AccentOrange
 import com.tuck.app.ui.theme.AccentPurple
 import com.tuck.app.ui.theme.AccentSky
 import com.tuck.app.ui.theme.TuckTheme
-import java.util.Calendar
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.rememberModalBottomSheetState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onNavigateToSearch: () -> Unit,
     onNavigateToDetail: (Long) -> Unit,
+    onNavigateToSettings: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val appSettings by viewModel.appSettings.collectAsStateWithLifecycle()
     val tuckColors = TuckTheme.colors
     val tuckShapes = TuckTheme.shapes
 
     var showQuickAddSheet by remember { mutableStateOf(false) }
+    var showThemeSheet by remember { mutableStateOf(false) }
     var showPasteDialog by remember { mutableStateOf(false) }
     var pasteContent by remember { mutableStateOf("") }
     var isDismissedResurface by remember { mutableStateOf(false) }
@@ -124,6 +134,12 @@ fun HomeScreen(
         }
     }
 
+    val isDark = when (appSettings.theme) {
+        com.tuck.app.domain.repository.AppTheme.DARK -> true
+        com.tuck.app.domain.repository.AppTheme.LIGHT -> false
+        com.tuck.app.domain.repository.AppTheme.SYSTEM -> isSystemInDarkTheme()
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -137,6 +153,10 @@ fun HomeScreen(
             item {
                 HomeHeroHeader(
                     itemCount = uiState.items.size,
+                    folderCount = uiState.collections.size,
+                    isDarkMode = isDark,
+                    onOpenThemePicker = { showThemeSheet = true },
+                    onNavigateToSettings = onNavigateToSettings,
                     onNavigateToSearch = onNavigateToSearch
                 )
             }
@@ -296,6 +316,16 @@ fun HomeScreen(
         )
     }
 
+    if (showThemeSheet) {
+        QuickThemePickerSheet(
+            currentTheme = appSettings.theme,
+            currentFlavor = appSettings.themeFlavor,
+            onSelectTheme = { viewModel.setTheme(it) },
+            onSelectFlavor = { viewModel.setThemeFlavor(it) },
+            onDismiss = { showThemeSheet = false }
+        )
+    }
+
     // Paste / Write Note Dialog
     if (showPasteDialog) {
         AlertDialog(
@@ -381,19 +411,14 @@ fun HomeScreen(
 @Composable
 private fun HomeHeroHeader(
     itemCount: Int,
+    folderCount: Int,
+    isDarkMode: Boolean,
+    onOpenThemePicker: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     onNavigateToSearch: () -> Unit
 ) {
     val tuckColors = TuckTheme.colors
     val tuckShapes = TuckTheme.shapes
-
-    val greeting = remember {
-        val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-        when (hour) {
-            in 5..11 -> "Good morning"
-            in 12..17 -> "Good afternoon"
-            else -> "Good evening"
-        }
-    }
 
     Column(
         modifier = Modifier
@@ -407,31 +432,55 @@ private fun HomeHeroHeader(
         ) {
             Column {
                 Text(
-                    text = greeting,
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.ExtraBold,
+                    text = "My Stash",
+                    style = TuckTheme.typography.displayLarge,
                     color = tuckColors.textPrimary
                 )
-                Text(
-                    text = "$itemCount items tucked away safely",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = tuckColors.textSecondary
+                Spacer(modifier = Modifier.height(2.dp))
+                CountStat(
+                    savesCount = itemCount,
+                    foldersCount = folderCount
                 )
             }
 
-            Surface(
-                shape = tuckShapes.medium,
-                color = tuckColors.surfaceCard,
-                border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.border),
-                modifier = Modifier.size(46.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                        contentDescription = "Tuck Logo",
-                        tint = Color.Unspecified,
-                        modifier = Modifier.size(38.dp)
-                    )
+                // Theme Switcher Quick Button
+                Surface(
+                    onClick = onOpenThemePicker,
+                    shape = tuckShapes.medium,
+                    color = tuckColors.surfaceCard,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.border),
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Filled.Palette,
+                            contentDescription = "Switch Theme & Palette",
+                            tint = tuckColors.accent,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+
+                // Settings Screen Button
+                Surface(
+                    onClick = onNavigateToSettings,
+                    shape = tuckShapes.medium,
+                    color = tuckColors.surfaceCard,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.border),
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Filled.Settings,
+                            contentDescription = "Settings",
+                            tint = tuckColors.textPrimary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
                 }
             }
         }
@@ -697,6 +746,87 @@ private fun ScreenshotSyncBanner(
                         contentDescription = "Dismiss",
                         tint = tuckColors.textMuted,
                         modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun QuickThemePickerSheet(
+    currentTheme: com.tuck.app.domain.repository.AppTheme,
+    currentFlavor: com.tuck.app.domain.repository.TuckThemeFlavor,
+    onSelectTheme: (com.tuck.app.domain.repository.AppTheme) -> Unit,
+    onSelectFlavor: (com.tuck.app.domain.repository.TuckThemeFlavor) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val tuckColors = TuckTheme.colors
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = tuckColors.surface,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 8.dp)
+                .padding(bottom = 36.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Appearance & Themes",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = tuckColors.textPrimary
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Filled.Close, contentDescription = "Close", tint = tuckColors.textMuted)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            SectionLabel(text = "Appearance Mode")
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf(
+                    "System" to com.tuck.app.domain.repository.AppTheme.SYSTEM,
+                    "Light" to com.tuck.app.domain.repository.AppTheme.LIGHT,
+                    "Dark" to com.tuck.app.domain.repository.AppTheme.DARK
+                ).forEach { (label, theme) ->
+                    TuckCategoryChip(
+                        label = label,
+                        isSelected = currentTheme == theme,
+                        onClick = { onSelectTheme(theme) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            SectionLabel(text = "Theme Palette")
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                com.tuck.app.domain.repository.TuckThemeFlavor.values().forEach { flavor ->
+                    TuckThemePreviewCard(
+                        flavor = flavor,
+                        isSelected = currentFlavor == flavor,
+                        onClick = { onSelectFlavor(flavor) }
                     )
                 }
             }

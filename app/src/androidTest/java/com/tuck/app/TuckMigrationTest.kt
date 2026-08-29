@@ -206,6 +206,44 @@ class TuckMigrationTest {
     }
 
     @Test
+    fun migrate4To5_addsCapturedAtWithoutDisturbingExistingRows() {
+        helper.createDatabase(TEST_DB, 2).use { db ->
+            db.execSQL(
+                """
+                INSERT INTO saved_items
+                    (id, contentType, title, description, originalUrl, canonicalUrl, sourceDomain,
+                     sourceApp, mimeType, localFilePath, thumbnailPath, originalText, extractedText,
+                     ocrText, commentsJson, createdAt, updatedAt, lastOpenedAt, isFavorite,
+                     isArchived, isDeleted, processingStatus, textHash, imageSha256)
+                VALUES
+                    (1, 'IMAGE', 'Holiday photo', NULL, NULL, NULL, NULL, NULL, 'image/jpeg',
+                     '/data/img_1.jpg', NULL, NULL, NULL, NULL, NULL,
+                     1700000000000, 1700000000000, NULL, 0, 0, 0, 'READY', NULL, 'sha-1')
+                """.trimIndent()
+            )
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 3, true, TuckDatabase.MIGRATION_2_3).close()
+        helper.runMigrationsAndValidate(TEST_DB, 4, false, TuckDatabase.MIGRATION_3_4).close()
+        val db = helper.runMigrationsAndValidate(TEST_DB, 5, false, TuckDatabase.MIGRATION_4_5)
+
+        db.use {
+            it.query("SELECT title, createdAt, capturedAt FROM saved_items WHERE id = 1").use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("existing rows survive", "Holiday photo", c.getString(0))
+                assertEquals("save time is untouched", 1700000000000L, c.getLong(1))
+                assertTrue("capturedAt starts null, to be backfilled from EXIF", c.isNull(2))
+            }
+            // A pre-v5 row must accept a capture time without any further migration.
+            it.execSQL("UPDATE saved_items SET capturedAt = 1500000000000 WHERE id = 1")
+            it.query("SELECT capturedAt FROM saved_items WHERE id = 1").use { c ->
+                c.moveToFirst()
+                assertEquals(1500000000000L, c.getLong(0))
+            }
+        }
+    }
+
+    @Test
     fun migrate2To3_parsesCommentsJsonIntoMaterializedPathTree() {
         helper.createDatabase(TEST_DB, 2).use { db ->
             db.execSQL(

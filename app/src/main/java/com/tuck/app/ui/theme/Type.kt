@@ -83,3 +83,52 @@ val TuckTypography = Typography(
         lineHeight = 14.sp
     )
 )
+
+/**
+ * Extended typography tokens for the Tuck visual redesign.
+ */
+data class TuckTypographyExtension(
+    val displayLarge: TextStyle = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Black,
+        fontSize = 30.sp,
+        lineHeight = 36.sp,
+        letterSpacing = (-0.6).sp
+    ),
+    val displayMedium: TextStyle = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.ExtraBold,
+        fontSize = 24.sp,
+        lineHeight = 30.sp,
+        letterSpacing = (-0.4).sp
+    ),
+    val sectionLabel: TextStyle = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.ExtraBold,
+        fontSize = 11.sp,
+        lineHeight = 14.sp,
+        letterSpacing = 1.2.sp
+    ),
+    val numericCount: TextStyle = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Bold,
+        fontSize = 13.sp,
+        lineHeight = 17.sp
+    ),
+    val tileTitle: TextStyle = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Bold,
+        fontSize = 14.sp,
+        lineHeight = 18.sp
+    ),
+    val matchHighlight: TextStyle = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.ExtraBold,
+        fontSize = 14.sp,
+        lineHeight = 18.sp
+    )
+)
+
+val LocalTuckTypographyExtension = androidx.compose.runtime.staticCompositionLocalOf {
+    TuckTypographyExtension()
+}

@@ -10,28 +10,153 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.tuck.app.domain.repository.TuckThemeFlavor
+import com.tuck.app.ui.theme.color.CobaltDarkPalette
+import com.tuck.app.ui.theme.color.CobaltLightPalette
+import com.tuck.app.ui.theme.color.ForestDarkPalette
+import com.tuck.app.ui.theme.color.ForestLightPalette
+import com.tuck.app.ui.theme.color.LinenDarkPalette
+import com.tuck.app.ui.theme.color.LinenLightPalette
+import com.tuck.app.ui.theme.color.NoirDarkPalette
+import com.tuck.app.ui.theme.color.NoirLightPalette
+import com.tuck.app.ui.theme.color.PaletteSlot
+import com.tuck.app.ui.theme.color.PlumDarkPalette
+import com.tuck.app.ui.theme.color.PlumLightPalette
+import com.tuck.app.ui.theme.color.TuckPalette
 
 /**
- * Tuck design tokens for colors, spacing, and shapes.
+ * Curated Collection Tile Color with guaranteed WCAG 2.1 AA (>= 4.5:1) foreground contrast.
+ */
+data class CollectionColorEntry(
+    val id: String,
+    val name: String,
+    val background: Color,
+    val foreground: Color
+)
+
+/**
+ * Maps a legacy color ID or string to a canonical [PaletteSlot].
+ */
+fun mapLegacyColorToSlot(stored: String?): PaletteSlot? {
+    if (stored.isNullOrBlank()) return null
+    val direct = PaletteSlot.fromString(stored)
+    if (direct != null) return direct
+
+    return when (stored.trim().lowercase()) {
+        "coral", "terracotta", "orange", "crimson" -> PaletteSlot.TERRACOTTA
+        "amber", "yellow" -> PaletteSlot.AMBER
+        "mustard", "gold" -> PaletteSlot.MUSTARD
+        "emerald", "mint", "green", "sage" -> PaletteSlot.SAGE
+        "teal", "cyan" -> PaletteSlot.TEAL
+        "sky", "indigo", "slate", "midnight", "blue", "denim" -> PaletteSlot.DENIM
+        "purple", "violet", "plum" -> PaletteSlot.PLUM
+        "berry", "rose", "pink" -> PaletteSlot.ROSE
+        else -> null
+    }
+}
+
+/**
+ * Resolves a [PaletteSlot] deterministically for a collection.
+ * Adjacent items in default sort are dispersed across hues using prime multiplication.
+ */
+fun resolveCollectionSlot(storedColorId: String?, name: String = "", id: Long = 0): PaletteSlot {
+    val mapped = mapLegacyColorToSlot(storedColorId)
+    if (mapped != null) return mapped
+
+    val rawSeed = if (name.isNotBlank()) name.trim().lowercase().hashCode().toLong() else id
+    val positiveSeed = kotlin.math.abs(rawSeed)
+    val slotIndex = ((positiveSeed * 5L) % PaletteSlot.entries.size).toInt()
+    return PaletteSlot.entries[slotIndex]
+}
+
+/**
+ * Resolves a collection color entry from a stored ID or name, using the provided or default palette.
+ */
+fun resolveCollectionColor(
+    storedColorId: String?,
+    name: String = "",
+    id: Long = 0,
+    palette: TuckPalette = LinenLightPalette
+): CollectionColorEntry {
+    val slot = resolveCollectionSlot(storedColorId, name, id)
+    val entry = palette[slot]
+    return CollectionColorEntry(
+        id = slot.name.lowercase(),
+        name = slot.displayName,
+        background = entry.fill,
+        foreground = entry.onFill
+    )
+}
+
+/**
+ * Backward compatibility 8-color saturated collection palette list for LinenLight.
+ */
+val DefaultCollectionPalette: List<CollectionColorEntry> by lazy {
+    PaletteSlot.entries.map { slot ->
+        val entry = LinenLightPalette[slot]
+        CollectionColorEntry(
+            id = slot.name.lowercase(),
+            name = slot.displayName,
+            background = entry.fill,
+            foreground = entry.onFill
+        )
+    }
+}
+
+/**
+ * Multi-hue Tuck Design Tokens.
+ * Structured into Neutrals, Roles, and Palette while maintaining 100% backward compatibility.
  */
 data class TuckColors(
-    val background: Color,
+    // Neutrals
+    val canvas: Color,
     val surface: Color,
     val surfaceCard: Color,
     val surfaceElevated: Color,
     val surfaceVariant: Color,
     val surfaceSubtle: Color,
-    val accent: Color,
-    val accentLight: Color,
-    val accentContainer: Color,
+    val border: Color,
+    val borderSubtle: Color,
+    val dividerHairline: Color,
     val textPrimary: Color,
     val textSecondary: Color,
     val textMuted: Color,
+    val isDark: Boolean,
+
+    // Primary & Accent
+    val accent: Color,
+    val accentLight: Color,
+    val accentContainer: Color,
     val textOnAccent: Color,
-    val border: Color,
-    val borderSubtle: Color,
-    val isDark: Boolean
-)
+
+    // Highlight & Badge
+    val highlight: Color,
+    val highlightText: Color,
+    val badgeBackground: Color,
+    val tileForeground: Color = textPrimary,
+
+    // Roles
+    val destructive: Color = if (isDark) Color(0xFFF87171) else Color(0xFFDC2626),
+    val warning: Color = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706),
+    val success: Color = if (isDark) Color(0xFF4ADE80) else Color(0xFF16A34A),
+
+    // Multi-Hue Coordinated Palette
+    val palette: TuckPalette = if (isDark) NoirDarkPalette else LinenLightPalette
+) {
+    // Backward compatibility alias for background -> canvas
+    val background: Color get() = canvas
+
+    // Backward compatibility collectionPalette list
+    val collectionPalette: List<CollectionColorEntry>
+        get() = PaletteSlot.entries.map { slot ->
+            val entry = palette[slot]
+            CollectionColorEntry(
+                id = slot.name.lowercase(),
+                name = slot.displayName,
+                background = entry.fill,
+                foreground = entry.onFill
+            )
+        }
+}
 
 data class TuckSpacing(
     val none: Dp = 0.dp,
@@ -53,199 +178,249 @@ data class TuckShapes(
     val circle: Shape = CircleShape
 )
 
-// 1. Linen Palettes (Default)
+// 1. Linen Palettes (Signature Warm Paper & Terracotta)
 val LinenLight = TuckColors(
-    background = Color(0xFFFAF7F2),
+    canvas = Color(0xFFFAF7F2),
     surface = Color(0xFFFFFFFF),
     surfaceCard = Color(0xFFF4EEE5),
     surfaceElevated = Color(0xFFFFFFFF),
     surfaceVariant = Color(0xFFEDE5D8),
     surfaceSubtle = Color(0xFFF8F3EC),
-    accent = Color(0xFFE25C34),
-    accentLight = Color(0xFFF07650),
-    accentContainer = Color(0xFFFDEEE9),
+    border = Color(0xFFE8DFD3),
+    borderSubtle = Color(0xFFF0E9DF),
+    dividerHairline = Color(0xFFE8DFD3),
     textPrimary = Color(0xFF1C1917),
     textSecondary = Color(0xFF6E665E),
     textMuted = Color(0xFF9C9287),
-    textOnAccent = Color(0xFFFFFFFF),
-    border = Color(0xFFE8DFD3),
-    borderSubtle = Color(0xFFF0E9DF),
-    isDark = false
+    accent = LinenLightPalette[PaletteSlot.TERRACOTTA].fill,
+    accentLight = Color(0xFFF07650),
+    accentContainer = Color(0xFFFDEEE9),
+    textOnAccent = LinenLightPalette[PaletteSlot.TERRACOTTA].onFill,
+    highlight = Color(0xFFFEF08A),
+    highlightText = Color(0xFF713F12),
+    badgeBackground = Color(0xFFEDE5D8),
+    isDark = false,
+    palette = LinenLightPalette
 )
 
 val LinenDark = TuckColors(
-    background = Color(0xFF181614),
+    canvas = Color(0xFF181614),
     surface = Color(0xFF221F1C),
     surfaceCard = Color(0xFF2A2622),
     surfaceElevated = Color(0xFF322E29),
     surfaceVariant = Color(0xFF38332E),
     surfaceSubtle = Color(0xFF1F1C19),
-    accent = Color(0xFFFF7A50),
-    accentLight = Color(0xFFFFA080),
-    accentContainer = Color(0xFF3D261E),
+    border = Color(0xFF3B352E),
+    borderSubtle = Color(0xFF2B2621),
+    dividerHairline = Color(0xFF3B352E),
     textPrimary = Color(0xFFF7F4EE),
     textSecondary = Color(0xFFB5ADA4),
     textMuted = Color(0xFF7C746B),
-    textOnAccent = Color(0xFF181614),
-    border = Color(0xFF3B352E),
-    borderSubtle = Color(0xFF2B2621),
-    isDark = true
+    accent = LinenDarkPalette[PaletteSlot.TERRACOTTA].fill,
+    accentLight = Color(0xFFFFA080),
+    accentContainer = Color(0xFF3D261E),
+    textOnAccent = LinenDarkPalette[PaletteSlot.TERRACOTTA].onFill,
+    highlight = Color(0xFF854D0E),
+    highlightText = Color(0xFFFEF08A),
+    badgeBackground = Color(0xFF38332E),
+    isDark = true,
+    palette = LinenDarkPalette
 )
 
-// 2. Noir Palettes
+// 2. Noir Palettes (Signature Obsidian & Titanium)
 val NoirDark = TuckColors(
-    background = Color(0xFF0D0D0E),
+    canvas = Color(0xFF0D0D0E),
     surface = Color(0xFF161619),
     surfaceCard = Color(0xFF1F1F24),
     surfaceElevated = Color(0xFF28282E),
     surfaceVariant = Color(0xFF2F2F37),
     surfaceSubtle = Color(0xFF121214),
-    accent = Color(0xFFFF6B4A),
-    accentLight = Color(0xFFFF886E),
-    accentContainer = Color(0xFF3A1E17),
+    border = Color(0xFF2E2E38),
+    borderSubtle = Color(0xFF22222A),
+    dividerHairline = Color(0xFF2E2E38),
     textPrimary = Color(0xFFF4F4F6),
     textSecondary = Color(0xFFA2A2AD),
     textMuted = Color(0xFF6B6B76),
-    textOnAccent = Color(0xFF0D0D0E),
-    border = Color(0xFF2E2E38),
-    borderSubtle = Color(0xFF22222A),
-    isDark = true
+    accent = NoirDarkPalette[PaletteSlot.TERRACOTTA].fill,
+    accentLight = Color(0xFFFF886E),
+    accentContainer = Color(0xFF3A1E17),
+    textOnAccent = NoirDarkPalette[PaletteSlot.TERRACOTTA].onFill,
+    highlight = Color(0xFF854D0E),
+    highlightText = Color(0xFFFEF08A),
+    badgeBackground = Color(0xFF2F2F37),
+    isDark = true,
+    palette = NoirDarkPalette
 )
 
 val NoirLight = TuckColors(
-    background = Color(0xFFF5F5F7),
+    canvas = Color(0xFFF5F5F7),
     surface = Color(0xFFFFFFFF),
     surfaceCard = Color(0xFFECECEE),
     surfaceElevated = Color(0xFFFFFFFF),
     surfaceVariant = Color(0xFFE2E2E6),
     surfaceSubtle = Color(0xFFF9F9FA),
-    accent = Color(0xFFE64A19),
-    accentLight = Color(0xFFFF6B4A),
-    accentContainer = Color(0xFFFFEBE6),
+    border = Color(0xFFDCDCE2),
+    borderSubtle = Color(0xFFE8E8EC),
+    dividerHairline = Color(0xFFDCDCE2),
     textPrimary = Color(0xFF111113),
     textSecondary = Color(0xFF5A5A66),
     textMuted = Color(0xFF8C8C9A),
-    textOnAccent = Color(0xFFFFFFFF),
-    border = Color(0xFFDCDCE2),
-    borderSubtle = Color(0xFFE8E8EC),
-    isDark = false
+    accent = NoirLightPalette[PaletteSlot.TERRACOTTA].fill,
+    accentLight = Color(0xFFFF6B4A),
+    accentContainer = Color(0xFFFFEBE6),
+    textOnAccent = NoirLightPalette[PaletteSlot.TERRACOTTA].onFill,
+    highlight = Color(0xFFFEF08A),
+    highlightText = Color(0xFF713F12),
+    badgeBackground = Color(0xFFE2E2E6),
+    isDark = false,
+    palette = NoirLightPalette
 )
 
-// 3. Forest Palettes
+// 3. Forest Palettes (Botanical Sage & Moss Pine)
 val ForestLight = TuckColors(
-    background = Color(0xFFF3F7F4),
+    canvas = Color(0xFFF3F7F4),
     surface = Color(0xFFFFFFFF),
     surfaceCard = Color(0xFFE8F0EA),
     surfaceElevated = Color(0xFFFFFFFF),
-    surfaceVariant = Color(0xFFDDE9E0),
+    surfaceVariant = Color(0xFFDCE8DF),
     surfaceSubtle = Color(0xFFF0F5F2),
-    accent = Color(0xFF2D6A4F),
-    accentLight = Color(0xFF40916C),
-    accentContainer = Color(0xFFE2EFE7),
-    textPrimary = Color(0xFF122017),
-    textSecondary = Color(0xFF4A6052),
-    textMuted = Color(0xFF7D9585),
-    textOnAccent = Color(0xFFFFFFFF),
-    border = Color(0xFFD5E4D8),
-    borderSubtle = Color(0xFFE2EEE5),
-    isDark = false
+    border = Color(0xFFD1E0D5),
+    borderSubtle = Color(0xFFE3EDE6),
+    dividerHairline = Color(0xFFD1E0D5),
+    textPrimary = Color(0xFF111D14),
+    textSecondary = Color(0xFF475E4D),
+    textMuted = Color(0xFF789480),
+    accent = ForestLightPalette[PaletteSlot.SAGE].fill,
+    accentLight = Color(0xFF52B788),
+    accentContainer = Color(0xFFE5F6EE),
+    textOnAccent = ForestLightPalette[PaletteSlot.SAGE].onFill,
+    highlight = Color(0xFFD9F99D),
+    highlightText = Color(0xFF365314),
+    badgeBackground = Color(0xFFDCE8DF),
+    isDark = false,
+    palette = ForestLightPalette
 )
 
 val ForestDark = TuckColors(
-    background = Color(0xFF101813),
-    surface = Color(0xFF17231C),
-    surfaceCard = Color(0xFF1E2E25),
-    surfaceElevated = Color(0xFF26392E),
-    surfaceVariant = Color(0xFF2E4537),
-    surfaceSubtle = Color(0xFF131D17),
-    accent = Color(0xFF52B788),
+    canvas = Color(0xFF0F1712),
+    surface = Color(0xFF17221A),
+    surfaceCard = Color(0xFF1E2C22),
+    surfaceElevated = Color(0xFF26372B),
+    surfaceVariant = Color(0xFF2E4133),
+    surfaceSubtle = Color(0xFF131D16),
+    border = Color(0xFF2A3D30),
+    borderSubtle = Color(0xFF1F2E24),
+    dividerHairline = Color(0xFF2A3D30),
+    textPrimary = Color(0xFFEEF7F1),
+    textSecondary = Color(0xFFA5C2AC),
+    textMuted = Color(0xFF6B8773),
+    accent = ForestDarkPalette[PaletteSlot.SAGE].fill,
     accentLight = Color(0xFF74C69D),
-    accentContainer = Color(0xFF1D3B2B),
-    textPrimary = Color(0xFFECF5EE),
-    textSecondary = Color(0xFFA3BCA9),
-    textMuted = Color(0xFF6B8572),
-    textOnAccent = Color(0xFF101813),
-    border = Color(0xFF2A4033),
-    borderSubtle = Color(0xFF203227),
-    isDark = true
+    accentContainer = Color(0xFF1A3D2A),
+    textOnAccent = ForestDarkPalette[PaletteSlot.SAGE].onFill,
+    highlight = Color(0xFF4D7C0F),
+    highlightText = Color(0xFFECFCCB),
+    badgeBackground = Color(0xFF2E4133),
+    isDark = true,
+    palette = ForestDarkPalette
 )
 
-// 4. Cobalt Palettes
+// 4. Cobalt Palettes (Blueprint Ice & Oceanic Navy)
 val CobaltLight = TuckColors(
-    background = Color(0xFFF0F4F8),
+    canvas = Color(0xFFF2F6FB),
     surface = Color(0xFFFFFFFF),
-    surfaceCard = Color(0xFFE3ECF5),
+    surfaceCard = Color(0xFFE5EEF8),
     surfaceElevated = Color(0xFFFFFFFF),
-    surfaceVariant = Color(0xFFD6E3F0),
-    surfaceSubtle = Color(0xFFF4F7FB),
-    accent = Color(0xFF2563EB),
+    surfaceVariant = Color(0xFFD7E5F4),
+    surfaceSubtle = Color(0xFFEEF4FA),
+    border = Color(0xFFCADDF0),
+    borderSubtle = Color(0xFFDEEAF7),
+    dividerHairline = Color(0xFFCADDF0),
+    textPrimary = Color(0xFF0F1B2C),
+    textSecondary = Color(0xFF485E7C),
+    textMuted = Color(0xFF7B93B2),
+    accent = CobaltLightPalette[PaletteSlot.DENIM].fill,
     accentLight = Color(0xFF3B82F6),
-    accentContainer = Color(0xFFDBEAFE),
-    textPrimary = Color(0xFF0E1726),
-    textSecondary = Color(0xFF475569),
-    textMuted = Color(0xFF8294AA),
-    textOnAccent = Color(0xFFFFFFFF),
-    border = Color(0xFFCFDDEB),
-    borderSubtle = Color(0xFFDFE8F2),
-    isDark = false
+    accentContainer = Color(0xFFEFF6FF),
+    textOnAccent = CobaltLightPalette[PaletteSlot.DENIM].onFill,
+    highlight = Color(0xFFBAE6FD),
+    highlightText = Color(0xFF0369A1),
+    badgeBackground = Color(0xFFD7E5F4),
+    isDark = false,
+    palette = CobaltLightPalette
 )
 
 val CobaltDark = TuckColors(
-    background = Color(0xFF0B132B),
-    surface = Color(0xFF121E42),
-    surfaceCard = Color(0xFF1A2B5E),
-    surfaceElevated = Color(0xFF24397B),
-    surfaceVariant = Color(0xFF2C448F),
-    surfaceSubtle = Color(0xFF0E1836),
-    accent = Color(0xFF38BDF8),
+    canvas = Color(0xFF0C131D),
+    surface = Color(0xFF131D2B),
+    surfaceCard = Color(0xFF1B2739),
+    surfaceElevated = Color(0xFF223247),
+    surfaceVariant = Color(0xFF2A3C54),
+    surfaceSubtle = Color(0xFF101925),
+    border = Color(0xFF27384E),
+    borderSubtle = Color(0xFF1B293A),
+    dividerHairline = Color(0xFF27384E),
+    textPrimary = Color(0xFFEFF5FC),
+    textSecondary = Color(0xFFA1BBD9),
+    textMuted = Color(0xFF65809E),
+    accent = CobaltDarkPalette[PaletteSlot.DENIM].fill,
     accentLight = Color(0xFF60A5FA),
-    accentContainer = Color(0xFF1E3A8A),
-    textPrimary = Color(0xFFF0F6FF),
-    textSecondary = Color(0xFF94A3B8),
-    textMuted = Color(0xFF64748B),
-    textOnAccent = Color(0xFF0B132B),
-    border = Color(0xFF243A6B),
-    borderSubtle = Color(0xFF1B2D54),
-    isDark = true
+    accentContainer = Color(0xFF173054),
+    textOnAccent = CobaltDarkPalette[PaletteSlot.DENIM].onFill,
+    highlight = Color(0xFF0369A1),
+    highlightText = Color(0xFFE0F2FE),
+    badgeBackground = Color(0xFF2A3C54),
+    isDark = true,
+    palette = CobaltDarkPalette
 )
 
-// 5. Plum Palettes
+// 5. Plum Palettes (Velvet Dusk & Twilight Mulberry)
 val PlumLight = TuckColors(
-    background = Color(0xFFFAF4F8),
+    canvas = Color(0xFFF9F5F9),
     surface = Color(0xFFFFFFFF),
-    surfaceCard = Color(0xFFF3E6EF),
+    surfaceCard = Color(0xFFF2E7F3),
     surfaceElevated = Color(0xFFFFFFFF),
-    surfaceVariant = Color(0xFFEAD4E4),
-    surfaceSubtle = Color(0xFFFDF7FB),
-    accent = Color(0xFF8E3B68),
-    accentLight = Color(0xFFA84B79),
-    accentContainer = Color(0xFFFBEAF3),
-    textPrimary = Color(0xFF230F21),
-    textSecondary = Color(0xFF5E4057),
-    textMuted = Color(0xFF8F6E87),
-    textOnAccent = Color(0xFFFFFFFF),
-    border = Color(0xFFEAD4E4),
-    borderSubtle = Color(0xFFF2E2ED),
-    isDark = false
+    surfaceVariant = Color(0xFFEADBEC),
+    surfaceSubtle = Color(0xFFF7EFF7),
+    border = Color(0xFFE2CCE5),
+    borderSubtle = Color(0xFFEEDEEF),
+    dividerHairline = Color(0xFFE2CCE5),
+    textPrimary = Color(0xFF241026),
+    textSecondary = Color(0xFF69486E),
+    textMuted = Color(0xFF9E77A4),
+    accent = PlumLightPalette[PaletteSlot.PLUM].fill,
+    accentLight = Color(0xFFA855F7),
+    accentContainer = Color(0xFFFAF5FF),
+    textOnAccent = PlumLightPalette[PaletteSlot.PLUM].onFill,
+    highlight = Color(0xFFF5D0FE),
+    highlightText = Color(0xFF86198F),
+    badgeBackground = Color(0xFFEADBEC),
+    isDark = false,
+    palette = PlumLightPalette
 )
 
 val PlumDark = TuckColors(
-    background = Color(0xFF1A0F1A),
-    surface = Color(0xFF261626),
-    surfaceCard = Color(0xFF331E33),
-    surfaceElevated = Color(0xFF402640),
-    surfaceVariant = Color(0xFF4D2D4D),
-    surfaceSubtle = Color(0xFF201320),
-    accent = Color(0xFFC26795),
-    accentLight = Color(0xFFD982B0),
-    accentContainer = Color(0xFF4A203E),
-    textPrimary = Color(0xFFFAEFF8),
-    textSecondary = Color(0xFFB89EB3),
-    textMuted = Color(0xFF806B7C),
-    textOnAccent = Color(0xFF1A0F1A),
-    border = Color(0xFF422540),
-    borderSubtle = Color(0xFF331B31),
-    isDark = true
+    canvas = Color(0xFF150E18),
+    surface = Color(0xFF1E1522),
+    surfaceCard = Color(0xFF281C2E),
+    surfaceElevated = Color(0xFF33243A),
+    surfaceVariant = Color(0xFF3D2C45),
+    surfaceSubtle = Color(0xFF1A111E),
+    border = Color(0xFF3B2942),
+    borderSubtle = Color(0xFF2A1D30),
+    dividerHairline = Color(0xFF3B2942),
+    textPrimary = Color(0xFFFAF3FC),
+    textSecondary = Color(0xFFD1B4D9),
+    textMuted = Color(0xFF8D6F96),
+    accent = PlumDarkPalette[PaletteSlot.PLUM].fill,
+    accentLight = Color(0xFFC084FC),
+    accentContainer = Color(0xFF3D184E),
+    textOnAccent = PlumDarkPalette[PaletteSlot.PLUM].onFill,
+    highlight = Color(0xFF86198F),
+    highlightText = Color(0xFFFAE8FF),
+    badgeBackground = Color(0xFF3D2C45),
+    isDark = true,
+    palette = PlumDarkPalette
 )
 
 val LocalTuckColors = staticCompositionLocalOf { LinenLight }

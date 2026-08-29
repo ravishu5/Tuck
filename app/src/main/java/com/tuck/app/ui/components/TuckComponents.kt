@@ -239,38 +239,39 @@ data class CollectionVisual(
 )
 
 @Composable
-fun getCollectionVisual(name: String, iconHint: String? = null): CollectionVisual {
+fun getCollectionVisual(name: String, iconHint: String? = null, colorHint: String? = null, collectionId: Long = 0): CollectionVisual {
     val tuckColors = TuckTheme.colors
     val lower = name.lowercase().trim()
     val hint = (iconHint ?: "").lowercase().trim()
+    val fallbackColor = resolveCollectionColor(colorHint, name, collectionId).background
 
     return when {
         lower.contains("article") || hint == "article" -> 
-            CollectionVisual(Icons.AutoMirrored.Filled.Article, AccentTeal, "📰")
+            CollectionVisual(Icons.AutoMirrored.Filled.Article, if (colorHint != null) fallbackColor else AccentTeal, "📰")
         lower.contains("education") || lower.contains("course") || hint == "school" || hint == "menu_book" -> 
-            CollectionVisual(Icons.Filled.School, AccentAmber, "🎓")
+            CollectionVisual(Icons.Filled.School, if (colorHint != null) fallbackColor else AccentAmber, "🎓")
         lower.contains("finance") || lower.contains("money") || lower.contains("crypto") || hint == "attach_money" -> 
-            CollectionVisual(Icons.Filled.AttachMoney, AccentEmerald, "💰")
+            CollectionVisual(Icons.Filled.AttachMoney, if (colorHint != null) fallbackColor else AccentEmerald, "💰")
         lower.contains("programming") || lower.contains("code") || lower.contains("dev") || hint == "code" -> 
-            CollectionVisual(Icons.Filled.Code, AccentIndigo, "💻")
+            CollectionVisual(Icons.Filled.Code, if (colorHint != null) fallbackColor else AccentIndigo, "💻")
         lower.contains("research") || lower.contains("paper") || hint == "science" -> 
-            CollectionVisual(Icons.Filled.AutoAwesome, AccentPurple, "🔬")
+            CollectionVisual(Icons.Filled.AutoAwesome, if (colorHint != null) fallbackColor else AccentPurple, "🔬")
         lower.contains("shopping") || lower.contains("product") || hint == "shopping_cart" -> 
-            CollectionVisual(Icons.Filled.ShoppingCart, AccentRose, "🛍️")
+            CollectionVisual(Icons.Filled.ShoppingCart, if (colorHint != null) fallbackColor else AccentRose, "🛍️")
         lower.contains("travel") || lower.contains("trip") || lower.contains("flight") || hint == "flight" -> 
-            CollectionVisual(Icons.Filled.Flight, AccentSky, "✈️")
+            CollectionVisual(Icons.Filled.Flight, if (colorHint != null) fallbackColor else AccentSky, "✈️")
         lower.contains("food") || lower.contains("dining") || lower.contains("recipe") || hint == "restaurant" -> 
-            CollectionVisual(Icons.Filled.Restaurant, AccentOrange, "🍽️")
+            CollectionVisual(Icons.Filled.Restaurant, if (colorHint != null) fallbackColor else AccentOrange, "🍽️")
         lower.contains("work") || hint == "work" -> 
-            CollectionVisual(Icons.Filled.Work, AccentSlate, "💼")
+            CollectionVisual(Icons.Filled.Work, if (colorHint != null) fallbackColor else AccentSlate, "💼")
         lower.contains("personal") || hint == "person" -> 
-            CollectionVisual(Icons.Filled.Person, AccentRose, "👤")
+            CollectionVisual(Icons.Filled.Person, if (colorHint != null) fallbackColor else AccentRose, "👤")
         lower.contains("video") || hint == "videocam" -> 
-            CollectionVisual(Icons.Filled.Videocam, AccentRose, "🎬")
+            CollectionVisual(Icons.Filled.Videocam, if (colorHint != null) fallbackColor else AccentRose, "🎬")
         lower.contains("image") || lower.contains("photo") || hint == "image" || hint == "photo_camera" -> 
-            CollectionVisual(Icons.Filled.Image, AccentEmerald, "🖼️")
+            CollectionVisual(Icons.Filled.Image, if (colorHint != null) fallbackColor else AccentEmerald, "🖼️")
         lower.contains("pdf") || hint == "picture_as_pdf" -> 
-            CollectionVisual(Icons.Filled.PictureAsPdf, AccentCrimson, "📄")
+            CollectionVisual(Icons.Filled.PictureAsPdf, if (colorHint != null) fallbackColor else AccentCrimson, "📄")
         lower.contains("linkedin") -> 
             CollectionVisual(Icons.Filled.Language, BrandLinkedIn, "💼")
         lower.contains("instagram") -> 
@@ -288,7 +289,7 @@ fun getCollectionVisual(name: String, iconHint: String? = null): CollectionVisua
         lower.contains("screenshot") -> 
             CollectionVisual(Icons.Filled.CameraAlt, AccentIndigo, "📸")
         else -> 
-            CollectionVisual(Icons.Filled.Folder, tuckColors.accent, "📁")
+            CollectionVisual(Icons.Filled.Folder, fallbackColor, "📁")
     }
 }
 
@@ -299,11 +300,12 @@ fun TuckCategoryChip(
     isSelected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    icon: String? = null
+    icon: String? = null,
+    color: String? = null
 ) {
     val tuckColors = TuckTheme.colors
     val tuckShapes = TuckTheme.shapes
-    val visual = getCollectionVisual(label, icon)
+    val visual = getCollectionVisual(label, icon, color)
 
     val backgroundColor by animateColorAsState(
         targetValue = if (isSelected) tuckColors.accent else tuckColors.surfaceCard,
@@ -320,12 +322,11 @@ fun TuckCategoryChip(
     val iconTint = if (isSelected) tuckColors.textOnAccent else visual.color
 
     Surface(
+        onClick = onClick,
         color = backgroundColor,
         shape = tuckShapes.pill,
         border = androidx.compose.foundation.BorderStroke(1.dp, borderColor),
         modifier = modifier
-            .clip(tuckShapes.pill)
-            .clickable(onClick = onClick)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -356,12 +357,14 @@ fun TuckCategoryCard(
     icon: String?,
     isAutoGenerated: Boolean,
     isLocked: Boolean = false,
+    color: String? = null,
+    collectionId: Long = 0,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val tuckColors = TuckTheme.colors
     val tuckShapes = TuckTheme.shapes
-    val visual = getCollectionVisual(name, icon)
+    val visual = getCollectionVisual(name, icon, color, collectionId)
 
     Card(
         shape = tuckShapes.medium,
@@ -490,6 +493,253 @@ fun TuckEmptyState(
                 )
             ) {
                 Text(text = actionLabel, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+// --- R3 Component Library Additions ---
+
+@Composable
+fun SectionLabel(
+    text: String,
+    modifier: Modifier = Modifier,
+    color: Color = TuckTheme.colors.textSecondary
+) {
+    Text(
+        text = text.uppercase(),
+        style = TuckTheme.typography.sectionLabel,
+        color = color,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun CountStat(
+    savesCount: Int,
+    foldersCount: Int,
+    modifier: Modifier = Modifier
+) {
+    val tuckColors = TuckTheme.colors
+    Text(
+        text = "$savesCount ${if (savesCount == 1) "save" else "saves"} · $foldersCount ${if (foldersCount == 1) "folder" else "folders"}",
+        style = TuckTheme.typography.numericCount,
+        color = tuckColors.textSecondary,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun FilterPill(
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    count: Int? = null,
+    modifier: Modifier = Modifier
+) {
+    val tuckColors = TuckTheme.colors
+    val shapes = TuckTheme.shapes
+
+    val bg by animateColorAsState(
+        targetValue = if (isSelected) tuckColors.textPrimary else tuckColors.surfaceCard,
+        label = "filterPillBg"
+    )
+    val textColor by animateColorAsState(
+        targetValue = if (isSelected) tuckColors.surface else tuckColors.textPrimary,
+        label = "filterPillText"
+    )
+
+    Surface(
+        color = bg,
+        shape = shapes.pill,
+        border = androidx.compose.foundation.BorderStroke(1.dp, if (isSelected) bg else tuckColors.borderSubtle),
+        modifier = modifier
+            .clip(shapes.pill)
+            .clickable(onClick = onClick)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                color = textColor
+            )
+            if (count != null) {
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "$count",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isSelected) textColor.copy(alpha = 0.8f) else tuckColors.textMuted
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun CollectionTile(
+    name: String,
+    count: Int,
+    colorId: String? = null,
+    iconHint: String? = null,
+    collectionId: Long = 0,
+    isSelected: Boolean = false,
+    isLocked: Boolean = false,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colorEntry = resolveCollectionColor(colorId, name, collectionId)
+    val visual = getCollectionVisual(name, iconHint, colorId, collectionId)
+
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = colorEntry.background),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp)
+        ) {
+            if (isSelected) {
+                Box(
+                    modifier = Modifier
+                        .size(22.dp)
+                        .clip(CircleShape)
+                        .background(colorEntry.foreground)
+                        .align(Alignment.TopEnd),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Check,
+                        contentDescription = "Selected",
+                        tint = colorEntry.background,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            } else if (isLocked) {
+                Text(
+                    text = "🔒",
+                    fontSize = 12.sp,
+                    modifier = Modifier.align(Alignment.TopEnd)
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = if (isSelected || isLocked) 4.dp else 0.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(colorEntry.foreground.copy(alpha = 0.18f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = visual.icon,
+                        contentDescription = name,
+                        tint = colorEntry.foreground,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = name,
+                    style = TuckTheme.typography.tileTitle,
+                    color = colorEntry.foreground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Text(
+                    text = "$count",
+                    style = TuckTheme.typography.numericCount,
+                    color = colorEntry.foreground.copy(alpha = 0.8f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun MatchReasonChip(
+    reason: String,
+    modifier: Modifier = Modifier
+) {
+    val tuckColors = TuckTheme.colors
+    Surface(
+        color = tuckColors.highlight,
+        shape = RoundedCornerShape(6.dp),
+        modifier = modifier
+    ) {
+        Text(
+            text = reason,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = tuckColors.highlightText,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+        )
+    }
+}
+
+@Composable
+fun SkeletonCard(
+    modifier: Modifier = Modifier
+) {
+    val tuckColors = TuckTheme.colors
+    val shapes = TuckTheme.shapes
+
+    Card(
+        shape = shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = tuckColors.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.borderSubtle),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(96.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(shapes.small)
+                    .background(tuckColors.surfaceVariant)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.85f)
+                        .height(14.dp)
+                        .clip(shapes.small)
+                        .background(tuckColors.surfaceVariant)
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.5f)
+                        .height(12.dp)
+                        .clip(shapes.small)
+                        .background(tuckColors.surfaceVariant.copy(alpha = 0.6f))
+                )
             }
         }
     }
@@ -912,6 +1162,26 @@ fun TuckThemePreviewCard(
                             color = previewColors.textOnAccent
                         )
                     }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // 8-Hue Multi-Hue Palette Swatch Strip
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(12.dp)
+                    .clip(shapes.small),
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                previewColors.palette.entries.forEach { entry ->
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(12.dp)
+                            .background(entry.fill)
+                    )
                 }
             }
         }

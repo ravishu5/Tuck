@@ -10,6 +10,7 @@ import com.tuck.app.domain.model.ProcessingStatus
     tableName = "saved_items",
     indices = [
         Index(value = ["createdAt"]),
+        Index(value = ["capturedAt"]),
         Index(value = ["contentType"]),
         Index(value = ["sourceDomain"]),
         Index(value = ["processingStatus"]),
@@ -40,6 +41,8 @@ data class SavedItemEntity(
     val extractedText: String? = null,
     val ocrText: String? = null,
     val commentsJson: String? = null,
+    /** When the content itself was created - EXIF/gallery date - as opposed to when Tuck saved it. */
+    val capturedAt: Long? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
     val lastOpenedAt: Long? = null,

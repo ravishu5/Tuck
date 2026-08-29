@@ -16,14 +16,22 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -54,6 +62,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tuck.app.domain.model.Collection
+import com.tuck.app.ui.components.CollectionTile
+import com.tuck.app.ui.components.CountStat
+import com.tuck.app.ui.components.FilterPill
 import com.tuck.app.ui.components.TuckCategoryCard
 import com.tuck.app.ui.components.TuckContentCard
 import com.tuck.app.ui.components.TuckEmptyState
@@ -74,8 +85,10 @@ fun CollectionsScreen(
 
     var showCreateDialog by remember { mutableStateOf(false) }
     var newCollectionName by remember { mutableStateOf("") }
+    var selectedColorId by remember { mutableStateOf("terracotta") }
     var categorySearchQuery by remember { mutableStateOf("") }
-    var activeTab by remember { mutableStateOf(0) } // 0: Curated, 1: Smart
+    var isGridView by remember { mutableStateOf(true) }
+    var filterTab by remember { mutableStateOf(0) } // 0: All, 1: Curated, 2: Smart, 3: Locked
 
     Box(
         modifier = Modifier
@@ -175,92 +188,160 @@ fun CollectionsScreen(
                 }
             } else {
                 // All Collections View
-                LazyColumn(
+                val totalSaves = (uiState.customCollections + uiState.autoCollections).sumOf { it.itemCount }
+                val displayCollections = when (filterTab) {
+                    0 -> uiState.customCollections + uiState.autoCollections
+                    1 -> uiState.customCollections
+                    2 -> uiState.autoCollections
+                    3 -> (uiState.customCollections + uiState.autoCollections).filter { it.isLocked }
+                    else -> uiState.customCollections + uiState.autoCollections
+                }
+
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(if (isGridView) 3 else 1),
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 88.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 88.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    item {
+                    // Header (Spans full width)
+                    item(span = { GridItemSpan(maxLineSpan) }) {
                         Column {
-                            Text(
-                                text = "Collections",
-                                style = MaterialTheme.typography.headlineLarge,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = tuckColors.textPrimary
-                            )
-                            Text(
-                                text = "Organized boards and smart categories.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = tuckColors.textSecondary
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Collections",
+                                    style = TuckTheme.typography.displayLarge,
+                                    color = tuckColors.textPrimary
+                                )
+                                IconButton(
+                                    onClick = { isGridView = !isGridView },
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isGridView) Icons.Filled.ViewList else Icons.Filled.GridView,
+                                        contentDescription = if (isGridView) "Switch to List View" else "Switch to Grid View",
+                                        tint = tuckColors.textSecondary,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(2.dp))
+                            CountStat(
+                                savesCount = totalSaves,
+                                foldersCount = displayCollections.size
                             )
                         }
-                        Spacer(modifier = Modifier.height(14.dp))
                     }
 
-                    // Tab Selector: Curated vs Smart
-                    item {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(tuckShapes.pill)
-                                .background(tuckColors.surfaceCard)
-                                .padding(4.dp)
+                    // Filter Pills (Spans full width)
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                         ) {
-                            CollectionTabButton(
-                                title = "Curated (${uiState.customCollections.size})",
-                                isSelected = activeTab == 0,
-                                onClick = { activeTab = 0 },
-                                modifier = Modifier.weight(1f)
-                            )
-                            CollectionTabButton(
-                                title = "Smart Auto (${uiState.autoCollections.size})",
-                                isSelected = activeTab == 1,
-                                onClick = { activeTab = 1 },
-                                modifier = Modifier.weight(1f)
-                            )
+                            item {
+                                FilterPill(
+                                    label = "All",
+                                    isSelected = filterTab == 0,
+                                    count = uiState.customCollections.size + uiState.autoCollections.size,
+                                    onClick = { filterTab = 0 }
+                                )
+                            }
+                            item {
+                                FilterPill(
+                                    label = "Curated",
+                                    isSelected = filterTab == 1,
+                                    count = uiState.customCollections.size,
+                                    onClick = { filterTab = 1 }
+                                )
+                            }
+                            item {
+                                FilterPill(
+                                    label = "Smart",
+                                    isSelected = filterTab == 2,
+                                    count = uiState.autoCollections.size,
+                                    onClick = { filterTab = 2 }
+                                )
+                            }
+                            val lockedCount = (uiState.customCollections + uiState.autoCollections).count { it.isLocked }
+                            if (lockedCount > 0) {
+                                item {
+                                    FilterPill(
+                                        label = "Locked 🔒",
+                                        isSelected = filterTab == 3,
+                                        count = lockedCount,
+                                        onClick = { filterTab = 3 }
+                                    )
+                                }
+                            }
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-
-                    val displayCollections = if (activeTab == 0) {
-                        uiState.customCollections
-                    } else {
-                        uiState.autoCollections
                     }
 
                     if (displayCollections.isEmpty()) {
-                        item {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
                             TuckEmptyState(
-                                title = if (activeTab == 0) "No custom collections" else "No smart categories",
-                                description = if (activeTab == 0) "Create your first collection with (+)" else "Smart categories will appear automatically as you save items.",
+                                title = if (filterTab == 1) "No custom collections" else "No collections found",
+                                description = if (filterTab == 1) "Create your first custom collection with (+)" else "Collections will appear automatically as you save items.",
                                 icon = Icons.Filled.Folder,
                                 modifier = Modifier.padding(top = 32.dp)
                             )
                         }
                     } else {
                         items(displayCollections, key = { it.id }) { col ->
-                            TuckCategoryCard(
-                                name = col.name,
-                                count = col.itemCount ?: 0,
-                                icon = col.icon,
-                                isAutoGenerated = col.isAutoGenerated,
-                                isLocked = col.isLocked,
-                                onClick = {
-                                    if (col.isLocked && fragmentActivity != null) {
-                                        val authManager = com.tuck.app.ui.security.BiometricAuthManager(context)
-                                        authManager.authenticate(
-                                            activity = fragmentActivity,
-                                            title = "Unlock ${col.name}",
-                                            onSuccess = { viewModel.selectCollection(col) },
-                                            onError = { err ->
-                                                android.widget.Toast.makeText(context, err, android.widget.Toast.LENGTH_SHORT).show()
-                                            }
-                                        )
-                                    } else {
-                                        viewModel.selectCollection(col)
+                            if (isGridView) {
+                                CollectionTile(
+                                    name = col.name,
+                                    count = col.itemCount,
+                                    colorId = col.color,
+                                    iconHint = col.icon,
+                                    collectionId = col.id,
+                                    isLocked = col.isLocked,
+                                    onClick = {
+                                        if (col.isLocked && fragmentActivity != null) {
+                                            val authManager = com.tuck.app.ui.security.BiometricAuthManager(context)
+                                            authManager.authenticate(
+                                                activity = fragmentActivity,
+                                                title = "Unlock ${col.name}",
+                                                onSuccess = { viewModel.selectCollection(col) },
+                                                onError = { err ->
+                                                    android.widget.Toast.makeText(context, err, android.widget.Toast.LENGTH_SHORT).show()
+                                                }
+                                            )
+                                        } else {
+                                            viewModel.selectCollection(col)
+                                        }
                                     }
-                                }
-                            )
+                                )
+                            } else {
+                                TuckCategoryCard(
+                                    name = col.name,
+                                    count = col.itemCount,
+                                    icon = col.icon,
+                                    isAutoGenerated = col.isAutoGenerated,
+                                    isLocked = col.isLocked,
+                                    color = col.color,
+                                    collectionId = col.id,
+                                    onClick = {
+                                        if (col.isLocked && fragmentActivity != null) {
+                                            val authManager = com.tuck.app.ui.security.BiometricAuthManager(context)
+                                            authManager.authenticate(
+                                                activity = fragmentActivity,
+                                                title = "Unlock ${col.name}",
+                                                onSuccess = { viewModel.selectCollection(col) },
+                                                onError = { err ->
+                                                    android.widget.Toast.makeText(context, err, android.widget.Toast.LENGTH_SHORT).show()
+                                                }
+                                            )
+                                        } else {
+                                            viewModel.selectCollection(col)
+                                        }
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -286,11 +367,12 @@ fun CollectionsScreen(
         }
 
         // Create New Category Dialog
-        if (showCreateDialog) {
+    if (showCreateDialog) {
         AlertDialog(
             onDismissRequest = {
                 showCreateDialog = false
                 newCollectionName = ""
+                selectedColorId = "coral"
             },
             title = {
                 Text(
@@ -330,15 +412,53 @@ fun CollectionsScreen(
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Text(
+                        text = "CHOOSE COLOR",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = tuckColors.textSecondary,
+                        letterSpacing = 1.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(tuckColors.collectionPalette) { colorEntry ->
+                            val isSelected = selectedColorId == colorEntry.id
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(colorEntry.background)
+                                    .clickable { selectedColorId = colorEntry.id },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Check,
+                                        contentDescription = "Selected",
+                                        tint = colorEntry.foreground,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
                         if (newCollectionName.isNotBlank()) {
-                            viewModel.createCollection(newCollectionName.trim())
+                            viewModel.createCollection(newCollectionName.trim(), selectedColorId)
                             showCreateDialog = false
                             newCollectionName = ""
+                            selectedColorId = "terracotta"
                         }
                     },
                     shape = tuckShapes.small,
@@ -355,6 +475,7 @@ fun CollectionsScreen(
                 TextButton(onClick = {
                     showCreateDialog = false
                     newCollectionName = ""
+                    selectedColorId = "terracotta"
                 }) {
                     Text("Cancel", color = tuckColors.textMuted)
                 }

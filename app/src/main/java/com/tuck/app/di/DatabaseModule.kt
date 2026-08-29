@@ -64,7 +64,8 @@ object DatabaseModule {
         }).addMigrations(
             TuckDatabase.MIGRATION_1_2,
             TuckDatabase.MIGRATION_2_3,
-            TuckDatabase.MIGRATION_3_4
+            TuckDatabase.MIGRATION_3_4,
+            TuckDatabase.MIGRATION_4_5
         )
             .build()
     }

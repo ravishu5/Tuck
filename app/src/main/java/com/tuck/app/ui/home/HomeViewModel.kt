@@ -61,8 +61,39 @@ class HomeViewModel @Inject constructor(
     private val screenshotImporter: ScreenshotImporter,
     private val fileStorageService: FileStorageService,
     private val urlMetadataProcessor: UrlMetadataProcessor,
-    private val relatedItemsEngine: RelatedItemsEngine
+    private val relatedItemsEngine: RelatedItemsEngine,
+    private val settingsRepository: com.tuck.app.domain.repository.SettingsRepository
 ) : ViewModel() {
+
+    val appSettings = settingsRepository.getSettings().stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = com.tuck.app.domain.repository.AppSettings()
+    )
+
+    fun setTheme(theme: com.tuck.app.domain.repository.AppTheme) {
+        viewModelScope.launch {
+            settingsRepository.updateTheme(theme)
+        }
+    }
+
+    fun setThemeFlavor(flavor: com.tuck.app.domain.repository.TuckThemeFlavor) {
+        viewModelScope.launch {
+            settingsRepository.updateThemeFlavor(flavor)
+        }
+    }
+
+    fun toggleTheme() {
+        viewModelScope.launch {
+            val current = settingsRepository.getSettings().first()
+            val nextTheme = when (current.theme) {
+                com.tuck.app.domain.repository.AppTheme.LIGHT -> com.tuck.app.domain.repository.AppTheme.DARK
+                com.tuck.app.domain.repository.AppTheme.DARK -> com.tuck.app.domain.repository.AppTheme.LIGHT
+                com.tuck.app.domain.repository.AppTheme.SYSTEM -> com.tuck.app.domain.repository.AppTheme.DARK
+            }
+            settingsRepository.updateTheme(nextTheme)
+        }
+    }
 
     private val _selectedCategory = MutableStateFlow<String?>(null)
     private val _selectedType = MutableStateFlow<ContentType?>(null)
