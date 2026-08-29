@@ -13,10 +13,9 @@ Sources reviewed on 2026-08-29:
 - Web search for category-wide complaints
 - Prior analysis in this repo (`TASKS.md`, `REDESIGN_TASKS.md`, and the lifecycle/import argument)
 
-**Not reviewed: the four Reddit threads.** Reddit is blocked by policy in this environment — plain
-fetch, `old.reddit.com` and the browser were all refused. Nothing from those threads is in this
-document. Paste the post and comment text and I will fold it in; the competitor's *own* changelog and
-reviews already cover much of the same ground, but user comments usually surface complaints the
+**Reddit: five threads, ~250 comments, supplied by Ravi and folded in as §I.** Reddit itself is
+unreachable from this environment (fetch, `old.reddit.com` and the browser are all refused by
+policy). §I is the highest-signal section in this document — user comments surface the complaints a
 developer never advertises.
 
 **Competitive note:** the App Store listing says Stash is on iPhone, iPad, Mac and Vision, and the
@@ -191,40 +190,239 @@ not breadth of platform.
 
 ---
 
-# G. Suggested order
+# I. Reddit — 5 threads, ~250 comments
 
-Reasoning rather than a list: **the entity/knowledge-graph work in `TASKS.md` Phase A is sequenced
-too early, and I wrote it that way.** An entity graph needs volume to be useful — with 20 saves,
-"everything about Ravi" is an empty page and topic extraction is noise. It pays off around 500+
-items, which describes a user you do not have yet. D1 and D2 are what create that user.
+Sources: r/iosapps (launch, 94 threads), r/SideProject (10k users), r/macapps (ADHD post, 63
+threads), r/ProductivityApps, r/iosapps (10k update). Dev is `u/N0omi`, solo, ~4 months post-launch.
 
-**Phase 0 — make it productive and non-empty**
-D1 lifecycle + reminders · D2 first-run screenshot import · **H1 rule-based auto-filing** ·
-B2 smart dates → reminders · C3 haptics · A9 surface the category suggestion in the share sheet ·
-B11 copy text out of images
+## I-0. The finding that matters most
 
-**Phase 1 — retrieval made visible**
-B3 search on home · D4 match-reason chips · B5 bulk select everywhere · B9 storage screen ·
-B13 richer details
+**The "save and forget" problem is the loudest unsolved complaint in the category, and the
+developer has no answer for it.** Six separate users raised it independently:
 
-**Phase 2 — organisation catch-up**
-B6 grid view (via redesign R4) · B4 pin collections · B7/B8 sub-stashes · C2 icon + colour pickers ·
-C4 reorder · A18/B16 duplicate merge · C5 hidden collections
+> *"Save it and forget it. Just because I have a new place to save and sort my images doesn't mean I
+> will ever use them… my problem is advancing the things I've organized into something actionable.
+> If I had 4, 40, 400, or 40,000 images with information, I never look at them again after I save
+> them."* — u/eternus
 
-**Phase 3 — ownership**
-B10 Markdown export · D3/H4 importers (H5: preserve folders) · B12 custom preview image ·
-H2 offline web archive · H3 reader view · H6 refresh a save
+> *"If Stash makes it much easier to save everything, how do you help users actually return to what
+> they saved later? Is the app meant to be mainly a searchable archive, or do you plan lightweight
+> **review/reminder flows** so it doesn't become another place where saved things quietly pile up?"*
+> — u/omegafi
 
-**Phase 4 — hardening before any launch**
-D10 measured budgets · baseline profile · APK size decision (43.6 MB against a 25 MB budget)
+> *"What's stopping this from piling up and becoming something else to micromanage?"* — u/GassyJr
 
-**Phase 5 — the differentiators that need volume**
-D6 entities · D8 comment-tree design · D9 actionable entities · D7 source/derived convention
+Also u/couldhvdancedallnite (*"I feel like I would never go back to check it"*), u/movingimagecentral
+(*"stashing endless ideas rather than doing something is a nightmare"*), u/i_like_pickles_too
+(*"I'll still have problem finding the piece of info from this pile"*).
 
-**Deferred pending decisions:** everything marked 🚫 — sync, shared collections, and anything
-AI-shaped.
+The developer's answer was that things pile up "but into categories." That is not an answer, and
+users said so. **This is independent, unprompted confirmation of D1 (item lifecycle, reminders,
+snooze) and it is the single clearest wedge available to Tuck.**
+
+## I-1. Auto-categorisation — heavily demanded, philosophically refused
+
+Requested by u/Barton5877, u/AndyKJMehta, u/rukola99, u/darknternal, u/CaptainMarder, u/thegurjyot,
+u/Harikrishnareddy9 — seven users across three threads.
+
+> *"Don't want to save and then pick a folder. I want it to automatically thematically group."*
+
+The developer refuses, with a genuinely good reason:
+
+> *"Categories overlap too much. Is this a breakfast recipe or a dinner recipe? Is this address a
+> friend's house or just somewhere to park? There's no way any AI could reliably know that."*
+
+**He is right that guessing fails, and wrong that the answer is nothing.** The answer is
+**user-defined rules** — H1 — plus a suggestion the user can correct in one tap. Tuck already owns
+the query DSL and the unused `isSmart`/`smartQuery` columns. This is a real strategic opening: strong
+repeat demand, incumbent ideologically committed to not serving it.
+
+## I-2. Trust and data portability — the deepest anxiety in the threads
+
+| Quote | User |
+|---|---|
+| *"I'm always worried about apps going bottoms up, and I don't really see any way to export entered data."* | u/ababababaiopop |
+| *"The real question is how to get the data out again."* | u/asiastar |
+| *"It's hard to trust a service that's not established… Apple Notes does the job, and I'll know it'll be around."* | u/serifoblique |
+| *"A vast majority of vibe coders abandon their projects… those few early adopters have to figure out how to get their data out."* | u/Bamboodl |
+| *"Why can't I import a previously saved export?"* | u/ChurchOfSatin |
+
+Note the last one: **Stash can export but cannot import.** An export you cannot restore is not a
+backup. Tuck already has working import — that is a shippable trust claim today.
+
+`u/bogdallica` articulated the "vibe coded" anxiety precisely: it is not that AI-built apps are bad,
+it is that **the signal of commitment is gone**, so nobody knows whether the app will exist in a
+year. Tuck's counter is structural, not rhetorical: open formats, documented schema, working
+import, and everything on-device.
+
+## I-3. Sync is their Achilles heel — twelve separate reports
+
+u/Diggler_von_Anhalt, u/Sweaty-Attention768, u/camelopardalisx, u/ChurchOfSatin, u/Macreddit01
+(repeatedly, and eventually *"Wonder if the App has been abandoned"* after no support reply),
+u/arrogantheart, u/Came2PooOnlySharted, u/esdoenone (*"Mostly not. I have to sync it manually"*),
+u/LucidXonline (syncing 3+ hours), u/wporchard, u/guigro (a `Containers/Stash` folder filling the
+hard drive — *"Money lost unfortunately"*), u/per4o (stashes showing empty or half-synced).
+
+Combined with the App Store review where a user **lost every saved item**, this is the incumbent's
+defining weakness. Tuck should not ship sync until it can be additive, non-destructive, and
+snapshotted before first run.
+
+## I-4. Performance — they fall over at ~200 items
+
+> *"It's got really laggy and takes ages to save or load… I think I have about 200 links."* — u/wporchard
+
+> *"Quite laggy when it comes to viewing the screenshots. Look at how smoothly CaptureLab works."*
+> — u/Budget_Valuable3992, who reported after the fix: *"Doesn't seem like it has the problems fixed."*
+
+**200 items.** Tuck's 10,000-item performance target stops being an engineering nicety and becomes a
+marketing claim.
+
+## I-5. Accessibility — cost them at least one paying user
+
+Font size raised by u/Syxball, u/Mythenmetz1, u/theAImajo (a grateful paying user who still could not
+read it at max size) and u/blackcat562, who **uninstalled over it**:
+
+> *"The tiny fonts… the option in settings changes both, and the smaller fonts are still tiny even
+> when you change it to huge, so that sucks."*
+
+The redesign brief already mandates 200% dynamic-type testing and contrast as a test rather than an
+opinion. This validates it.
+
+## I-6. Feature requests from the threads
+
+Ranked by frequency and by how well Tuck is placed to serve them.
+
+| # | Request | Status | Notes |
+|---|---|---|---|
+| **R1** | **Archive the page, not just the link** — *"What happens when you save a post and it gets deleted from the original location?"* (u/Anxious-Mango5143); *"Could it archive the content like Pocket?"* (u/skysurfer425, u/miomao10) | 🟡 | **People screenshot precisely because content disappears.** A link-saver that does not archive fails at the actual job. Tuck stores readable text but not a full snapshot — see H2 |
+| **R2** | **Browser extension** — 7 users (u/Fylleth666, u/Maleficent_Air1940, u/TheVillageRuse, u/jaredkent wants Firefox, u/LucidXonline, u/theCuriousObserver02, u/closedmic_) | ❌ | The most-requested single feature after Android |
+| **R3** | **Auto-delete the original screenshot after import** (u/skysurfer425) | ❌ | Directly serves the "clean my camera roll" job. Stash shipped it |
+| **R4** | **Import from Instagram / TikTok / Facebook saved collections** (u/jl748795, u/Trailhawk8: *"this app would be absolute perfection"*) | ❌ | Technically hard, no public APIs. Worth investigating; huge if solved |
+| **R5** | **Swipe between items full-screen like Photos** (u/_apatheticenthusiast) | ❌ | Real UX gap: currently tap in, back out, tap next |
+| **R6** | **Preserve original photo metadata (date taken)** (u/nicebrah, u/Negative-Complex-482) | 🟡 | *"I'm holding off on deleting the originals because I need to know when a photo was taken."* Blocks the core job |
+| **R7** | **Global timeline — all saves by date, without entering categories** (u/omurices) | 🟡 | Inbox is close but is triage-only |
+| **R8** | **Paste a link instead of using Share** (u/LucidXonline) | ❌ | Trivial; removes a real friction on desktop-to-phone |
+| **R9** | **Copy image to clipboard** to paste into WhatsApp (u/listexplode) | ❌ | Trivial |
+| **R10** | **Animated GIF playback** (u/listexplode) | ❌ | GIFs render as stills |
+| **R11** | **Video audio preserved** (u/IndieTeifling) | ❌ | Stash silently dropped audio — a user deleted originals first. Data-loss class bug; verify Tuck does not do this |
+| **R12** | **Photo quality preserved** (u/mambo-2008: 3 MB → a few KB) | ❌ | Same class. Verify Tuck's copy path is byte-exact |
+| **R13** | **Multi-language / localisation** (Italian, Spanish, Swedish, Portuguese users) | ❌ | Relevant for India |
+| **R14** | **Regional / PPP pricing** (u/iam_malc: *"I live somewhere the currency is weak"*; u/TheBrainer0815 student) | ❌ | Directly relevant to an India-first launch |
+| **R15** | **A–Z sort and manual reordering of collections** (u/LucidXonline) | 🟡 | `sortOrdinal` exists, no UI |
+| **R16** | **Pin frequently used collections** (u/Jaybotics) | 🟡 | = B4 |
+| **R17** | **List view alongside grid** (u/Jaybotics) | 🟡 | = B6 |
+| **R18** | **Shortcuts / automation to add a note** (u/Sway_RL) | 🟡 | Android: Tasker intents, app shortcuts |
+| **R19** | **System-wide search integration** (u/chrislaw Spotlight, u/enigma707 semantic index) | ❌ | Android: App Search / Assistant |
+| **R20** | **Choose your cloud provider — Google Drive** (u/psychobeno, u/76: iCloud 5 GB cap is a bottleneck) | 🚫 | Deferred with sync, but note: **the dev plans Google Drive for his Android build** |
+| **R21** | **Group a batch of imported screenshots as related** (u/skysurfer425) | ❌ | Nice fit with Tuck's multi-asset `media_assets` |
+| **R22** | **Fetch the actual tweet: content + a rendered screenshot of the post** (u/Fylleth666) | 🟡 | Tuck's extractors are the right shape for this |
+| **R23** | **App Store links save with almost no data** (u/per4o) | 🟡 | A specific extractor gap worth copying as a test case |
+| **R24** | **Dark-mode share sheet** (u/unabatedshagie) and **themed/dark app icon** (u/hexegol) | ❌ | Android: themed icon (monochrome) support |
+| **R25** | **Optional local AI summaries** (u/theCuriousObserver02, u/isrinivas) | 🚫 | Requested but explicitly cut from v1 |
+| **R26** | **Onboarding is too long and the forced category step confuses** (u/NickNimmin, detailed); no help/instructions (u/kimvy, u/reditding, u/terza36) | ❌ | u/NickNimmin: *"I started tuning out 2 screens before the paywall."* Tuck has no onboarding at all yet — build it right the first time |
+
+## I-7. Competitors named by users
+
+**Pool / pool.day** (VC-backed, named 3×) · **Gladys** · **Raindrop.io** (3×) · **GoodLinks** ·
+**Pocket** · **Anybox** · **Capture / CaptureLab** (praised for smoothness) · **Pile** ·
+**Albo** (albo.inc) · **Resurf** (praised for Mac capture UX) · **usemosaik.com** · **joinrecall** ·
+plus Notion, Evernote, Apple Notes and Photos albums as the incumbent behaviours.
+
+The recurring *"why not just use Photos albums?"* objection (u/PersonoFly, u/atiaa11) is worth
+answering directly in positioning: Photos albums are references, not an archive, and they cannot
+hold links, PDFs or posts.
+
+## I-8. Business and growth intel
+
+- **10,000 downloads in 3 months, no ads, almost entirely Reddit** — posting, absorbing feedback,
+  posting the update, repeating.
+- **12–15% free→paid conversion.** Extremely high for consumer.
+- Free tier: **100 items, 10 categories.** Pro $9.99 lifetime promo, $19.99 standard, $7.99/yr.
+- **Price doubled and revenue stayed flat**, per u/Smart-Button1428 — demand is elastic in that band,
+  so the model is the lever, not the price.
+- **Posting repeatedly caused backlash** (*"Do you post this every month?"*, downvotes). One post per
+  subreddit per genuine milestone is the sustainable cadence.
+- **"Is this vibe coded?" was the top comment on the biggest thread**, with ~110 upvotes across the
+  accusations. This is now a default suspicion for any new indie app. Tuck's defence is evidence:
+  tests that run on device, a public repo, a documented schema, and working import.
+- **App Store screenshots drove installs directly** — *"Downloaded just because of the screenshots"* —
+  though another user found them *"a bit overwhelming."* The redesign work pays for itself here.
+- **Android is the #1 request the developer receives**, and he stated in mid-June it was
+  *"hopefully a month or so"* away, using Google Drive for sync. **That window is now effectively
+  closed or closing.** Tuck's advantage has to be depth, not being first.
 
 ---
+
+# G. Suggested order
+
+*Revised after the Reddit threads. Two things changed: the lifecycle argument went from my inference
+to directly evidenced user demand, and data-loss-class bugs moved to the front because two of them
+cost the incumbent users who had already deleted their originals.*
+
+**The through-line:** the incumbent wins on capture and loses on *return*. Every complaint that
+matters — save-and-forget, sync data loss, lag at 200 items, unreadable text, no import — is about
+what happens **after** the save. That is where Tuck should compete.
+
+### Phase 0 — the wedge: make saving lead somewhere
+- **D1 — item lifecycle: status, reminders, snooze.** Six users named this as the unsolved problem
+  and the incumbent has no answer. Highest-leverage item in this document
+- **D2 — first-run bulk screenshot import**, plus **R3 auto-delete the original** after import
+- **H1 — user-defined auto-filing rules.** Seven users asked for auto-categorisation; the incumbent
+  refuses on principle. Rules serve the demand without the misfiling he is right to fear
+- **B2 — smart dates from OCR → offer a reminder.** Regex, no AI
+- **A9 — surface the category suggestion in the share sheet** · **C3 — haptics**
+
+### Phase 0.5 — verify Tuck has no data-loss bugs *(do this immediately, it is cheap)*
+- **R11 — video audio preserved** · **R12 — photo quality preserved** · **R6 — original photo
+  metadata preserved.** Stash silently dropped audio and recompressed images; users had already
+  deleted their originals. Write a test that byte-compares a copied file against its source
+
+### Phase 1 — retrieval made visible
+B3 search on home · D4 match-reason chips · B5 bulk select everywhere · R7 global timeline ·
+R5 full-screen swipe between items · B9 storage screen · B13 richer details
+
+### Phase 2 — organisation catch-up
+B6 grid view (redesign R4) · B4/R16 pin collections · B7/B8 sub-stashes · C2 icon and colour pickers ·
+R15 sort and reorder · A18/B16 duplicate merge · C5 hidden collections
+
+### Phase 3 — ownership and trust *(the incumbent's soft underbelly)*
+B10 Markdown export · **working import** (Stash cannot restore its own export) · D3/H4 importers with
+**H5 folder preservation** · **R1 offline page archive** — people screenshot because content
+disappears · H3 reader view · H6 refresh a save
+
+### Phase 4 — hardening before launch
+D10 measured budgets — the incumbent lags at **200 items**, so 10k is a marketing claim ·
+baseline profile · APK size · **R26 onboarding**, built once and built short ·
+**I-5 accessibility**: dynamic type to 200% and contrast, which cost the incumbent a paying user
+
+### Phase 5 — differentiators that need volume
+D6 entities · D8 comment-tree reading · D9 actionable entities · D7 source/derived convention ·
+R22 richer social extraction
+
+### Phase 6 — reach
+R2 browser extension (7 requests, second only to Android) · R13 localisation · R14 regional pricing ·
+R19 system search integration · R24 themed icon and dark share sheet
+
+**Deferred pending decisions:** everything marked 🚫 — sync, shared collections, anything AI-shaped.
+Note that sync is both the most-requested capability *and* the incumbent's most damaging failure.
+When Tuck builds it: local is the source of truth, sync is additive and never destructive, and a
+local snapshot is taken before the first run.
+
+---
+
+## Positioning notes drawn from the threads
+
+- **Free tier.** Theirs is 100 items / 10 categories. Tuck has no server costs at all, so a
+  genuinely generous free tier is cheap differentiation — and their own numbers show price is not the
+  lever (doubling it left revenue flat).
+- **"Is this vibe coded?" was the top comment on their biggest thread.** This is now the default
+  suspicion for any new indie app. Tuck's answer should be evidence rather than protest: a public
+  repo, tests that run on a real device, a documented schema, and an import that actually restores.
+- **Answer the "why not just use Photos albums?" objection directly** — it came up repeatedly.
+  Albums are references, not an archive, and they cannot hold links, PDFs or posts.
+- **Do not market Tuck as an ADHD app.** Their ADHD-framed post drew the most hostility in the whole
+  corpus, including from people with ADHD. One commenter put it well: it is useful to everyone, and
+  the framing narrows reach.
 
 ## Still missing from this document
 
