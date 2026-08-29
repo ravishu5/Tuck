@@ -156,6 +156,41 @@ These come from actual App Store reviews and are worth as much as the feature li
 
 ---
 
+# H. Adjacent competitors (App Store, 2026-08-29)
+
+Reddit is unreachable from here, so I went at the same question from the App Store side. Four apps
+in the neighbouring space, mined for features and — more usefully — for their reviews.
+
+**MarkMark — Read it Later** (iPhone/iPad/Mac; free, Pro $1.99/mo, $9.99/yr, $14.99 lifetime)
+**Save for Later: AI Bookmarks** (free, $1.99/mo, $8.99/yr, $19.99 lifetime)
+**Recall for Reddit** (Mac, $4.99) · **Everything-Save All** ($1.99; minimal, nothing to learn)
+
+| # | Feature | Status | Notes |
+|---|---|---|---|
+| **H1** | **Rule-based auto-filing** — "Reddit links go to my Reddit folder" | ❌ | **The best find in this batch.** A real MarkMark review asks for exactly this and does not have it. Tuck already owns both halves: a query DSL parser and the unused `collections.isSmart` / `smartQuery` columns. A rule *is* a saved DSL query plus a destination. Turns Tuck's auto-organisation promise into something the user can actually steer |
+| H2 | **Offline web archive** — full page snapshot, not just readable text | 🟡 | Tuck stores `readable_html` and a thumbnail; it does not snapshot images or CSS. Real gap for the "archive" claim |
+| H3 | **Reader view** — distraction-free reading | 🟡 | Detail has webview vs snapshot tabs; there is no typographic reading mode |
+| H4 | **Import from Pocket / Raindrop / Omnivore / browser bookmarks** | ❌ | Both apps ship this; Save for Later advertises "in one tap". Reinforces D3 |
+| H5 | **Preserve folder structure on import** | ❌ | A MarkMark reviewer complained the import "didn't take any of the folders I had taken the time to organize". Cheap way to be better than the incumbent on day one |
+| H6 | **Refresh / re-fetch an existing save** | 🟡 | Tuck can retry enrichment internally; it is not a user-visible action. Useful when a page 404s or a title was bad at capture time |
+| H7 | **Ratings or rankings on saves** | ❌ | Minor, but a cheap signal for surfacing later |
+| H8 | **Shake for a random saved item** | ❌ | Playful rediscovery. Fits the "memory" positioning better than it fits a bookmark manager |
+| H9 | **Global quick-search shortcut** (Cmd+K in Recall) | 🟡 | Android equivalents: search directly from the widget, the QS tile, and a notification action |
+| H10 | **Passive capture** — record every Reddit post *visited*, not just saved | ❌ | Recall's whole premise. Powerful for recall, heavy on privacy, and not really viable on Android without accessibility-service overreach. **Recommend against** |
+| H11 | **Import existing history on first install** | ❌ | Recall does this too. Independent confirmation of D2 — every app that solves day-one emptiness does it by importing something the user already has |
+| H12 | **Localisation** | ❌ | Save for Later ships German and Brazilian Portuguese. Relevant if India is a target market |
+
+**Pricing intel.** Lifetime sits in a tight $9.99–$19.99 band across all three paid competitors:
+Stash $9.99 (promo from $19.99), MarkMark $14.99, Save for Later $19.99. Annual is $8–10.
+
+**Competitive read.** Nobody in this set does OCR *and* nested comment capture *and* ranked search
+with match provenance. Recall for Reddit is Reddit-only and Mac-only. Stash is the closest overall
+and is coming to Android. The gap Tuck can hold is **depth of capture plus quality of retrieval**,
+not breadth of platform.
+
+
+---
+
 # G. Suggested order
 
 Reasoning rather than a list: **the entity/knowledge-graph work in `TASKS.md` Phase A is sequenced
@@ -164,8 +199,9 @@ too early, and I wrote it that way.** An entity graph needs volume to be useful 
 items, which describes a user you do not have yet. D1 and D2 are what create that user.
 
 **Phase 0 — make it productive and non-empty**
-D1 lifecycle + reminders · D2 first-run screenshot import · B2 smart dates → reminders · C3 haptics ·
-A9 surface the category suggestion in the share sheet · B11 copy text out of images
+D1 lifecycle + reminders · D2 first-run screenshot import · **H1 rule-based auto-filing** ·
+B2 smart dates → reminders · C3 haptics · A9 surface the category suggestion in the share sheet ·
+B11 copy text out of images
 
 **Phase 1 — retrieval made visible**
 B3 search on home · D4 match-reason chips · B5 bulk select everywhere · B9 storage screen ·
@@ -176,7 +212,8 @@ B6 grid view (via redesign R4) · B4 pin collections · B7/B8 sub-stashes · C2 
 C4 reorder · A18/B16 duplicate merge · C5 hidden collections
 
 **Phase 3 — ownership**
-B10 Markdown export · D3 importers · B12 custom preview image
+B10 Markdown export · D3/H4 importers (H5: preserve folders) · B12 custom preview image ·
+H2 offline web archive · H3 reader view · H6 refresh a save
 
 **Phase 4 — hardening before any launch**
 D10 measured budgets · baseline profile · APK size decision (43.6 MB against a 25 MB budget)
