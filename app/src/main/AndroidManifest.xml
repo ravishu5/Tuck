@@ -89,6 +89,15 @@
             </intent-filter>
         </activity>
 
+        <receiver
+            android:name=".processing.ReminderActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.tuck.app.action.REMINDER_DONE" />
+                <action android:name="com.tuck.app.action.REMINDER_SNOOZE" />
+            </intent-filter>
+        </receiver>
+
         <!-- FileProvider for secure viewing and sharing of stored files & PDFs -->
         <provider
             android:name="androidx.core.content.FileProvider"

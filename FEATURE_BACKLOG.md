@@ -364,18 +364,27 @@ matters — save-and-forget, sync data loss, lag at 200 items, unreadable text, 
 what happens **after** the save. That is where Tuck should compete.
 
 ### Phase 0 — the wedge: make saving lead somewhere
-- **D1 — item lifecycle: status, reminders, snooze.** Six users named this as the unsolved problem
-  and the incumbent has no answer. Highest-leverage item in this document
+- [x] **D1 — item lifecycle: reminders, snooze, done.** *Shipped 2026-08-29.* `remindAt` and
+  `completedAt` via migration 5→6, four coarse presets, a WorkManager reminder with Done and
+  Snooze notification actions, and a FOLLOW UP section on the detail screen. Verified on device:
+  tapping "Tomorrow" stored 09:00 the next morning and scheduled the job. Deliberately **no status
+  enum** - the evidence pointed at "bring it back" and "I dealt with it", nothing more
 - **D2 — first-run bulk screenshot import**, plus **R3 auto-delete the original** after import
 - **H1 — user-defined auto-filing rules.** Seven users asked for auto-categorisation; the incumbent
   refuses on principle. Rules serve the demand without the misfiling he is right to fear
 - **B2 — smart dates from OCR → offer a reminder.** Regex, no AI
 - **A9 — surface the category suggestion in the share sheet** · **C3 — haptics**
 
-### Phase 0.5 — verify Tuck has no data-loss bugs *(do this immediately, it is cheap)*
-- **R11 — video audio preserved** · **R12 — photo quality preserved** · **R6 — original photo
-  metadata preserved.** Stash silently dropped audio and recompressed images; users had already
-  deleted their originals. Write a test that byte-compares a copied file against its source
+### Phase 0.5 — data-loss bugs — *done 2026-08-29*
+- [x] **R11/R12 — audio and image quality preserved.** The copy path was already a verbatim byte
+  stream; six instrumentation tests now prove it by SHA-256 rather than assuming it
+- [x] **R6 — original capture time preserved** via `capturedAt` (migration 4→5), read from EXIF.
+  It was silently dropped in *two* further places - the repository mapping and the vault
+  export/import - so an export/restore round-trip would have lost it
+- [x] File type no longer forced: every image was written `.jpg` and every video `.mp4`, and the
+  importer hardcoded `image/png` over every JPEG in the gallery
+- [ ] **Detail screen spins forever when an item does not exist** — found while testing; the
+  loading state never resolves for a missing id instead of showing an empty state
 
 ### Phase 1 — retrieval made visible
 B3 search on home · D4 match-reason chips · B5 bulk select everywhere · R7 global timeline ·

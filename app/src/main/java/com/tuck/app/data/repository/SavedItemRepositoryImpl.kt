@@ -17,6 +17,7 @@ import com.tuck.app.domain.model.SavedComment
 import com.tuck.app.domain.model.SavedItem
 import com.tuck.app.domain.model.Tag
 import com.tuck.app.domain.repository.SavedItemRepository
+import com.tuck.app.processing.ReminderScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -31,7 +32,8 @@ class SavedItemRepositoryImpl @Inject constructor(
     private val entityDao: EntityDao,
     private val tagDao: TagDao,
     private val collectionDao: CollectionDao,
-    private val fileStorageService: FileStorageService
+    private val fileStorageService: FileStorageService,
+    private val reminderScheduler: ReminderScheduler
 ) : SavedItemRepository {
 
     override fun getAllActiveItems(): Flow<List<SavedItem>> {
@@ -129,6 +131,8 @@ class SavedItemRepositoryImpl @Inject constructor(
             extractedText = item.extractedText,
             ocrText = item.ocrText,
             capturedAt = item.capturedAt,
+            remindAt = item.remindAt,
+            completedAt = item.completedAt,
             createdAt = item.createdAt,
             updatedAt = item.updatedAt,
             lastOpenedAt = item.lastOpenedAt,
@@ -177,6 +181,8 @@ class SavedItemRepositoryImpl @Inject constructor(
             extractedText = item.extractedText,
             ocrText = item.ocrText,
             capturedAt = item.capturedAt,
+            remindAt = item.remindAt,
+            completedAt = item.completedAt,
             createdAt = item.createdAt,
             updatedAt = System.currentTimeMillis(),
             lastOpenedAt = item.lastOpenedAt,
@@ -261,6 +267,25 @@ class SavedItemRepositoryImpl @Inject constructor(
         Unit
     }
 
+    override suspend fun setReminder(id: Long, remindAt: Long?) {
+        savedItemDao.setRemindAt(id, remindAt)
+        if (remindAt != null) {
+            reminderScheduler.schedule(id, remindAt)
+        } else {
+            reminderScheduler.cancel(id)
+        }
+    }
+
+    override suspend fun setCompleted(id: Long, completed: Boolean) {
+        savedItemDao.setCompletedAt(id, if (completed) System.currentTimeMillis() else null)
+        // A completed item should never nag; an un-completed one does not silently
+        // regain the reminder it used to have.
+        if (completed) {
+            savedItemDao.setRemindAt(id, null)
+            reminderScheduler.cancel(id)
+        }
+    }
+
     override suspend fun markOpened(id: Long) = withContext(Dispatchers.IO) {
         savedItemDao.updateLastOpened(id)
     }
@@ -317,6 +342,8 @@ class SavedItemRepositoryImpl @Inject constructor(
         ocrText = ocrText,
         comments = parseCommentsJson(commentsJson),
         capturedAt = capturedAt,
+        remindAt = remindAt,
+        completedAt = completedAt,
         createdAt = createdAt,
         updatedAt = updatedAt,
         lastOpenedAt = lastOpenedAt,

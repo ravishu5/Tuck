@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.tuck.app.processing.ReminderPreset
+import com.tuck.app.processing.ReminderScheduler
 import javax.inject.Inject
 
 data class DetailUiState(
@@ -129,6 +131,27 @@ class ItemDetailViewModel @Inject constructor(
         val currentItem = uiState.value.item ?: return
         viewModelScope.launch {
             savedItemRepository.updateItem(currentItem.copy(userNote = note.trim().ifBlank { null }))
+        }
+    }
+
+    fun setReminder(preset: ReminderPreset) {
+        val currentItem = uiState.value.item ?: return
+        viewModelScope.launch {
+            savedItemRepository.setReminder(currentItem.id, ReminderScheduler.resolve(preset))
+        }
+    }
+
+    fun clearReminder() {
+        val currentItem = uiState.value.item ?: return
+        viewModelScope.launch {
+            savedItemRepository.setReminder(currentItem.id, null)
+        }
+    }
+
+    fun toggleCompleted() {
+        val currentItem = uiState.value.item ?: return
+        viewModelScope.launch {
+            savedItemRepository.setCompleted(currentItem.id, currentItem.completedAt == null)
         }
     }
 

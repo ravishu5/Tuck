@@ -24,6 +24,8 @@ data class SavedItem(
     val ocrText: String? = null,
     val comments: List<SavedComment> = emptyList(),
     val capturedAt: Long? = null,
+    val remindAt: Long? = null,
+    val completedAt: Long? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
     val lastOpenedAt: Long? = null,

@@ -73,6 +73,8 @@ class VaultBackupService @Inject constructor(
                         put("captureNote", item.captureNote ?: "")
                         put("isFavorite", item.isFavorite)
                         item.capturedAt?.let { put("capturedAt", it) }
+                        item.remindAt?.let { put("remindAt", it) }
+                        item.completedAt?.let { put("completedAt", it) }
                         put("createdAt", item.createdAt)
                     })
                 }
@@ -110,6 +112,8 @@ class VaultBackupService @Inject constructor(
                         put("captureNote", item.captureNote ?: "")
                         put("isFavorite", item.isFavorite)
                         item.capturedAt?.let { put("capturedAt", it) }
+                        item.remindAt?.let { put("remindAt", it) }
+                        item.completedAt?.let { put("completedAt", it) }
                         put("createdAt", item.createdAt)
                         if (!item.localFilePath.isNullOrBlank()) {
                             val file = File(item.localFilePath)
@@ -216,6 +220,8 @@ class VaultBackupService @Inject constructor(
                     isFavorite = obj["isFavorite"]?.jsonPrimitive?.booleanOrNull ?: false,
                     processingStatus = ProcessingStatus.READY,
                     capturedAt = obj["capturedAt"]?.jsonPrimitive?.longOrNull,
+                    remindAt = obj["remindAt"]?.jsonPrimitive?.longOrNull,
+                    completedAt = obj["completedAt"]?.jsonPrimitive?.longOrNull,
                     createdAt = obj["createdAt"]?.jsonPrimitive?.longOrNull ?: System.currentTimeMillis()
                 )
 
@@ -271,6 +277,8 @@ class VaultBackupService @Inject constructor(
                         put("captureNote", item.captureNote ?: "")
                         put("isFavorite", item.isFavorite)
                         item.capturedAt?.let { put("capturedAt", it) }
+                        item.remindAt?.let { put("remindAt", it) }
+                        item.completedAt?.let { put("completedAt", it) }
                         put("createdAt", item.createdAt)
                     })
                 }
@@ -313,6 +321,8 @@ class VaultBackupService @Inject constructor(
                 isFavorite = obj["isFavorite"]?.jsonPrimitive?.booleanOrNull ?: false,
                 processingStatus = ProcessingStatus.READY,
                 capturedAt = obj["capturedAt"]?.jsonPrimitive?.longOrNull,
+                    remindAt = obj["remindAt"]?.jsonPrimitive?.longOrNull,
+                    completedAt = obj["completedAt"]?.jsonPrimitive?.longOrNull,
                     createdAt = obj["createdAt"]?.jsonPrimitive?.longOrNull ?: System.currentTimeMillis()
             )
 

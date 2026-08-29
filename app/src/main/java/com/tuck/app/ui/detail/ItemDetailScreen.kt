@@ -52,6 +52,8 @@ import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -93,6 +95,8 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.tuck.app.processing.ReminderPreset
+import com.tuck.app.ui.theme.TuckTheme
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -291,6 +295,15 @@ fun ItemDetailScreen(
                     onCopyText = { copyToClipboard(context, "Note", item.originalText ?: item.extractedText.orEmpty()) }
                 )
             }
+
+            Spacer(modifier = Modifier.height(20.dp))
+            FollowUpSection(
+                remindAt = item.remindAt,
+                completedAt = item.completedAt,
+                onPickPreset = { viewModel.setReminder(it) },
+                onClearReminder = { viewModel.clearReminder() },
+                onToggleCompleted = { viewModel.toggleCompleted() }
+            )
 
             // Materialized Threaded Comments & Discussion Section
             if (uiState.commentsTree.isNotEmpty() || item.comments.isNotEmpty()) {
@@ -1130,6 +1143,96 @@ fun ThreadedCommentTreeSection(
                             )
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Turns a save into something with a future: a reminder to bring it back, and a way to
+ * mark it dealt with so it stops counting as outstanding.
+ *
+ * The presets are deliberately coarse rather than a date-time picker - "tomorrow
+ * morning" is what people mean, and every extra tap here is a reason not to bother.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FollowUpSection(
+    remindAt: Long?,
+    completedAt: Long?,
+    onPickPreset: (ReminderPreset) -> Unit,
+    onClearReminder: () -> Unit,
+    onToggleCompleted: () -> Unit
+) {
+    val tuckColors = TuckTheme.colors
+    val isCompleted = completedAt != null
+    var isPicking by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "FOLLOW UP",
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = 1.2.sp,
+            color = tuckColors.textMuted
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            FilterChip(
+                selected = isCompleted,
+                onClick = onToggleCompleted,
+                label = { Text(if (isCompleted) "Done" else "Mark done") }
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            if (remindAt != null) {
+                AssistChip(
+                    onClick = onClearReminder,
+                    label = {
+                        Text(
+                            "Reminder " + android.text.format.DateUtils.getRelativeTimeSpanString(
+                                remindAt,
+                                System.currentTimeMillis(),
+                                android.text.format.DateUtils.MINUTE_IN_MILLIS
+                            )
+                        )
+                    },
+                    trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = "Clear reminder",
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                )
+            } else if (!isCompleted) {
+                AssistChip(
+                    onClick = { isPicking = !isPicking },
+                    label = { Text("Remind me") }
+                )
+            }
+        }
+
+        if (isPicking && remindAt == null && !isCompleted) {
+            Spacer(modifier = Modifier.height(8.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(
+                    ReminderPreset.LATER_TODAY to "Later today",
+                    ReminderPreset.TOMORROW_MORNING to "Tomorrow",
+                    ReminderPreset.THIS_WEEKEND to "This weekend",
+                    ReminderPreset.NEXT_WEEK to "Next week"
+                ).forEach { (preset, label) ->
+                    AssistChip(
+                        onClick = {
+                            onPickPreset(preset)
+                            isPicking = false
+                        },
+                        label = { Text(label) }
+                    )
                 }
             }
         }

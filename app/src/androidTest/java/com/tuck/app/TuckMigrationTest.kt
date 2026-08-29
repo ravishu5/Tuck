@@ -244,6 +244,45 @@ class TuckMigrationTest {
     }
 
     @Test
+    fun migrate5To6_addsLifecycleColumnsAndKeepsExistingData() {
+        helper.createDatabase(TEST_DB, 2).use { db ->
+            db.execSQL(
+                """
+                INSERT INTO saved_items
+                    (id, contentType, title, description, originalUrl, canonicalUrl, sourceDomain,
+                     sourceApp, mimeType, localFilePath, thumbnailPath, originalText, extractedText,
+                     ocrText, commentsJson, createdAt, updatedAt, lastOpenedAt, isFavorite,
+                     isArchived, isDeleted, processingStatus, textHash, imageSha256)
+                VALUES
+                    (1, 'URL', 'Compare laptops', NULL, 'https://example.com', NULL, 'example.com',
+                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                     1700000000000, 1700000000000, NULL, 0, 0, 0, 'READY', NULL, NULL)
+                """.trimIndent()
+            )
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 3, true, TuckDatabase.MIGRATION_2_3).close()
+        helper.runMigrationsAndValidate(TEST_DB, 4, false, TuckDatabase.MIGRATION_3_4).close()
+        helper.runMigrationsAndValidate(TEST_DB, 5, false, TuckDatabase.MIGRATION_4_5).close()
+        val db = helper.runMigrationsAndValidate(TEST_DB, 6, false, TuckDatabase.MIGRATION_5_6)
+
+        db.use {
+            it.query("SELECT title, remindAt, completedAt FROM saved_items WHERE id = 1").use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("Compare laptops", c.getString(0))
+                assertTrue("an existing item has no reminder", c.isNull(1))
+                assertTrue("an existing item is not marked done", c.isNull(2))
+            }
+            it.execSQL("UPDATE saved_items SET remindAt = 1800000000000, completedAt = 1800000001000 WHERE id = 1")
+            it.query("SELECT remindAt, completedAt FROM saved_items WHERE id = 1").use { c ->
+                c.moveToFirst()
+                assertEquals(1800000000000L, c.getLong(0))
+                assertEquals(1800000001000L, c.getLong(1))
+            }
+        }
+    }
+
+    @Test
     fun migrate2To3_parsesCommentsJsonIntoMaterializedPathTree() {
         helper.createDatabase(TEST_DB, 2).use { db ->
             db.execSQL(

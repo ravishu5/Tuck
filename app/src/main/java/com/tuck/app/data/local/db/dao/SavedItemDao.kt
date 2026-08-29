@@ -61,6 +61,15 @@ interface SavedItemDao {
     """)
     suspend fun getItemsByCollectionList(collectionId: Long): List<SavedItemEntity>
 
+    @Query("UPDATE saved_items SET remindAt = :remindAt, updatedAt = :now WHERE id = :id")
+    suspend fun setRemindAt(id: Long, remindAt: Long?, now: Long = System.currentTimeMillis())
+
+    @Query("UPDATE saved_items SET completedAt = :completedAt, updatedAt = :now WHERE id = :id")
+    suspend fun setCompletedAt(id: Long, completedAt: Long?, now: Long = System.currentTimeMillis())
+
+    @Query("SELECT * FROM saved_items WHERE remindAt IS NOT NULL AND completedAt IS NULL AND isDeleted = 0 ORDER BY remindAt ASC")
+    fun getItemsWithReminders(): kotlinx.coroutines.flow.Flow<List<com.tuck.app.data.local.db.entity.SavedItemEntity>>
+
     @Query("UPDATE saved_items SET isFavorite = :isFavorite, updatedAt = :updatedAt WHERE id = :id")
     suspend fun setFavorite(id: Long, isFavorite: Boolean, updatedAt: Long = System.currentTimeMillis())
 

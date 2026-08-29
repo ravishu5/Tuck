@@ -11,6 +11,8 @@ import com.tuck.app.domain.model.ProcessingStatus
     indices = [
         Index(value = ["createdAt"]),
         Index(value = ["capturedAt"]),
+        Index(value = ["remindAt"]),
+        Index(value = ["completedAt"]),
         Index(value = ["contentType"]),
         Index(value = ["sourceDomain"]),
         Index(value = ["processingStatus"]),
@@ -43,6 +45,10 @@ data class SavedItemEntity(
     val commentsJson: String? = null,
     /** When the content itself was created - EXIF/gallery date - as opposed to when Tuck saved it. */
     val capturedAt: Long? = null,
+    /** When to surface this item again. Null means no reminder is set. */
+    val remindAt: Long? = null,
+    /** When the user marked this acted-on. Null means it is still outstanding. */
+    val completedAt: Long? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
     val lastOpenedAt: Long? = null,

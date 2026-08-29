@@ -4,6 +4,7 @@ import com.tuck.app.data.local.db.dao.CollectionDao
 import com.tuck.app.data.local.db.dao.EntityDao
 import com.tuck.app.data.local.db.dao.SavedItemDao
 import com.tuck.app.data.local.db.dao.SavedItemFtsDao
+import com.tuck.app.processing.ReminderScheduler
 import com.tuck.app.data.local.db.dao.TagDao
 import com.tuck.app.data.local.db.entity.SavedItemEntity
 import com.tuck.app.data.local.storage.FileStorageService
@@ -26,6 +27,7 @@ class SavedItemRepositoryTest {
 
     private val savedItemDao: SavedItemDao = mockk(relaxed = true)
     private val savedItemFtsDao: SavedItemFtsDao = mockk(relaxed = true)
+    private val reminderScheduler: ReminderScheduler = mockk(relaxed = true)
     private val entityDao: EntityDao = mockk(relaxed = true)
     private val tagDao: TagDao = mockk(relaxed = true)
     private val collectionDao: CollectionDao = mockk(relaxed = true)
@@ -38,6 +40,7 @@ class SavedItemRepositoryTest {
         repository = SavedItemRepositoryImpl(
             savedItemDao = savedItemDao,
             savedItemFtsDao = savedItemFtsDao,
+            reminderScheduler = reminderScheduler,
             entityDao = entityDao,
             tagDao = tagDao,
             collectionDao = collectionDao,

@@ -49,7 +49,7 @@ import kotlinx.serialization.json.JsonObject
         DerivedPointEntity::class,
         OcrBlockEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -317,6 +317,23 @@ abstract class TuckDatabase : RoomDatabase() {
                 // which fails schema validation on the next open.
                 db.execSQL("ALTER TABLE saved_items ADD COLUMN capturedAt INTEGER")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_saved_items_capturedAt ON saved_items(capturedAt)")
+            }
+        }
+
+        /**
+         * Adds the item lifecycle: `remindAt` and `completedAt`.
+         *
+         * Until now a saved item had no notion of intent or completion, so everything
+         * became an undifferentiated pile - the single most repeated complaint about
+         * apps in this category. Both columns are nullable and carry no DEFAULT clause,
+         * since an explicit "DEFAULT NULL" records a default Room does not expect.
+         */
+        val MIGRATION_5_6 = object : androidx.room.migration.Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE saved_items ADD COLUMN remindAt INTEGER")
+                db.execSQL("ALTER TABLE saved_items ADD COLUMN completedAt INTEGER")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_saved_items_remindAt ON saved_items(remindAt)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_saved_items_completedAt ON saved_items(completedAt)")
             }
         }
 

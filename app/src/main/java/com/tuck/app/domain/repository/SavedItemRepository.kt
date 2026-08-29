@@ -27,6 +27,11 @@ interface SavedItemRepository {
     suspend fun emptyTrash()
     suspend fun markOpened(id: Long)
 
+    /** Sets or clears a reminder, keeping the scheduled work in step with the stored value. */
+    suspend fun setReminder(id: Long, remindAt: Long?)
+    /** Marks an item acted-on, which also retires any pending reminder. */
+    suspend fun setCompleted(id: Long, completed: Boolean)
+
     suspend fun findByCanonicalUrl(canonicalUrl: String): SavedItem?
     suspend fun findByTextHash(hash: String): SavedItem?
     suspend fun findByImageHash(sha256: String): SavedItem?
