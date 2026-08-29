@@ -191,6 +191,9 @@ fun TuckApp(
 
                 composable(NavRoutes.SETTINGS) {
                     SettingsScreen(
+                        onNavigateToFilingRules = {
+                            navController.navigate(NavRoutes.FILING_RULES)
+                        },
                         onNavigateToTrash = {
                             navController.navigate(NavRoutes.TRASH)
                         },
@@ -205,6 +208,12 @@ fun TuckApp(
                     arguments = listOf(navArgument("itemId") { type = NavType.LongType })
                 ) {
                     ItemDetailScreen(
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+
+                composable(NavRoutes.FILING_RULES) {
+                    com.tuck.app.ui.rules.FilingRulesScreen(
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }

@@ -59,6 +59,7 @@ class ItemProcessingWorker @AssistedInject constructor(
     private val sourcePersonExtractor: SourcePersonExtractor,
     private val networkPolicy: NetworkPolicy,
     private val classifier: RuleBasedContentClassifier,
+    private val filingRuleEngine: FilingRuleEngine,
     private val settingsRepository: SettingsRepository
 ) : CoroutineWorker(appContext, workerParams) {
 
@@ -491,7 +492,20 @@ class ItemProcessingWorker @AssistedInject constructor(
                 tagsJoined.append(tagName).append(" ")
             }
 
-            // 5. Index into FTS
+            // 5. User-defined auto-filing rules.
+            // Deliberately after classification so a rule can match on tags and domain,
+            // and additive to whatever the classifier already chose.
+            try {
+                filingRuleEngine.apply(
+                    domainItem.copy(
+                        tags = classification.suggestedTags.map { com.tuck.app.domain.model.Tag(name = it) }
+                    )
+                )
+            } catch (e: Exception) {
+                // Filing is a convenience; never let it fail an otherwise-good save.
+            }
+
+            // 6. Index into FTS
             val entitiesJoined = extractedEntities.joinToString(" ") { it.value }
             val ftsEntity = SavedItemFtsEntity(
                 rowid = itemId,
@@ -507,7 +521,7 @@ class ItemProcessingWorker @AssistedInject constructor(
             )
             savedItemFtsDao.insertOrUpdate(ftsEntity)
 
-            // 6. Update SavedItemEntity to READY with all enriched fields
+            // 7. Update SavedItemEntity to READY with all enriched fields
             savedItemDao.updateProcessingResult(
                 id = itemId,
                 status = ProcessingStatus.READY,

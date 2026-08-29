@@ -66,13 +66,17 @@ object DatabaseModule {
             TuckDatabase.MIGRATION_2_3,
             TuckDatabase.MIGRATION_3_4,
             TuckDatabase.MIGRATION_4_5,
-            TuckDatabase.MIGRATION_5_6
+            TuckDatabase.MIGRATION_5_6,
+            TuckDatabase.MIGRATION_6_7
         )
             .build()
     }
 
     @Provides
     fun provideSavedItemDao(database: TuckDatabase): SavedItemDao = database.savedItemDao()
+
+    @Provides
+    fun provideFilingRuleDao(database: TuckDatabase): com.tuck.app.data.local.db.dao.FilingRuleDao = database.filingRuleDao()
 
     @Provides
     fun provideSavedItemFtsDao(database: TuckDatabase): SavedItemFtsDao = SavedItemFtsDaoImpl(database)

@@ -11,6 +11,7 @@ import com.tuck.app.data.local.db.dao.EntityDao
 import com.tuck.app.data.local.db.dao.ItemRawPayloadDao
 import com.tuck.app.data.local.db.dao.MediaAssetDao
 import com.tuck.app.data.local.db.dao.SavedItemDao
+import com.tuck.app.data.local.db.dao.FilingRuleDao
 import com.tuck.app.data.local.db.dao.SearchHistoryDao
 import com.tuck.app.data.local.db.dao.SourceContentDao
 import com.tuck.app.data.local.db.dao.TagDao
@@ -24,6 +25,7 @@ import com.tuck.app.data.local.db.entity.OcrBlockEntity
 import com.tuck.app.data.local.db.entity.SavedItemCollectionCrossRef
 import com.tuck.app.data.local.db.entity.SavedItemEntity
 import com.tuck.app.data.local.db.entity.SavedItemTagCrossRef
+import com.tuck.app.data.local.db.entity.FilingRuleEntity
 import com.tuck.app.data.local.db.entity.SearchHistoryEntity
 import com.tuck.app.data.local.db.entity.SourceCommentEntity
 import com.tuck.app.data.local.db.entity.SourcePostEntity
@@ -41,6 +43,7 @@ import kotlinx.serialization.json.JsonObject
         CollectionEntity::class,
         SavedItemCollectionCrossRef::class,
         SearchHistoryEntity::class,
+        FilingRuleEntity::class,
         ItemRawPayloadEntity::class,
         MediaAssetEntity::class,
         SourcePostEntity::class,
@@ -49,7 +52,7 @@ import kotlinx.serialization.json.JsonObject
         DerivedPointEntity::class,
         OcrBlockEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -59,6 +62,7 @@ abstract class TuckDatabase : RoomDatabase() {
     abstract fun tagDao(): TagDao
     abstract fun collectionDao(): CollectionDao
     abstract fun searchHistoryDao(): SearchHistoryDao
+    abstract fun filingRuleDao(): FilingRuleDao
     abstract fun mediaAssetDao(): MediaAssetDao
     abstract fun sourceContentDao(): SourceContentDao
     abstract fun derivedContentDao(): DerivedContentDao
@@ -334,6 +338,35 @@ abstract class TuckDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE saved_items ADD COLUMN completedAt INTEGER")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_saved_items_remindAt ON saved_items(remindAt)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_saved_items_completedAt ON saved_items(completedAt)")
+            }
+        }
+
+        /**
+         * Adds user-defined auto-filing rules.
+         *
+         * No DEFAULT clauses: the table is created empty, so NOT NULL columns need no
+         * backfill, and an explicit default would record one Room does not expect.
+         */
+        val MIGRATION_6_7 = object : androidx.room.migration.Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `filing_rules` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `query` TEXT NOT NULL,
+                        `collectionId` INTEGER NOT NULL,
+                        `isEnabled` INTEGER NOT NULL,
+                        `sortOrdinal` INTEGER NOT NULL,
+                        `matchCount` INTEGER NOT NULL,
+                        `lastMatchedAt` INTEGER,
+                        `createdAt` INTEGER NOT NULL,
+                        FOREIGN KEY(`collectionId`) REFERENCES `collections`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_filing_rules_collectionId` ON `filing_rules`(`collectionId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_filing_rules_isEnabled` ON `filing_rules`(`isEnabled`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_filing_rules_sortOrdinal` ON `filing_rules`(`sortOrdinal`)")
             }
         }
 

@@ -59,6 +59,7 @@ object NavRoutes {
     const val FAVORITES = "favorites"
     const val SETTINGS = "settings"
     const val TRASH = "trash"
+    const val FILING_RULES = "filing_rules"
     const val DETAIL = "detail/{itemId}"
     const val CATEGORY_DETAIL = "category_detail/{collectionId}/{collectionName}"
 

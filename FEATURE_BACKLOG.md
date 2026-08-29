@@ -166,7 +166,7 @@ in the neighbouring space, mined for features and — more usefully — for thei
 
 | # | Feature | Status | Notes |
 |---|---|---|---|
-| **H1** | **Rule-based auto-filing** — "Reddit links go to my Reddit folder" | ❌ | **The best find in this batch.** A real MarkMark review asks for exactly this and does not have it. Tuck already owns both halves: a query DSL parser and the unused `collections.isSmart` / `smartQuery` columns. A rule *is* a saved DSL query plus a destination. Turns Tuck's auto-organisation promise into something the user can actually steer |
+| **H1** | **Rule-based auto-filing** — "Reddit links go to my Reddit folder" | ✅ *shipped* | **The best find in this batch.** A real MarkMark review asks for exactly this and does not have it. Tuck already owns both halves: a query DSL parser and the unused `collections.isSmart` / `smartQuery` columns. A rule *is* a saved DSL query plus a destination. Turns Tuck's auto-organisation promise into something the user can actually steer |
 | H2 | **Offline web archive** — full page snapshot, not just readable text | 🟡 | Tuck stores `readable_html` and a thumbnail; it does not snapshot images or CSS. Real gap for the "archive" claim |
 | H3 | **Reader view** — distraction-free reading | 🟡 | Detail has webview vs snapshot tabs; there is no typographic reading mode |
 | H4 | **Import from Pocket / Raindrop / Omnivore / browser bookmarks** | ❌ | Both apps ship this; Save for Later advertises "in one tap". Reinforces D3 |
@@ -370,8 +370,12 @@ what happens **after** the save. That is where Tuck should compete.
   tapping "Tomorrow" stored 09:00 the next morning and scheduled the job. Deliberately **no status
   enum** - the evidence pointed at "bring it back" and "I dealt with it", nothing more
 - **D2 — first-run bulk screenshot import**, plus **R3 auto-delete the original** after import
-- **H1 — user-defined auto-filing rules.** Seven users asked for auto-categorisation; the incumbent
-  refuses on principle. Rules serve the demand without the misfiling he is right to fear
+- [x] **H1 — user-defined auto-filing rules.** *Shipped 2026-08-29.* A rule is a query-DSL string
+  plus a destination collection, so the search syntax doubles as the rule language and there is
+  nothing new to learn. Runs after enrichment (a `source:` rule needs the domain), additive to the
+  classifier, and a rule stating no condition is rejected in both the UI and the engine - a rule
+  that silently files everything is the worst failure here. Verified on device: `source:reddit`
+  filed a shared Reddit link into Articles alongside the classifier's own choice
 - **B2 — smart dates from OCR → offer a reminder.** Regex, no AI
 - **A9 — surface the category suggestion in the share sheet** · **C3 — haptics**
 
