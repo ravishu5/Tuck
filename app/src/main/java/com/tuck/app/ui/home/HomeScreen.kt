@@ -95,11 +95,18 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.rememberModalBottomSheetState
 import com.tuck.app.ui.theme.color.PaletteSlot
 import com.tuck.app.ui.components.TuckFab
+import com.tuck.app.ui.theme.pressScale
+import com.tuck.app.ui.theme.TuckGradients
+import androidx.compose.material3.ripple
+import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import com.tuck.app.ui.components.CollectionTile
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onNavigateToSearch: () -> Unit,
+    onNavigateToCollections: () -> Unit = {},
     onNavigateToDetail: (Long) -> Unit,
     onNavigateToSettings: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
@@ -231,6 +238,26 @@ fun HomeScreen(
                         onToggleFavorite = { id, isFav ->
                             viewModel.toggleFavorite(id, isFav)
                         }
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+
+            // 6b. Collections rail — the fullest first, same tiles as the Collections tab
+            if (uiState.selectedSource == null && uiState.collections.any { it.itemCount > 0 }) {
+                item {
+                    TuckSectionHeader(
+                        title = "Collections",
+                        actionText = "View all"
+                    )
+                    CollectionsRail(
+                        collections = uiState.collections
+                            .sortedWith(
+                                compareByDescending<com.tuck.app.domain.model.Collection> { it.itemCount }
+                                    .thenBy { it.name.lowercase() }
+                            )
+                            .take(6),
+                        onCollectionClick = { onNavigateToCollections() }
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                 }
@@ -525,6 +552,7 @@ private fun HomeQuickActionRow(
     ) {
         QuickActionButton(
             label = "Note",
+            sublabel = "Quick note",
             icon = Icons.Filled.Notes,
             tint = TuckTheme.colors.palette[PaletteSlot.PRIMARY_CORE].fill,
             modifier = Modifier.weight(1f),
@@ -532,6 +560,7 @@ private fun HomeQuickActionRow(
         )
         QuickActionButton(
             label = "Scan",
+            sublabel = "Camera",
             icon = Icons.Filled.CameraAlt,
             tint = TuckTheme.colors.palette[PaletteSlot.SECONDARY_CORE].fill,
             modifier = Modifier.weight(1f),
@@ -539,6 +568,7 @@ private fun HomeQuickActionRow(
         )
         QuickActionButton(
             label = "Doc/PDF",
+            sublabel = "Add file",
             icon = Icons.Filled.PictureAsPdf,
             tint = TuckTheme.colors.palette[PaletteSlot.TERTIARY_CORE].fill,
             modifier = Modifier.weight(1f),
@@ -546,6 +576,7 @@ private fun HomeQuickActionRow(
         )
         QuickActionButton(
             label = "Paste",
+            sublabel = "Clipboard",
             icon = Icons.Filled.ContentPaste,
             tint = TuckTheme.colors.palette[PaletteSlot.PRIMARY_SOFT].fill,
             modifier = Modifier.weight(1f),
@@ -557,41 +588,62 @@ private fun HomeQuickActionRow(
 @Composable
 private fun QuickActionButton(
     label: String,
+    sublabel: String,
     icon: ImageVector,
     tint: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val tuckColors = TuckTheme.colors
-    val shapes = TuckTheme.shapes
+    val interactionSource = remember { MutableInteractionSource() }
 
-    Surface(
-        shape = shapes.small,
-        color = tuckColors.surfaceCard,
-        border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.border),
+    // Same treatment as an empty collection tile: tinted ground, saturated icon chip.
+    // The four actions then read as one family with the rest of the app rather than as
+    // a separate row of outlined buttons.
+    Column(
         modifier = modifier
-            .clip(shapes.small)
-            .clickable(onClick = onClick)
+            .pressScale(interactionSource)
+            .clip(RoundedCornerShape(16.dp))
+            .background(TuckGradients.tint(tint, tuckColors.isDark))
+            .border(1.dp, TuckGradients.tintEdge(tint, tuckColors.isDark), RoundedCornerShape(16.dp))
+            .clickable(
+                interactionSource = interactionSource,
+                indication = ripple(color = tint),
+                onClick = onClick
+            )
+            .padding(vertical = 11.dp, horizontal = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(
-            modifier = Modifier.padding(vertical = 10.dp, horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .clip(RoundedCornerShape(9.dp))
+                .background(TuckGradients.tile(tint, tuckColors.isDark)),
+            contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = tint,
-                modifier = Modifier.size(16.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                color = tuckColors.textPrimary
+                tint = tuckColors.onScrim,
+                modifier = Modifier.size(15.dp)
             )
         }
+
+        Spacer(modifier = Modifier.height(7.dp))
+
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = tuckColors.textPrimary,
+            maxLines = 1
+        )
+        Text(
+            text = sublabel,
+            style = MaterialTheme.typography.labelSmall,
+            color = tuckColors.textMuted,
+            maxLines = 1
+        )
     }
 }
 
@@ -819,6 +871,39 @@ private fun QuickThemePickerSheet(
                     )
                 }
             }
+        }
+    }
+}
+
+/**
+ * The fullest collections, in the same tiles the Collections tab uses.
+ *
+ * Home is where someone lands, so it should answer "what have I got" before "what did I
+ * just save". Populated collections lead; the rail hides itself entirely when everything
+ * is empty, rather than showing a row of nothing.
+ */
+@Composable
+private fun CollectionsRail(
+    collections: List<com.tuck.app.domain.model.Collection>,
+    onCollectionClick: (Long) -> Unit
+) {
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        items(collections, key = { it.id }) { collection ->
+            CollectionTile(
+                name = collection.name,
+                count = collection.itemCount,
+                openCount = collection.openCount,
+                previewPaths = collection.previewPaths,
+                colorId = collection.color,
+                iconHint = collection.icon,
+                collectionId = collection.id,
+                isLocked = collection.isLocked,
+                onClick = { onCollectionClick(collection.id) },
+                modifier = Modifier.width(168.dp)
+            )
         }
     }
 }

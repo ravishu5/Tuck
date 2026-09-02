@@ -139,6 +139,12 @@ fun TuckApp(
             ) {
                 composable(NavRoutes.HOME) {
                     HomeScreen(
+                        onNavigateToCollections = {
+                            navController.navigate(NavRoutes.COLLECTIONS) {
+                                popUpTo(NavRoutes.HOME)
+                                launchSingleTop = true
+                            }
+                        },
                         onNavigateToSearch = {
                             navController.navigate(NavRoutes.SEARCH) {
                                 popUpTo(navController.graph.findStartDestination().id) {
