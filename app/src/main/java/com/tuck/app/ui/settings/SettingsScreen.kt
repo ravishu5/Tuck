@@ -353,6 +353,24 @@ fun SettingsScreen(
                         checked = uiState.settings.wifiOnlyMetadata,
                         onCheckedChange = { viewModel.setWifiOnlyMetadata(it) }
                     )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    SettingsSwitchRow(
+                        title = stringResource(R.string.setting_transcribe),
+                        subtitle = stringResource(R.string.setting_transcribe_sub),
+                        checked = uiState.settings.transcribeVoiceNotes,
+                        onCheckedChange = { viewModel.setTranscribeVoiceNotes(it) }
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    SettingsSwitchRow(
+                        title = stringResource(R.string.setting_deep_capture),
+                        subtitle = stringResource(R.string.setting_deep_capture_sub),
+                        checked = uiState.settings.deepCaptureEnabled,
+                        onCheckedChange = { viewModel.setDeepCaptureEnabled(it) }
+                    )
                 }
             }
         }

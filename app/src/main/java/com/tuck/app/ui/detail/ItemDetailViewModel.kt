@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.tuck.app.data.local.db.dao.SourceContentDao
 import com.tuck.app.data.local.db.entity.SourceCommentEntity
 import com.tuck.app.data.local.db.entity.SourcePostEntity
-import com.tuck.app.domain.memory.RelatedItemsEngine
 import com.tuck.app.domain.model.Collection
 import com.tuck.app.domain.model.SavedItem
 import com.tuck.app.domain.repository.CollectionRepository
@@ -30,7 +29,6 @@ data class DetailUiState(
     val sourcePost: SourcePostEntity? = null,
     val commentsTree: List<SourceCommentEntity> = emptyList(),
     val allCollections: List<Collection> = emptyList(),
-    val relatedItems: List<SavedItem> = emptyList(),
     val isEditingTitle: Boolean = false,
     val editedTitle: String = "",
     val isLoading: Boolean = true,
@@ -55,7 +53,6 @@ class ItemDetailViewModel @Inject constructor(
     private val checklistDao: ChecklistDao,
     private val collectionRepository: CollectionRepository,
     private val sourceContentDao: SourceContentDao,
-    private val relatedItemsEngine: RelatedItemsEngine
 ) : ViewModel() {
 
     private val itemId: Long = checkNotNull(savedStateHandle["itemId"])
@@ -81,21 +78,17 @@ class ItemDetailViewModel @Inject constructor(
         SourceContentState(post = post, comments = comments)
     }
 
-    // combine() is typed only up to five flows, so the checklist is layered on top
-    // rather than pushed into the vararg overload, which would lose the types.
     private val baseState = combine(
         savedItemRepository.getItemByIdFlow(itemId),
         sourceContentFlow,
         collectionRepository.getAllCollections(),
-        relatedItemsEngine.findRelatedItems(itemId, 5),
         titleEditFlow
-    ) { item, sourceContent, allCollections, relatedItems, titleEdit ->
+    ) { item, sourceContent, allCollections, titleEdit ->
         DetailUiState(
             item = item,
             sourcePost = sourceContent.post,
             commentsTree = sourceContent.comments,
             allCollections = allCollections,
-            relatedItems = relatedItems,
             isEditingTitle = titleEdit.isEditing,
             editedTitle = if (titleEdit.isEditing) titleEdit.text else item?.title.orEmpty(),
             isLoading = false,
@@ -169,17 +162,18 @@ class ItemDetailViewModel @Inject constructor(
         viewModelScope.launch { checklistDao.delete(entry) }
     }
 
-    fun setReminder(preset: ReminderPreset) {
+    /** An exact time and an optional reason, both chosen in the shared reminder dialog. */
+    fun setReminderAt(remindAt: Long, note: String?) {
         val currentItem = uiState.value.item ?: return
         viewModelScope.launch {
-            savedItemRepository.setReminder(currentItem.id, ReminderScheduler.resolve(preset))
+            savedItemRepository.setReminder(currentItem.id, remindAt, note)
         }
     }
 
     fun clearReminder() {
         val currentItem = uiState.value.item ?: return
         viewModelScope.launch {
-            savedItemRepository.setReminder(currentItem.id, null)
+            savedItemRepository.setReminder(currentItem.id, null, null)
         }
     }
 

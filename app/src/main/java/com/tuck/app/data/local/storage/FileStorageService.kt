@@ -9,6 +9,8 @@ import android.os.ParcelFileDescriptor
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
 import androidx.exifinterface.media.ExifInterface
+import com.tuck.app.data.remote.FetchVerdict
+import com.tuck.app.data.remote.RemoteMediaPolicy
 import com.tuck.app.domain.model.ContentType
 import com.tuck.app.domain.repository.StorageUsage
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -25,8 +27,17 @@ import javax.inject.Singleton
 
 @Singleton
 class FileStorageService @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val remoteMediaPolicy: RemoteMediaPolicy
 ) {
+
+    private companion object {
+        /** Thumbnails are previews; anything larger than this is not one. */
+        const val MAX_THUMBNAIL_BYTES = 10L * 1024 * 1024
+
+        /** A saved clip, not a film: past this the storage cost outweighs having it offline. */
+        const val MAX_VIDEO_BYTES = 120L * 1024 * 1024
+    }
     private val imagesDir: File by lazy {
         File(context.filesDir, "saved/images").apply { mkdirs() }
     }
@@ -37,6 +48,10 @@ class FileStorageService @Inject constructor(
 
     private val documentsDir: File by lazy {
         File(context.filesDir, "saved/documents").apply { mkdirs() }
+    }
+
+    private val videosDir: File by lazy {
+        File(context.filesDir, "saved/videos").apply { mkdirs() }
     }
 
     private val thumbnailsDir: File by lazy {
@@ -285,40 +300,6 @@ class FileStorageService @Inject constructor(
         thumbFile.absolutePath
     }
 
-    suspend fun downloadAndSaveThumbnail(imageUrl: String): String? = withContext(Dispatchers.IO) {
-        if (imageUrl.isBlank()) return@withContext null
-        try {
-            val cleanUrl = imageUrl.replace("&amp;", "&")
-            val url = java.net.URL(cleanUrl)
-            val connection = url.openConnection() as java.net.HttpURLConnection
-            connection.instanceFollowRedirects = true
-            connection.connectTimeout = 8000
-            connection.readTimeout = 8000
-            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-            connection.setRequestProperty("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8")
-            connection.connect()
-
-            val responseCode = connection.responseCode
-            if (responseCode in 200..299) {
-                val bytes = connection.inputStream.use { it.readBytes() }
-                if (bytes.isNotEmpty()) {
-                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                    if (bitmap != null) {
-                        val thumbFile = File(thumbnailsDir, "thumb_${UUID.randomUUID()}.jpg")
-                        FileOutputStream(thumbFile).use { out ->
-                            bitmap.compress(Bitmap.CompressFormat.JPEG, 85, out)
-                        }
-                        bitmap.recycle()
-                        return@withContext thumbFile.absolutePath
-                    }
-                }
-            }
-            null
-        } catch (e: Exception) {
-            null
-        }
-    }
-
     private fun generateImageThumbnail(sourceImage: File): String? {
         return try {
             val options = BitmapFactory.Options().apply {
@@ -381,35 +362,211 @@ class FileStorageService @Inject constructor(
         }
     }
 
+    /**
+     * Caches a remote thumbnail locally.
+     *
+     * The URL here is page-controlled (an `og:image`, a media entry in a platform payload), so
+     * it is checked through [RemoteMediaPolicy] before the socket opens and again at every
+     * redirect — an allowlist that trusts a `Location` header is not an allowlist. The response
+     * must look like an image and must stay under [MAX_THUMBNAIL_BYTES]; a `Content-Length` is
+     * a claim, not a guarantee, so the ceiling is enforced while copying.
+     */
     suspend fun downloadAndCacheImage(imageUrl: String): String? = withContext(Dispatchers.IO) {
         if (imageUrl.isBlank()) return@withContext null
-        try {
-            val url = java.net.URL(imageUrl)
-            val conn = url.openConnection() as java.net.HttpURLConnection
-            conn.connectTimeout = 6000
-            conn.readTimeout = 6000
-            conn.instanceFollowRedirects = true
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile)")
-            conn.connect()
 
-            if (conn.responseCode in 200..299) {
-                val fileName = "thumb_${UUID.randomUUID()}.jpg"
-                val thumbFile = File(thumbnailsDir, fileName)
-                conn.inputStream.use { input ->
-                    FileOutputStream(thumbFile).use { output ->
-                        input.copyTo(output)
-                    }
-                }
-                if (thumbFile.exists() && thumbFile.length() > 0) {
-                    thumbFile.absolutePath
-                } else {
-                    null
-                }
-            } else {
-                null
+        var target = imageUrl
+        repeat(remoteMediaPolicy.maxRedirects + 1) {
+            when (val outcome = fetchThumbnailOnce(target)) {
+                is ThumbnailFetch.Saved -> return@withContext outcome.path
+                is ThumbnailFetch.Redirect -> target = outcome.location
+                ThumbnailFetch.Rejected -> return@withContext null
+            }
+        }
+        // Ran out of hops.
+        null
+    }
+
+    private sealed interface ThumbnailFetch {
+        data class Saved(val path: String) : ThumbnailFetch
+        data class Redirect(val location: String) : ThumbnailFetch
+        data object Rejected : ThumbnailFetch
+    }
+
+    /** One hop: policy check, request, and either a saved file or where to go next. */
+    private fun fetchThumbnailOnce(target: String): ThumbnailFetch {
+        if (remoteMediaPolicy.check(target) !is FetchVerdict.Allowed) return ThumbnailFetch.Rejected
+
+        val conn = try {
+            (java.net.URL(target).openConnection() as java.net.HttpURLConnection).apply {
+                connectTimeout = 6000
+                readTimeout = 6000
+                // Followed by hand so every hop goes back through the policy.
+                instanceFollowRedirects = false
+                setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile)")
+                setRequestProperty("Accept", "image/*")
             }
         } catch (e: Exception) {
-            null
+            return ThumbnailFetch.Rejected
+        }
+
+        return try {
+            conn.connect()
+            val code = conn.responseCode
+
+            if (code in 300..399) {
+                val location = conn.getHeaderField("Location") ?: return ThumbnailFetch.Rejected
+                // Resolved against the current URL so a relative Location still works.
+                val resolved = try {
+                    java.net.URI(target).resolve(location).toString()
+                } catch (e: Exception) {
+                    return ThumbnailFetch.Rejected
+                }
+                return ThumbnailFetch.Redirect(resolved)
+            }
+            if (code !in 200..299) return ThumbnailFetch.Rejected
+
+            val contentType = conn.contentType?.substringBefore(';')?.trim()?.lowercase()
+            if (contentType != null && !contentType.startsWith("image/")) return ThumbnailFetch.Rejected
+            if (conn.contentLengthLong > MAX_THUMBNAIL_BYTES) return ThumbnailFetch.Rejected
+
+            val bytes = conn.inputStream.use { it.readUpTo(MAX_THUMBNAIL_BYTES) }
+                ?: return ThumbnailFetch.Rejected
+
+            // Re-encoding rather than storing the response verbatim normalises the format the
+            // `.jpg` name already promises, bounds what lands on disk, and means a byte stream
+            // that merely claims to be an image never reaches storage at all.
+            val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                ?: return ThumbnailFetch.Rejected
+            val thumbFile = File(thumbnailsDir, "thumb_${UUID.randomUUID()}.jpg")
+            try {
+                FileOutputStream(thumbFile).use { out ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 85, out)
+                }
+            } finally {
+                bitmap.recycle()
+            }
+
+            if (thumbFile.exists() && thumbFile.length() > 0) {
+                ThumbnailFetch.Saved(thumbFile.absolutePath)
+            } else {
+                thumbFile.delete()
+                ThumbnailFetch.Rejected
+            }
+        } catch (e: Exception) {
+            ThumbnailFetch.Rejected
+        } finally {
+            conn.disconnect()
+        }
+    }
+
+    /**
+     * Downloads a video so the item plays offline, and plays at all.
+     *
+     * A platform's own embed will not let Tuck drive it — no play, no seek, no timestamp — and
+     * Instagram serves logged-out embedders no video whatsoever. Holding the file is what turns
+     * a saved clip into something the app can actually play, and it keeps playing when the CDN
+     * link expires, which signed media URLs do within days.
+     *
+     * Guarded exactly like [downloadAndCacheImage]: the URL came out of page content, so every
+     * hop goes through [RemoteMediaPolicy] and the size is capped while writing.
+     */
+    suspend fun downloadAndCacheVideo(mediaUrl: String): String? = withContext(Dispatchers.IO) {
+        if (mediaUrl.isBlank()) return@withContext null
+
+        var target = mediaUrl
+        repeat(remoteMediaPolicy.maxRedirects + 1) {
+            when (val outcome = fetchVideoOnce(target)) {
+                is ThumbnailFetch.Saved -> return@withContext outcome.path
+                is ThumbnailFetch.Redirect -> target = outcome.location
+                ThumbnailFetch.Rejected -> return@withContext null
+            }
+        }
+        null
+    }
+
+    private fun fetchVideoOnce(target: String): ThumbnailFetch {
+        if (remoteMediaPolicy.check(target) !is FetchVerdict.Allowed) return ThumbnailFetch.Rejected
+
+        val conn = try {
+            (java.net.URL(target).openConnection() as java.net.HttpURLConnection).apply {
+                connectTimeout = 10_000
+                readTimeout = 20_000
+                instanceFollowRedirects = false
+                setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile)")
+                setRequestProperty("Accept", "video/*")
+            }
+        } catch (e: Exception) {
+            return ThumbnailFetch.Rejected
+        }
+
+        return try {
+            conn.connect()
+            val code = conn.responseCode
+
+            if (code in 300..399) {
+                val location = conn.getHeaderField("Location") ?: return ThumbnailFetch.Rejected
+                val resolved = try {
+                    java.net.URI(target).resolve(location).toString()
+                } catch (e: Exception) {
+                    return ThumbnailFetch.Rejected
+                }
+                return ThumbnailFetch.Redirect(resolved)
+            }
+            if (code !in 200..299) return ThumbnailFetch.Rejected
+
+            val contentType = conn.contentType?.substringBefore(';')?.trim()?.lowercase()
+            if (contentType != null && !contentType.startsWith("video/")) return ThumbnailFetch.Rejected
+            if (conn.contentLengthLong > MAX_VIDEO_BYTES) return ThumbnailFetch.Rejected
+
+            val file = File(videosDir, "video_${UUID.randomUUID()}.mp4")
+            val complete = conn.inputStream.use { input ->
+                FileOutputStream(file).use { output ->
+                    input.copyUpTo(output, MAX_VIDEO_BYTES)
+                }
+            }
+
+            if (complete && file.exists() && file.length() > 0) {
+                ThumbnailFetch.Saved(file.absolutePath)
+            } else {
+                file.delete()
+                ThumbnailFetch.Rejected
+            }
+        } catch (e: Exception) {
+            ThumbnailFetch.Rejected
+        } finally {
+            conn.disconnect()
+        }
+    }
+
+    /** Streams to disk with a ceiling, so an oversized video never fills the device. */
+    private fun InputStream.copyUpTo(output: FileOutputStream, limit: Long): Boolean {
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        var total = 0L
+        while (true) {
+            val read = read(buffer)
+            if (read == -1) return true
+            total += read
+            if (total > limit) return false
+            output.write(buffer, 0, read)
+        }
+    }
+
+    /**
+     * Reads at most [limit] bytes, returning null if the source had more.
+     *
+     * `readBytes()` would size the buffer from whatever the server chooses to send, so a
+     * hostile or merely broken response could exhaust memory before any size check ran.
+     */
+    private fun InputStream.readUpTo(limit: Long): ByteArray? {
+        val out = java.io.ByteArrayOutputStream()
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        var total = 0L
+        while (true) {
+            val read = read(buffer)
+            if (read == -1) return out.toByteArray()
+            total += read
+            if (total > limit) return null
+            out.write(buffer, 0, read)
         }
     }
 
@@ -422,7 +579,7 @@ class FileStorageService @Inject constructor(
      * their source rather than referenced directly by an item.
      */
     suspend fun listStoredFiles(): List<File> = withContext(Dispatchers.IO) {
-        listOf(imagesDir, pdfsDir, documentsDir)
+        listOf(imagesDir, pdfsDir, documentsDir, videosDir)
             .flatMap { it.listFiles()?.toList().orEmpty() }
             .filter { it.isFile }
     }

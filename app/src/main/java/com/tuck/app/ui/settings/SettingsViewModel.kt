@@ -101,6 +101,18 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setTranscribeVoiceNotes(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setTranscribeVoiceNotes(enabled)
+        }
+    }
+
+    fun setDeepCaptureEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setDeepCaptureEnabled(enabled)
+        }
+    }
+
     fun setWifiOnlyMetadata(wifiOnly: Boolean) {
         viewModelScope.launch {
             settingsRepository.setWifiOnlyMetadata(wifiOnly)

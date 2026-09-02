@@ -1,6 +1,10 @@
 package com.tuck.app
 
 import com.tuck.app.processing.extractors.GenericWebSourceExtractor
+import com.tuck.app.processing.extractors.GoogleMapsSourceExtractor
+import com.tuck.app.processing.extractors.InstagramSourceExtractor
+import com.tuck.app.processing.extractors.LinkedInSourceExtractor
+import com.tuck.app.processing.extractors.TikTokSourceExtractor
 import com.tuck.app.processing.extractors.RedditSourceExtractor
 import com.tuck.app.processing.extractors.SourceExtractorRegistry
 import com.tuck.app.processing.extractors.TwitterSourceExtractor
@@ -16,8 +20,15 @@ class SourceExtractorTest {
     private val redditExtractor = RedditSourceExtractor()
     private val youtubeExtractor = YouTubeSourceExtractor()
     private val twitterExtractor = TwitterSourceExtractor()
+    private val instagramExtractor = InstagramSourceExtractor()
+    private val tiktokExtractor = TikTokSourceExtractor()
+    private val linkedInExtractor = LinkedInSourceExtractor()
+    private val mapsExtractor = GoogleMapsSourceExtractor()
     private val genericWebExtractor = GenericWebSourceExtractor()
-    private val registry = SourceExtractorRegistry(redditExtractor, youtubeExtractor, twitterExtractor, genericWebExtractor)
+    private val registry = SourceExtractorRegistry(
+        redditExtractor, youtubeExtractor, twitterExtractor,
+        instagramExtractor, tiktokExtractor, linkedInExtractor, mapsExtractor, genericWebExtractor
+    )
 
     private fun readFixture(name: String): String {
         val stream = javaClass.classLoader?.getResourceAsStream("fixtures/$name")
@@ -35,6 +46,18 @@ class SourceExtractorTest {
 
         val tw = registry.getExtractor("https://x.com/AndroidDev/status/123456")
         assertEquals("TWITTER", tw.platformName)
+
+        val ig = registry.getExtractor("https://www.instagram.com/reel/C7xyz/")
+        assertEquals("INSTAGRAM", ig.platformName)
+
+        val tiktok = registry.getExtractor("https://www.tiktok.com/@user/video/123")
+        assertEquals("TIKTOK", tiktok.platformName)
+
+        val linkedin = registry.getExtractor("https://www.linkedin.com/posts/someone_abc")
+        assertEquals("LINKEDIN", linkedin.platformName)
+
+        val maps = registry.getExtractor("https://www.google.com/maps/place/Eiffel+Tower/@48.8584,2.2945,17z/")
+        assertEquals("MAPS", maps.platformName)
 
         val web = registry.getExtractor("https://sqlite.org/features.html")
         assertEquals("WEB", web.platformName)

@@ -19,6 +19,8 @@ import com.tuck.app.domain.repository.SavedItemRepository
 import com.tuck.app.processing.DuplicateDetector
 import com.tuck.app.processing.ItemProcessingWorker
 import com.tuck.app.processing.ParsedShareContent
+import com.tuck.app.processing.ReminderPreset
+import com.tuck.app.processing.ReminderScheduler
 import com.tuck.app.processing.ShareParser
 import com.tuck.app.processing.UrlMetadataProcessor
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -42,7 +44,9 @@ sealed interface ShareUiState {
         val subtitle: String,
         val collections: List<Collection> = emptyList(),
         val selectedCollectionIds: Set<Long> = emptySet(),
-        val isCustomCategoryDialogOpen: Boolean = false
+        val isCustomCategoryDialogOpen: Boolean = false,
+        /** When set, the item already has a reminder scheduled from this sheet. */
+        val remindAt: Long? = null
     ) : ShareUiState
     data class Error(val message: String) : ShareUiState
 }
@@ -211,5 +215,20 @@ class ShareViewModel @Inject constructor(
         }
         parts.add(parsed.contentType.displayName)
         return parts.joinToString(" · ")
+    }
+
+    /**
+     * Sets or clears a reminder on the item that was just saved.
+     *
+     * Deciding to come back to something is part of saving it — asking for that here means the
+     * reader never has to find the item again just to say "remind me on Saturday".
+     */
+    fun setReminder(remindAt: Long?, note: String?) {
+        val current = _uiState.value as? ShareUiState.Saved ?: return
+        viewModelScope.launch {
+            savedItemRepository.setReminder(current.savedItemId, remindAt, note)
+            val latest = _uiState.value as? ShareUiState.Saved ?: return@launch
+            _uiState.value = latest.copy(remindAt = remindAt)
+        }
     }
 }

@@ -28,7 +28,7 @@ interface SavedItemRepository {
     suspend fun markOpened(id: Long)
 
     /** Sets or clears a reminder, keeping the scheduled work in step with the stored value. */
-    suspend fun setReminder(id: Long, remindAt: Long?)
+    suspend fun setReminder(id: Long, remindAt: Long?, note: String? = null)
     /** Marks an item acted-on, which also retires any pending reminder. */
     suspend fun setCompleted(id: Long, completed: Boolean)
 

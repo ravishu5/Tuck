@@ -125,6 +125,8 @@ fun HomeScreen(
     onNavigateToCollections: () -> Unit = {},
     onNavigateToDetail: (Long) -> Unit,
     onNavigateToSettings: () -> Unit = {},
+    /** Incremented by the nav bar's capture button; each change opens the quick-add sheet. */
+    captureSignal: Int = 0,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -134,6 +136,11 @@ fun HomeScreen(
     val tuckShapes = TuckTheme.shapes
 
     var showQuickAddSheet by remember { mutableStateOf(false) }
+
+    // Keyed on the counter rather than a Boolean so pressing capture twice works the second time.
+    LaunchedEffect(captureSignal) {
+        if (captureSignal > 0) showQuickAddSheet = true
+    }
     var showThemeSheet by remember { mutableStateOf(false) }
     var showPasteDialog by remember { mutableStateOf(false) }
     var pasteContent by remember { mutableStateOf("") }

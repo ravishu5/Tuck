@@ -69,7 +69,6 @@
     <string name="detail_detected_entities_actions">Detected Entities &amp; Actions</string>
     <string name="detail_collections_tags">Collections &amp; Tags</string>
     <string name="detail_personal_notes">Personal Notes</string>
-    <string name="detail_related_saves_in_your_vault">Related Saves in Your Vault</string>
     <string name="detail_op">OP</string>
     <string name="detail_follow_up">FOLLOW UP</string>
     <string name="detail_checklist">CHECKLIST</string>
@@ -205,7 +204,28 @@
     <string name="saved_at">Saved %1$s</string>
 
     <!-- Bottom navigation -->
+    <string name="detail_open_fullscreen">Open full screen</string>
+    <string name="detail_view_on_source">View on %1$s</string>
+    <string name="share_save_to_tuck">Save to Tuck</string>
+    <string name="share_quick_save">Quick save</string>
+    <string name="reminder_clear">Clear</string>
+    <string name="detail_view_profile">View profile</string>
+    <string name="setting_transcribe">Transcribe Voice Notes</string>
+    <string name="setting_transcribe_sub">Convert recordings to text on device so you can search what you said. Needs Android 13 or later</string>
+    <string name="detail_add_note">Add note</string>
+    <string name="reminder_new">New Reminder</string>
+    <string name="reminder_edit">Edit Reminder</string>
+    <string name="reminder_subtitle">Set a time and optionally add a note.</string>
+    <string name="reminder_mode_relative">Remind me in</string>
+    <string name="reminder_mode_exact">Pick a time</string>
+    <string name="reminder_change">Change</string>
+    <string name="reminder_note_placeholder">Why you\'re saving this. A restaurant to try, something to do this weekend, a gift idea…</string>
+    <string name="player_play">Play</string>
+    <string name="player_pause">Pause</string>
+    <string name="player_back_10">Back 10 seconds</string>
+    <string name="player_forward_10">Forward 10 seconds</string>
     <string name="nav_home">Home</string>
+    <string name="nav_capture">Add to Tuck</string>
     <string name="nav_inbox">Inbox</string>
     <string name="nav_collections">Collections</string>
     <string name="nav_search">Search</string>
@@ -346,6 +366,8 @@
     <string name="setting_weekly_memory_sub">Resurface one forgotten save each week. Off by default.</string>
     <string name="setting_wifi_only">Wi-Fi Only for Previews</string>
     <string name="setting_wifi_only_sub">Fetch rich link previews and metadata only on Wi-Fi</string>
+    <string name="setting_deep_capture">Deep Capture</string>
+    <string name="setting_deep_capture_sub">Render pages that hide their content from a plain fetch, such as Instagram. Slower, uses more battery, and loads pages using your signed-in sessions</string>
     <string name="setting_vault_health_sub">Check that every save is intact and searchable</string>
     <string name="setting_export_archive">Export Full Vault Archive (.tuck)</string>
     <string name="setting_export_archive_sub">Complete archive with photos, PDFs, and notes</string>

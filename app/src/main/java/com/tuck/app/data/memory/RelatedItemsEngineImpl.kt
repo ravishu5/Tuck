@@ -20,61 +20,6 @@ class RelatedItemsEngineImpl @Inject constructor(
     private val tagDao: TagDao
 ) : RelatedItemsEngine {
 
-    override fun findRelatedItems(itemId: Long, limit: Int): Flow<List<SavedItem>> = flow {
-        val targetItem = savedItemRepository.getItemById(itemId)
-        if (targetItem == null) {
-            emit(emptyList())
-            return@flow
-        }
-
-        savedItemRepository.getAllActiveItems().collect { allItems ->
-            val otherItems = allItems.filter { it.id != itemId }
-            if (otherItems.isEmpty()) {
-                emit(emptyList())
-                return@collect
-            }
-
-            val targetEntities = targetItem.entities.map { it.normalizedValue.lowercase() }.toSet()
-            val targetTags = targetItem.tags.map { it.name.lowercase() }.toSet()
-            val targetDomain = targetItem.sourceDomain?.lowercase()
-            val targetKeywords = extractKeywords(targetItem.title + " " + (targetItem.description ?: ""))
-
-            val scoredItems = otherItems.map { candidate ->
-                var score = 0.0
-
-                // 1. Shared entities (strongest signal: +3.0 each)
-                val candidateEntities = candidate.entities.map { it.normalizedValue.lowercase() }.toSet()
-                val sharedEntities = targetEntities.intersect(candidateEntities).size
-                score += sharedEntities * 3.0
-
-                // 2. Shared tags (+2.0 each)
-                val candidateTags = candidate.tags.map { it.name.lowercase() }.toSet()
-                val sharedTags = targetTags.intersect(candidateTags).size
-                score += sharedTags * 2.0
-
-                // 3. Shared domain (+1.5)
-                if (!targetDomain.isNullOrBlank() && candidate.sourceDomain?.equals(targetDomain, ignoreCase = true) == true) {
-                    score += 1.5
-                }
-
-                // 4. Keyword overlap (+0.5 each)
-                val candidateKeywords = extractKeywords(candidate.title + " " + (candidate.description ?: ""))
-                val sharedKeywords = targetKeywords.intersect(candidateKeywords).size
-                score += sharedKeywords * 0.5
-
-                Pair(candidate, score)
-            }
-
-            val result = scoredItems
-                .filter { it.second > 0.5 }
-                .sortedByDescending { it.second }
-                .take(limit)
-                .map { it.first }
-
-            emit(result)
-        }
-    }
-
     override fun getRediscoverItems(limit: Int): Flow<List<SavedItem>> {
         return savedItemRepository.getAllActiveItems().map { allItems ->
             val now = System.currentTimeMillis()

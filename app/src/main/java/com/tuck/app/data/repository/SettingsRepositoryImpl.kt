@@ -34,6 +34,8 @@ class SettingsRepositoryImpl @Inject constructor(
         val AUTO_CATEGORIZE_ENABLED = booleanPreferencesKey("auto_categorize_enabled")
         val SAVE_COMMENTS_ENABLED = booleanPreferencesKey("save_comments_enabled")
         val WIFI_ONLY_METADATA = booleanPreferencesKey("wifi_only_metadata")
+        val DEEP_CAPTURE_ENABLED = booleanPreferencesKey("deep_capture_enabled")
+        val TRANSCRIBE_VOICE_NOTES = booleanPreferencesKey("transcribe_voice_notes")
         val MEMORY_RESURFACING_ENABLED = booleanPreferencesKey("memory_resurfacing_enabled")
     }
 
@@ -55,6 +57,8 @@ class SettingsRepositoryImpl @Inject constructor(
             val autoCategorize = preferences[PreferencesKeys.AUTO_CATEGORIZE_ENABLED] ?: true
             val saveComments = preferences[PreferencesKeys.SAVE_COMMENTS_ENABLED] ?: true
             val wifiOnly = preferences[PreferencesKeys.WIFI_ONLY_METADATA] ?: false
+            val deepCapture = preferences[PreferencesKeys.DEEP_CAPTURE_ENABLED] ?: false
+            val transcribe = preferences[PreferencesKeys.TRANSCRIBE_VOICE_NOTES] ?: true
             val memoryResurfacing = preferences[PreferencesKeys.MEMORY_RESURFACING_ENABLED] ?: false
 
             AppSettings(
@@ -64,6 +68,8 @@ class SettingsRepositoryImpl @Inject constructor(
                 autoCategorizeEnabled = autoCategorize,
                 saveCommentsEnabled = saveComments,
                 wifiOnlyMetadata = wifiOnly,
+                deepCaptureEnabled = deepCapture,
+                transcribeVoiceNotes = transcribe,
                 memoryResurfacingEnabled = memoryResurfacing
             )
         }
@@ -102,6 +108,18 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setSaveCommentsEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.SAVE_COMMENTS_ENABLED] = enabled
+        }
+    }
+
+    override suspend fun setDeepCaptureEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.DEEP_CAPTURE_ENABLED] = enabled
+        }
+    }
+
+    override suspend fun setTranscribeVoiceNotes(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.TRANSCRIBE_VOICE_NOTES] = enabled
         }
     }
 

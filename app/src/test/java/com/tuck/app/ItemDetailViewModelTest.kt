@@ -5,7 +5,6 @@ import app.cash.turbine.test
 import com.tuck.app.data.local.db.dao.SourceContentDao
 import com.tuck.app.data.local.db.entity.SourceCommentEntity
 import com.tuck.app.data.local.db.entity.SourcePostEntity
-import com.tuck.app.domain.memory.RelatedItemsEngine
 import com.tuck.app.domain.model.Collection
 import com.tuck.app.domain.model.ContentType
 import com.tuck.app.domain.model.SavedItem
@@ -41,7 +40,6 @@ class ItemDetailViewModelTest {
     private val savedItemRepository = mockk<SavedItemRepository>(relaxed = true)
     private val collectionRepository = mockk<CollectionRepository>(relaxed = true)
     private val sourceContentDao = mockk<SourceContentDao>(relaxed = true)
-    private val relatedItemsEngine = mockk<RelatedItemsEngine>(relaxed = true)
 
     private val sampleItem = SavedItem(
         id = 42L,
@@ -80,7 +78,6 @@ class ItemDetailViewModelTest {
         every { collectionRepository.getAllCollections() } returns flowOf(listOf(Collection(id = 1L, name = "ML")))
         every { sourceContentDao.getPostFlow(42L) } returns flowOf(samplePost)
         every { sourceContentDao.getCommentsTree(42L) } returns flowOf(listOf(sampleComment))
-        every { relatedItemsEngine.findRelatedItems(42L, 5) } returns flowOf(emptyList())
     }
 
     @After
@@ -95,8 +92,7 @@ class ItemDetailViewModelTest {
             savedItemRepository = savedItemRepository,
             checklistDao = checklistDao,
             collectionRepository = collectionRepository,
-            sourceContentDao = sourceContentDao,
-            relatedItemsEngine = relatedItemsEngine
+            sourceContentDao = sourceContentDao
         )
 
         viewModel.uiState.test {

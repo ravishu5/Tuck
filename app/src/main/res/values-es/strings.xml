@@ -68,7 +68,6 @@
     <string name="detail_detected_entities_actions">Datos y acciones detectados</string>
     <string name="detail_collections_tags">Colecciones y etiquetas</string>
     <string name="detail_personal_notes">Notas personales</string>
-    <string name="detail_related_saves_in_your_vault">Guardados relacionados</string>
     <string name="detail_op">OP</string>
     <string name="detail_follow_up">SEGUIMIENTO</string>
     <string name="detail_checklist">LISTA</string>
@@ -376,4 +375,27 @@
     <string name="type_contact">Contacto</string>
     <string name="type_location">Ubicación</string>
     <string name="type_item">Elemento</string>
+    <string name="detail_view_profile">Ver perfil</string>
+    <string name="detail_add_note">Añadir nota</string>
+    <string name="detail_open_fullscreen">Abrir a pantalla completa</string>
+    <string name="share_save_to_tuck">Guardar en Tuck</string>
+    <string name="share_quick_save">Guardado rápido</string>
+    <string name="reminder_clear">Quitar</string>
+    <string name="nav_capture">Añadir a Tuck</string>
+    <string name="setting_transcribe">Transcribir notas de voz</string>
+    <string name="setting_transcribe_sub">Convierte las grabaciones en texto en el dispositivo para poder buscar lo que dijiste. Requiere Android 13 o posterior</string>
+    <string name="setting_deep_capture">Captura profunda</string>
+    <string name="setting_deep_capture_sub">Renderiza las páginas que ocultan su contenido a una descarga simple, como Instagram. Más lenta, gasta más batería y carga las páginas con tus sesiones iniciadas</string>
+    <string name="detail_view_on_source">Ver en %1$s</string>
+    <string name="reminder_new">Nuevo recordatorio</string>
+    <string name="reminder_edit">Editar recordatorio</string>
+    <string name="reminder_subtitle">Elige una hora y, si quieres, añade una nota.</string>
+    <string name="reminder_mode_relative">Recordarme en</string>
+    <string name="reminder_mode_exact">Elegir hora</string>
+    <string name="reminder_change">Cambiar</string>
+    <string name="reminder_note_placeholder">Por qué lo guardas. Un restaurante que probar, algo para el fin de semana, una idea de regalo…</string>
+    <string name="player_play">Reproducir</string>
+    <string name="player_pause">Pausa</string>
+    <string name="player_back_10">Retroceder 10 segundos</string>
+    <string name="player_forward_10">Avanzar 10 segundos</string>
 </resources>

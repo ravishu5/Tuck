@@ -1,24 +1,23 @@
 package com.tuck.app.ui
 
-import androidx.compose.ui.res.stringResource
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.dp
+import com.tuck.app.ui.components.FloatingNavBar
+import com.tuck.app.ui.components.FloatingNavBarSpace
+import com.tuck.app.ui.components.rememberNavBarVisibility
+import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -60,10 +59,12 @@ fun TuckApp(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
+    var captureSignal by remember { mutableIntStateOf(0) }
+
     val bottomNavScreens = listOf(
         BottomNavScreen.Home,
-        BottomNavScreen.Inbox,
         BottomNavScreen.Collections,
+        BottomNavScreen.Inbox,
         BottomNavScreen.Search
     )
 
@@ -75,71 +76,32 @@ fun TuckApp(
     ) {
         val tuckColors = TuckTheme.colors
 
+        val navBar = rememberNavBarVisibility()
+        // A destination change is not a scroll, so the bar would otherwise stay hidden after
+        // navigating away from a list the reader had scrolled down.
+        LaunchedEffect(currentRoute) { navBar.reveal() }
+
         Scaffold(
             containerColor = tuckColors.background,
-            modifier = Modifier.fillMaxSize(),
-            bottomBar = {
-                AnimatedVisibility(
-                    visible = showBottomBar,
-                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
-                ) {
-                    Surface(
-                        tonalElevation = 3.dp,
-                        color = tuckColors.surface
-                    ) {
-                        NavigationBar(
-                            containerColor = tuckColors.surface,
-                            tonalElevation = 0.dp
-                        ) {
-                            bottomNavScreens.forEach { screen ->
-                                val selected = currentRoute == screen.route
-                                NavigationBarItem(
-                                    selected = selected,
-                                    onClick = {
-                                        if (currentRoute != screen.route) {
-                                            navController.navigate(screen.route) {
-                                                popUpTo(navController.graph.findStartDestination().id) {
-                                                    saveState = true
-                                                }
-                                                launchSingleTop = true
-                                                restoreState = true
-                                            }
-                                        }
-                                    },
-                                    icon = {
-                                        Icon(
-                                            imageVector = if (selected) screen.selectedIcon else screen.unselectedIcon,
-                                            contentDescription = stringResource(screen.titleRes)
-                                        )
-                                    },
-                                    label = {
-                                        Text(
-                                            text = stringResource(screen.titleRes),
-                                            style = MaterialTheme.typography.labelSmall
-                                        )
-                                    },
-                                    colors = NavigationBarItemDefaults.colors(
-                                        selectedIconColor = tuckColors.accent,
-                                        selectedTextColor = tuckColors.accent,
-                                        unselectedIconColor = tuckColors.textMuted,
-                                        unselectedTextColor = tuckColors.textMuted,
-                                        indicatorColor = tuckColors.accentContainer
-                                    )
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+            modifier = Modifier
+                .fillMaxSize()
+                .nestedScroll(navBar.connection)
         ) { paddingValues ->
+            Box(modifier = Modifier.fillMaxSize()) {
             NavHost(
                 navController = navController,
                 startDestination = NavRoutes.HOME,
-                modifier = Modifier.padding(paddingValues)
+                modifier = Modifier.padding(
+                    top = paddingValues.calculateTopPadding(),
+                    // Reserved whether or not the bar is showing, so nothing reflows under the
+                    // reader's thumb when it slides away.
+                    bottom = paddingValues.calculateBottomPadding() +
+                        if (showBottomBar) FloatingNavBarSpace else 0.dp
+                )
             ) {
                 composable(NavRoutes.HOME) {
                     HomeScreen(
+                        captureSignal = captureSignal,
                         onNavigateToCollections = {
                             navController.navigate(NavRoutes.COLLECTIONS) {
                                 popUpTo(NavRoutes.HOME)
@@ -239,6 +201,37 @@ fun TuckApp(
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }
+            }
+
+            FloatingNavBar(
+                screens = bottomNavScreens,
+                currentRoute = currentRoute,
+                visible = showBottomBar && navBar.visible,
+                onSelect = { screen ->
+                    if (currentRoute != screen.route) {
+                        navController.navigate(screen.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                },
+                onCapture = {
+                    if (currentRoute != NavRoutes.HOME) {
+                        navController.navigate(NavRoutes.HOME) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                    captureSignal++
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                        .padding(bottom = paddingValues.calculateBottomPadding())
+                )
             }
         }
     }

@@ -55,7 +55,7 @@ import kotlinx.serialization.json.JsonObject
         DerivedPointEntity::class,
         OcrBlockEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -392,6 +392,19 @@ abstract class TuckDatabase : RoomDatabase() {
                 )
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_checklist_items_itemId` ON `checklist_items`(`itemId`)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_checklist_items_ordinal` ON `checklist_items`(`ordinal`)")
+            }
+        }
+
+        /**
+         * Adds `remindNote`: the reason a reminder was set.
+         *
+         * Separate from `userNote`, which is what the reader thinks about the item itself. "Book
+         * this before Friday" belongs to the reminder and should disappear with it, not linger
+         * on the save afterwards.
+         */
+        val MIGRATION_8_9 = object : androidx.room.migration.Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE saved_items ADD COLUMN remindNote TEXT")
             }
         }
 
