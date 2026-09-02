@@ -48,8 +48,7 @@ import com.tuck.app.domain.model.SavedItem
 import com.tuck.app.ui.components.ContentTypeBadge
 import com.tuck.app.ui.components.EmptyState
 import com.tuck.app.ui.components.formatRelativeTime
-import com.tuck.app.ui.theme.AccentEmerald
-import com.tuck.app.ui.theme.AccentRose
+import com.tuck.app.ui.theme.TuckTheme
 
 @Composable
 fun TrashScreen(
@@ -96,7 +95,7 @@ fun TrashScreen(
             if (items.isNotEmpty()) {
                 TextButton(
                     onClick = { showEmptyConfirmDialog = true },
-                    colors = ButtonDefaults.textButtonColors(contentColor = AccentRose)
+                    colors = ButtonDefaults.textButtonColors(contentColor = TuckTheme.colors.destructive)
                 ) {
                     Icon(imageVector = Icons.Filled.DeleteForever, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
@@ -145,7 +144,7 @@ fun TrashScreen(
                         viewModel.emptyTrash()
                         showEmptyConfirmDialog = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = AccentRose)
+                    colors = ButtonDefaults.buttonColors(containerColor = TuckTheme.colors.destructive)
                 ) {
                     Text("Empty Trash")
                 }
@@ -209,7 +208,7 @@ fun TrashedItemCard(
                 OutlinedButton(
                     onClick = onRestore,
                     shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = AccentEmerald)
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TuckTheme.colors.success)
                 ) {
                     Icon(imageVector = Icons.Filled.Restore, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
@@ -220,7 +219,7 @@ fun TrashedItemCard(
 
                 TextButton(
                     onClick = onPermanentDelete,
-                    colors = ButtonDefaults.textButtonColors(contentColor = AccentRose)
+                    colors = ButtonDefaults.textButtonColors(contentColor = TuckTheme.colors.destructive)
                 ) {
                     Icon(imageVector = Icons.Filled.DeleteForever, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))

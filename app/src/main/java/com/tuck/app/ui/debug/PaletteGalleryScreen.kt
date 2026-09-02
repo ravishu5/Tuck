@@ -426,7 +426,7 @@ private fun NeutralRow(
                     .size(20.dp)
                     .clip(CircleShape)
                     .background(color)
-                    .border(1.dp, Color.Gray.copy(alpha = 0.3f), CircleShape)
+                    .border(1.dp, TuckTheme.colors.border, CircleShape)
             )
             Spacer(modifier = Modifier.width(10.dp))
             Text(
@@ -460,7 +460,7 @@ private fun RoleCard(
             text = label,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
-            color = Color.White
+            color = TuckTheme.colors.onScrim
         )
     }
 }

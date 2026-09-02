@@ -109,6 +109,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import com.tuck.app.ui.theme.color.PaletteSlot
 
 // 1. Search Bar Component
 @Composable
@@ -195,12 +196,12 @@ fun TuckPlatformBadge(
         domain.contains("arxiv.org") -> Triple("ArXiv", BrandArXiv, Icons.Filled.Description)
         domain.contains("wikipedia.org") -> Triple("Wikipedia", BrandWikipedia, Icons.Filled.Language)
         domain.contains("amazon.") -> Triple("Amazon", BrandAmazon, Icons.Filled.ShoppingCart)
-        item.contentType == ContentType.IMAGE -> Triple("Screenshot", AccentEmerald, Icons.Filled.Image)
-        item.contentType == ContentType.PDF -> Triple("PDF", AccentCrimson, Icons.Filled.PictureAsPdf)
-        item.contentType == ContentType.TEXT -> Triple("Note", AccentPurple, Icons.Filled.Notes)
-        item.contentType == ContentType.CONTACT -> Triple("Contact", AccentAmber, Icons.Filled.Description)
-        item.contentType == ContentType.LOCATION -> Triple("Location", AccentTeal, Icons.Filled.Language)
-        item.contentType == ContentType.VIDEO -> Triple("Video", AccentRose, Icons.Filled.PlayArrow)
+        item.contentType == ContentType.IMAGE -> Triple("Screenshot", tuckColors.palette[PaletteSlot.SECONDARY_CORE].fill, Icons.Filled.Image)
+        item.contentType == ContentType.PDF -> Triple("PDF", tuckColors.palette[PaletteSlot.PRIMARY_DEEP].fill, Icons.Filled.PictureAsPdf)
+        item.contentType == ContentType.TEXT -> Triple("Note", tuckColors.palette[PaletteSlot.PRIMARY_CORE].fill, Icons.Filled.Notes)
+        item.contentType == ContentType.CONTACT -> Triple("Contact", tuckColors.palette[PaletteSlot.SECONDARY_SOFT].fill, Icons.Filled.Description)
+        item.contentType == ContentType.LOCATION -> Triple("Location", tuckColors.palette[PaletteSlot.SECONDARY_SOFT].fill, Icons.Filled.Language)
+        item.contentType == ContentType.VIDEO -> Triple("Video", tuckColors.palette[PaletteSlot.TERTIARY_DEEP].fill, Icons.Filled.PlayArrow)
         else -> Triple(item.sourceDomain ?: item.contentType.displayName, tuckColors.accent, Icons.Filled.Language)
     }
 
@@ -247,31 +248,31 @@ fun getCollectionVisual(name: String, iconHint: String? = null, colorHint: Strin
 
     return when {
         lower.contains("article") || hint == "article" -> 
-            CollectionVisual(Icons.AutoMirrored.Filled.Article, if (colorHint != null) fallbackColor else AccentTeal, "📰")
+            CollectionVisual(Icons.AutoMirrored.Filled.Article, if (colorHint != null) fallbackColor else tuckColors.palette[PaletteSlot.SECONDARY_SOFT].fill, "📰")
         lower.contains("education") || lower.contains("course") || hint == "school" || hint == "menu_book" -> 
-            CollectionVisual(Icons.Filled.School, if (colorHint != null) fallbackColor else AccentAmber, "🎓")
+            CollectionVisual(Icons.Filled.School, if (colorHint != null) fallbackColor else tuckColors.palette[PaletteSlot.SECONDARY_SOFT].fill, "🎓")
         lower.contains("finance") || lower.contains("money") || lower.contains("crypto") || hint == "attach_money" -> 
-            CollectionVisual(Icons.Filled.AttachMoney, if (colorHint != null) fallbackColor else AccentEmerald, "💰")
+            CollectionVisual(Icons.Filled.AttachMoney, if (colorHint != null) fallbackColor else tuckColors.palette[PaletteSlot.SECONDARY_CORE].fill, "💰")
         lower.contains("programming") || lower.contains("code") || lower.contains("dev") || hint == "code" -> 
-            CollectionVisual(Icons.Filled.Code, if (colorHint != null) fallbackColor else AccentIndigo, "💻")
+            CollectionVisual(Icons.Filled.Code, if (colorHint != null) fallbackColor else tuckColors.palette[PaletteSlot.PRIMARY_DEEP].fill, "💻")
         lower.contains("research") || lower.contains("paper") || hint == "science" -> 
-            CollectionVisual(Icons.Filled.AutoAwesome, if (colorHint != null) fallbackColor else AccentPurple, "🔬")
+            CollectionVisual(Icons.Filled.AutoAwesome, if (colorHint != null) fallbackColor else tuckColors.palette[PaletteSlot.PRIMARY_CORE].fill, "🔬")
         lower.contains("shopping") || lower.contains("product") || hint == "shopping_cart" -> 
-            CollectionVisual(Icons.Filled.ShoppingCart, if (colorHint != null) fallbackColor else AccentRose, "🛍️")
+            CollectionVisual(Icons.Filled.ShoppingCart, if (colorHint != null) fallbackColor else tuckColors.palette[PaletteSlot.TERTIARY_DEEP].fill, "🛍️")
         lower.contains("travel") || lower.contains("trip") || lower.contains("flight") || hint == "flight" -> 
-            CollectionVisual(Icons.Filled.Flight, if (colorHint != null) fallbackColor else AccentSky, "✈️")
+            CollectionVisual(Icons.Filled.Flight, if (colorHint != null) fallbackColor else tuckColors.palette[PaletteSlot.PRIMARY_SOFT].fill, "✈️")
         lower.contains("food") || lower.contains("dining") || lower.contains("recipe") || hint == "restaurant" -> 
-            CollectionVisual(Icons.Filled.Restaurant, if (colorHint != null) fallbackColor else AccentOrange, "🍽️")
+            CollectionVisual(Icons.Filled.Restaurant, if (colorHint != null) fallbackColor else tuckColors.palette[PaletteSlot.TERTIARY_CORE].fill, "🍽️")
         lower.contains("work") || hint == "work" -> 
-            CollectionVisual(Icons.Filled.Work, if (colorHint != null) fallbackColor else AccentSlate, "💼")
+            CollectionVisual(Icons.Filled.Work, if (colorHint != null) fallbackColor else tuckColors.textSecondary, "💼")
         lower.contains("personal") || hint == "person" -> 
-            CollectionVisual(Icons.Filled.Person, if (colorHint != null) fallbackColor else AccentRose, "👤")
+            CollectionVisual(Icons.Filled.Person, if (colorHint != null) fallbackColor else tuckColors.palette[PaletteSlot.TERTIARY_DEEP].fill, "👤")
         lower.contains("video") || hint == "videocam" -> 
-            CollectionVisual(Icons.Filled.Videocam, if (colorHint != null) fallbackColor else AccentRose, "🎬")
+            CollectionVisual(Icons.Filled.Videocam, if (colorHint != null) fallbackColor else tuckColors.palette[PaletteSlot.TERTIARY_DEEP].fill, "🎬")
         lower.contains("image") || lower.contains("photo") || hint == "image" || hint == "photo_camera" -> 
-            CollectionVisual(Icons.Filled.Image, if (colorHint != null) fallbackColor else AccentEmerald, "🖼️")
+            CollectionVisual(Icons.Filled.Image, if (colorHint != null) fallbackColor else tuckColors.palette[PaletteSlot.SECONDARY_CORE].fill, "🖼️")
         lower.contains("pdf") || hint == "picture_as_pdf" -> 
-            CollectionVisual(Icons.Filled.PictureAsPdf, if (colorHint != null) fallbackColor else AccentCrimson, "📄")
+            CollectionVisual(Icons.Filled.PictureAsPdf, if (colorHint != null) fallbackColor else tuckColors.palette[PaletteSlot.TERTIARY_DEEP].fill, "📄")
         lower.contains("linkedin") -> 
             CollectionVisual(Icons.Filled.Language, BrandLinkedIn, "💼")
         lower.contains("instagram") -> 
@@ -285,9 +286,9 @@ fun getCollectionVisual(name: String, iconHint: String? = null, colorHint: Strin
         lower.contains("github") -> 
             CollectionVisual(Icons.Filled.Code, BrandGitHub, "🐙")
         lower.contains("note") -> 
-            CollectionVisual(Icons.AutoMirrored.Filled.Notes, AccentPurple, "📝")
+            CollectionVisual(Icons.AutoMirrored.Filled.Notes, tuckColors.palette[PaletteSlot.PRIMARY_CORE].fill, "📝")
         lower.contains("screenshot") -> 
-            CollectionVisual(Icons.Filled.CameraAlt, AccentIndigo, "📸")
+            CollectionVisual(Icons.Filled.CameraAlt, tuckColors.palette[PaletteSlot.PRIMARY_DEEP].fill, "📸")
         else -> 
             CollectionVisual(Icons.Filled.Folder, fallbackColor, "📁")
     }
@@ -842,14 +843,14 @@ fun TuckContentCard(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(Color.Black.copy(alpha = 0.6f))
+                                .background(tuckColors.scrim.copy(alpha = 0.6f))
                                 .align(Alignment.Center),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.PlayArrow,
                                 contentDescription = null,
-                                tint = Color.White,
+                                tint = tuckColors.onScrim,
                                 modifier = Modifier.size(22.dp)
                             )
                         }
@@ -859,7 +860,7 @@ fun TuckContentCard(
                     if (item.contentType == ContentType.IMAGE && !item.ocrText.isNullOrBlank()) {
                         Surface(
                             shape = tuckShapes.small,
-                            color = Color.Black.copy(alpha = 0.7f),
+                            color = tuckColors.scrim.copy(alpha = 0.7f),
                             modifier = Modifier
                                 .align(Alignment.BottomStart)
                                 .padding(8.dp)
@@ -867,7 +868,7 @@ fun TuckContentCard(
                             Text(
                                 text = "📸 OCR Indexed",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color.White,
+                                color = tuckColors.onScrim,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
@@ -903,7 +904,7 @@ fun TuckContentCard(
                             Icon(
                                 imageVector = if (item.isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
                                 contentDescription = "Favorite",
-                                tint = if (item.isFavorite) Color(0xFFF59E0B) else tuckColors.textMuted,
+                                tint = if (item.isFavorite) tuckColors.favorite else tuckColors.textMuted,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -987,7 +988,7 @@ fun TuckContentCard(
                         if (hasComments) {
                             Surface(
                                 shape = tuckShapes.small,
-                                color = Color(0xFF06B6D4).copy(alpha = 0.12f)
+                                color = tuckColors.palette[PaletteSlot.SECONDARY_CORE].fill.copy(alpha = 0.12f)
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -996,14 +997,14 @@ fun TuckContentCard(
                                     Icon(
                                         imageVector = Icons.Filled.Message,
                                         contentDescription = null,
-                                        tint = Color(0xFF06B6D4),
+                                        tint = tuckColors.palette[PaletteSlot.SECONDARY_CORE].fill,
                                         modifier = Modifier.size(10.dp)
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
                                         text = "${item.comments.size} comments",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = Color(0xFF06B6D4)
+                                        color = tuckColors.palette[PaletteSlot.SECONDARY_CORE].fill
                                     )
                                 }
                             }
@@ -1438,7 +1439,7 @@ fun QuickCaptureSpeedDialSheet(
                 title = "Take a Quick Note",
                 subtitle = "Save a formatted thought or markdown note",
                 icon = Icons.Filled.Notes,
-                iconTint = Color(0xFFA855F7),
+                iconTint = tuckColors.palette[PaletteSlot.PRIMARY_CORE].fill,
                 onClick = {
                     onDismiss()
                     onCaptureNote()
@@ -1449,7 +1450,7 @@ fun QuickCaptureSpeedDialSheet(
                 title = "Scan Document / Screenshot",
                 subtitle = "Local ML Kit OCR extracts all text instantly",
                 icon = Icons.Filled.CameraAlt,
-                iconTint = Color(0xFF10B981),
+                iconTint = tuckColors.palette[PaletteSlot.SECONDARY_CORE].fill,
                 onClick = {
                     onDismiss()
                     onScanOcr()
@@ -1460,7 +1461,7 @@ fun QuickCaptureSpeedDialSheet(
                 title = "Import PDF or Research Paper",
                 subtitle = "Extract text & generate first-page thumbnail",
                 icon = Icons.Filled.PictureAsPdf,
-                iconTint = Color(0xFFE11D48),
+                iconTint = tuckColors.palette[PaletteSlot.TERTIARY_CORE].fill,
                 onClick = {
                     onDismiss()
                     onImportPdf()
@@ -1471,7 +1472,7 @@ fun QuickCaptureSpeedDialSheet(
                 title = "Paste from Clipboard",
                 subtitle = "Save copied links, Reddit URLs, or text",
                 icon = Icons.Filled.ContentPaste,
-                iconTint = Color(0xFF0EA5E9),
+                iconTint = tuckColors.palette[PaletteSlot.SECONDARY_DEEP].fill,
                 onClick = {
                     onDismiss()
                     onPasteLink()
@@ -1482,7 +1483,7 @@ fun QuickCaptureSpeedDialSheet(
                 title = "Record Audio Voice Memo",
                 subtitle = "App-private local audio note",
                 icon = Icons.Filled.Mic,
-                iconTint = Color(0xFF6366F1),
+                iconTint = tuckColors.palette[PaletteSlot.PRIMARY_DEEP].fill,
                 onClick = {
                     onDismiss()
                     onRecordAudio()

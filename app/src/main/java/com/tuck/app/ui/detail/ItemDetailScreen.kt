@@ -89,8 +89,6 @@ import com.tuck.app.ui.components.ContentTypeBadge
 import com.tuck.app.ui.components.EntityActionChip
 import com.tuck.app.ui.components.formatRelativeTime
 import com.tuck.app.ui.components.startActivitySafe
-import com.tuck.app.ui.theme.AccentAmber
-import com.tuck.app.ui.theme.AccentRose
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -550,7 +548,7 @@ fun ItemDetailScreen(
                         showDeleteConfirmDialog = false
                         viewModel.moveToTrash()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = AccentRose)
+                    colors = ButtonDefaults.buttonColors(containerColor = TuckTheme.colors.destructive)
                 ) {
                     Text("Move to Trash")
                 }
@@ -636,14 +634,14 @@ fun DetailTopBar(
                 Icon(
                     imageVector = if (item.isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
                     contentDescription = "Favorite",
-                    tint = if (item.isFavorite) AccentAmber else MaterialTheme.colorScheme.onSurface
+                    tint = if (item.isFavorite) TuckTheme.colors.favorite else MaterialTheme.colorScheme.onSurface
                 )
             }
             IconButton(onClick = onShare) {
                 Icon(imageVector = Icons.Filled.Share, contentDescription = "Share")
             }
             IconButton(onClick = onDelete) {
-                Icon(imageVector = Icons.Filled.Delete, contentDescription = "Delete", tint = AccentRose)
+                Icon(imageVector = Icons.Filled.Delete, contentDescription = "Delete", tint = TuckTheme.colors.destructive)
             }
         }
     }
@@ -745,14 +743,14 @@ fun ItemPreviewCard(
                                 if (isVideoContent) {
                                     Surface(
                                         shape = CircleShape,
-                                        color = Color.Black.copy(alpha = 0.65f),
+                                        color = TuckTheme.colors.scrim.copy(alpha = 0.65f),
                                         modifier = Modifier.size(54.dp)
                                     ) {
                                         Box(contentAlignment = Alignment.Center) {
                                             Icon(
                                                 imageVector = Icons.Filled.PlayArrow,
                                                 contentDescription = "Play",
-                                                tint = Color.White,
+                                                tint = TuckTheme.colors.onScrim,
                                                 modifier = Modifier.size(32.dp)
                                             )
                                         }

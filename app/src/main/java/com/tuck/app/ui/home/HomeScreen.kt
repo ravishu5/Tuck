@@ -86,11 +86,6 @@ import com.tuck.app.ui.components.TuckEmptyState
 import com.tuck.app.ui.components.TuckResurfacingCard
 import com.tuck.app.ui.components.TuckSectionHeader
 import com.tuck.app.ui.components.TuckThemePreviewCard
-import com.tuck.app.ui.theme.AccentAmber
-import com.tuck.app.ui.theme.AccentEmerald
-import com.tuck.app.ui.theme.AccentOrange
-import com.tuck.app.ui.theme.AccentPurple
-import com.tuck.app.ui.theme.AccentSky
 import com.tuck.app.ui.theme.TuckTheme
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
@@ -98,6 +93,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.rememberModalBottomSheetState
+import com.tuck.app.ui.theme.color.PaletteSlot
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -537,28 +533,28 @@ private fun HomeQuickActionRow(
         QuickActionButton(
             label = "Note",
             icon = Icons.Filled.Notes,
-            tint = AccentPurple,
+            tint = TuckTheme.colors.palette[PaletteSlot.PRIMARY_CORE].fill,
             modifier = Modifier.weight(1f),
             onClick = onNote
         )
         QuickActionButton(
             label = "Scan",
             icon = Icons.Filled.CameraAlt,
-            tint = AccentEmerald,
+            tint = TuckTheme.colors.palette[PaletteSlot.SECONDARY_CORE].fill,
             modifier = Modifier.weight(1f),
             onClick = onScan
         )
         QuickActionButton(
             label = "Doc/PDF",
             icon = Icons.Filled.PictureAsPdf,
-            tint = AccentOrange,
+            tint = TuckTheme.colors.palette[PaletteSlot.TERTIARY_CORE].fill,
             modifier = Modifier.weight(1f),
             onClick = onPdf
         )
         QuickActionButton(
             label = "Paste",
             icon = Icons.Filled.ContentPaste,
-            tint = AccentSky,
+            tint = TuckTheme.colors.palette[PaletteSlot.PRIMARY_SOFT].fill,
             modifier = Modifier.weight(1f),
             onClick = onPaste
         )

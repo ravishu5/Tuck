@@ -47,11 +47,16 @@ class PaletteContrastTest {
 
     @Test
     fun testDeterministicFallbackResolution() {
-        val resolvedWithSlot = resolveCollectionColor("terracotta", "Random Title", 100)
-        assertEquals("terracotta", resolvedWithSlot.id)
+        val resolvedWithSlot = resolveCollectionColor("primary_core", "Random Title", 100)
+        assertEquals("primary_core", resolvedWithSlot.id)
 
+        // Slot names changed when themes became tricolor; values persisted by older
+        // builds must still resolve rather than falling back to a random colour.
         val resolvedLegacy = resolveCollectionColor("emerald", "Random Title", 100)
-        assertEquals("sage", resolvedLegacy.id)
+        assertEquals("primary_soft", resolvedLegacy.id)
+
+        val resolvedOldSlotName = resolveCollectionColor("terracotta", "Random Title", 100)
+        assertEquals("primary_core", resolvedOldSlotName.id)
 
         val resolvedFromTitle = resolveCollectionColor(null, "Design Ideas", 0)
         assertTrue(DefaultCollectionPalette.contains(resolvedFromTitle))

@@ -130,7 +130,7 @@ fun ShareDialogOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.55f))
+            .background(tuckColors.scrim.copy(alpha = 0.55f))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -191,14 +191,14 @@ fun ShareDialogOverlay(
                             ) {
                                 Surface(
                                     shape = CircleShape,
-                                    color = Color(0xFF10B981).copy(alpha = 0.15f),
+                                    color = tuckColors.success.copy(alpha = 0.15f),
                                     modifier = Modifier.size(36.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
                                             imageVector = Icons.Filled.Check,
                                             contentDescription = "Saved",
-                                            tint = Color(0xFF10B981),
+                                            tint = tuckColors.success,
                                             modifier = Modifier.size(20.dp)
                                         )
                                     }
@@ -338,7 +338,7 @@ fun ShareDialogOverlay(
                             Text(
                                 text = "Could not save item",
                                 style = MaterialTheme.typography.titleMedium,
-                                color = Color(0xFFEF4444),
+                                color = tuckColors.destructive,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(

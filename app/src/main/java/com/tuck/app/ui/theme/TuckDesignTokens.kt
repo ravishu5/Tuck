@@ -16,7 +16,15 @@ import com.tuck.app.ui.theme.color.ForestDarkPalette
 import com.tuck.app.ui.theme.color.ForestLightPalette
 import com.tuck.app.ui.theme.color.LinenDarkPalette
 import com.tuck.app.ui.theme.color.LinenLightPalette
+import com.tuck.app.ui.theme.color.LinenDarkPalette
 import com.tuck.app.ui.theme.color.NoirDarkPalette
+import com.tuck.app.ui.theme.color.NoirLightPalette
+import com.tuck.app.ui.theme.color.ForestLightPalette
+import com.tuck.app.ui.theme.color.ForestDarkPalette
+import com.tuck.app.ui.theme.color.CobaltLightPalette
+import com.tuck.app.ui.theme.color.CobaltDarkPalette
+import com.tuck.app.ui.theme.color.PlumLightPalette
+import com.tuck.app.ui.theme.color.PlumDarkPalette
 import com.tuck.app.ui.theme.color.NoirLightPalette
 import com.tuck.app.ui.theme.color.PaletteSlot
 import com.tuck.app.ui.theme.color.PlumDarkPalette
@@ -42,14 +50,14 @@ fun mapLegacyColorToSlot(stored: String?): PaletteSlot? {
     if (direct != null) return direct
 
     return when (stored.trim().lowercase()) {
-        "coral", "terracotta", "orange", "crimson" -> PaletteSlot.TERRACOTTA
-        "amber", "yellow" -> PaletteSlot.AMBER
-        "mustard", "gold" -> PaletteSlot.MUSTARD
-        "emerald", "mint", "green", "sage" -> PaletteSlot.SAGE
-        "teal", "cyan" -> PaletteSlot.TEAL
-        "sky", "indigo", "slate", "midnight", "blue", "denim" -> PaletteSlot.DENIM
-        "purple", "violet", "plum" -> PaletteSlot.PLUM
-        "berry", "rose", "pink" -> PaletteSlot.ROSE
+        "coral", "terracotta", "orange", "crimson" -> PaletteSlot.PRIMARY_CORE
+        "amber", "yellow" -> PaletteSlot.SECONDARY_CORE
+        "mustard", "gold" -> PaletteSlot.TERTIARY_CORE
+        "emerald", "mint", "green", "sage" -> PaletteSlot.PRIMARY_SOFT
+        "teal", "cyan" -> PaletteSlot.SECONDARY_SOFT
+        "sky", "indigo", "slate", "midnight", "blue", "denim" -> PaletteSlot.TERTIARY_DEEP
+        "purple", "violet", "plum" -> PaletteSlot.PRIMARY_DEEP
+        "berry", "rose", "pink" -> PaletteSlot.SECONDARY_DEEP
         else -> null
     }
 }
@@ -135,6 +143,12 @@ data class TuckColors(
     val tileForeground: Color = textPrimary,
 
     // Roles
+    /** Scrim behind media overlays and the share sheet. */
+    val scrim: Color = Color(0xFF000000),
+    /** Text and icons drawn on top of [scrim]. */
+    val onScrim: Color = Color(0xFFFFFFFF),
+    /** The favourite star. Warm in both themes, so it reads as a marked state. */
+    val favorite: Color = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706),
     val destructive: Color = if (isDark) Color(0xFFF87171) else Color(0xFFDC2626),
     val warning: Color = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706),
     val success: Color = if (isDark) Color(0xFF4ADE80) else Color(0xFF16A34A),
@@ -192,10 +206,10 @@ val LinenLight = TuckColors(
     textPrimary = Color(0xFF1C1917),
     textSecondary = Color(0xFF6E665E),
     textMuted = Color(0xFF9C9287),
-    accent = LinenLightPalette[PaletteSlot.TERRACOTTA].fill,
+    accent = LinenLightPalette[PaletteSlot.PRIMARY_CORE].fill,
     accentLight = Color(0xFFF07650),
     accentContainer = Color(0xFFFDEEE9),
-    textOnAccent = LinenLightPalette[PaletteSlot.TERRACOTTA].onFill,
+    textOnAccent = LinenLightPalette[PaletteSlot.PRIMARY_CORE].onFill,
     highlight = Color(0xFFFEF08A),
     highlightText = Color(0xFF713F12),
     badgeBackground = Color(0xFFEDE5D8),
@@ -216,10 +230,10 @@ val LinenDark = TuckColors(
     textPrimary = Color(0xFFF7F4EE),
     textSecondary = Color(0xFFB5ADA4),
     textMuted = Color(0xFF7C746B),
-    accent = LinenDarkPalette[PaletteSlot.TERRACOTTA].fill,
+    accent = LinenDarkPalette[PaletteSlot.PRIMARY_CORE].fill,
     accentLight = Color(0xFFFFA080),
     accentContainer = Color(0xFF3D261E),
-    textOnAccent = LinenDarkPalette[PaletteSlot.TERRACOTTA].onFill,
+    textOnAccent = LinenDarkPalette[PaletteSlot.PRIMARY_CORE].onFill,
     highlight = Color(0xFF854D0E),
     highlightText = Color(0xFFFEF08A),
     badgeBackground = Color(0xFF38332E),
@@ -241,10 +255,10 @@ val NoirDark = TuckColors(
     textPrimary = Color(0xFFF4F4F6),
     textSecondary = Color(0xFFA2A2AD),
     textMuted = Color(0xFF6B6B76),
-    accent = NoirDarkPalette[PaletteSlot.TERRACOTTA].fill,
+    accent = NoirDarkPalette[PaletteSlot.PRIMARY_CORE].fill,
     accentLight = Color(0xFFFF886E),
     accentContainer = Color(0xFF3A1E17),
-    textOnAccent = NoirDarkPalette[PaletteSlot.TERRACOTTA].onFill,
+    textOnAccent = NoirDarkPalette[PaletteSlot.PRIMARY_CORE].onFill,
     highlight = Color(0xFF854D0E),
     highlightText = Color(0xFFFEF08A),
     badgeBackground = Color(0xFF2F2F37),
@@ -265,10 +279,10 @@ val NoirLight = TuckColors(
     textPrimary = Color(0xFF111113),
     textSecondary = Color(0xFF5A5A66),
     textMuted = Color(0xFF8C8C9A),
-    accent = NoirLightPalette[PaletteSlot.TERRACOTTA].fill,
+    accent = NoirLightPalette[PaletteSlot.PRIMARY_CORE].fill,
     accentLight = Color(0xFFFF6B4A),
     accentContainer = Color(0xFFFFEBE6),
-    textOnAccent = NoirLightPalette[PaletteSlot.TERRACOTTA].onFill,
+    textOnAccent = NoirLightPalette[PaletteSlot.PRIMARY_CORE].onFill,
     highlight = Color(0xFFFEF08A),
     highlightText = Color(0xFF713F12),
     badgeBackground = Color(0xFFE2E2E6),
@@ -290,10 +304,10 @@ val ForestLight = TuckColors(
     textPrimary = Color(0xFF111D14),
     textSecondary = Color(0xFF475E4D),
     textMuted = Color(0xFF789480),
-    accent = ForestLightPalette[PaletteSlot.SAGE].fill,
+    accent = ForestLightPalette[PaletteSlot.PRIMARY_CORE].fill,
     accentLight = Color(0xFF52B788),
     accentContainer = Color(0xFFE5F6EE),
-    textOnAccent = ForestLightPalette[PaletteSlot.SAGE].onFill,
+    textOnAccent = ForestLightPalette[PaletteSlot.PRIMARY_CORE].onFill,
     highlight = Color(0xFFD9F99D),
     highlightText = Color(0xFF365314),
     badgeBackground = Color(0xFFDCE8DF),
@@ -314,10 +328,10 @@ val ForestDark = TuckColors(
     textPrimary = Color(0xFFEEF7F1),
     textSecondary = Color(0xFFA5C2AC),
     textMuted = Color(0xFF6B8773),
-    accent = ForestDarkPalette[PaletteSlot.SAGE].fill,
+    accent = ForestDarkPalette[PaletteSlot.PRIMARY_CORE].fill,
     accentLight = Color(0xFF74C69D),
     accentContainer = Color(0xFF1A3D2A),
-    textOnAccent = ForestDarkPalette[PaletteSlot.SAGE].onFill,
+    textOnAccent = ForestDarkPalette[PaletteSlot.PRIMARY_CORE].onFill,
     highlight = Color(0xFF4D7C0F),
     highlightText = Color(0xFFECFCCB),
     badgeBackground = Color(0xFF2E4133),
@@ -339,10 +353,10 @@ val CobaltLight = TuckColors(
     textPrimary = Color(0xFF0F1B2C),
     textSecondary = Color(0xFF485E7C),
     textMuted = Color(0xFF7B93B2),
-    accent = CobaltLightPalette[PaletteSlot.DENIM].fill,
+    accent = CobaltLightPalette[PaletteSlot.PRIMARY_CORE].fill,
     accentLight = Color(0xFF3B82F6),
     accentContainer = Color(0xFFEFF6FF),
-    textOnAccent = CobaltLightPalette[PaletteSlot.DENIM].onFill,
+    textOnAccent = CobaltLightPalette[PaletteSlot.PRIMARY_CORE].onFill,
     highlight = Color(0xFFBAE6FD),
     highlightText = Color(0xFF0369A1),
     badgeBackground = Color(0xFFD7E5F4),
@@ -363,10 +377,10 @@ val CobaltDark = TuckColors(
     textPrimary = Color(0xFFEFF5FC),
     textSecondary = Color(0xFFA1BBD9),
     textMuted = Color(0xFF65809E),
-    accent = CobaltDarkPalette[PaletteSlot.DENIM].fill,
+    accent = CobaltDarkPalette[PaletteSlot.PRIMARY_CORE].fill,
     accentLight = Color(0xFF60A5FA),
     accentContainer = Color(0xFF173054),
-    textOnAccent = CobaltDarkPalette[PaletteSlot.DENIM].onFill,
+    textOnAccent = CobaltDarkPalette[PaletteSlot.PRIMARY_CORE].onFill,
     highlight = Color(0xFF0369A1),
     highlightText = Color(0xFFE0F2FE),
     badgeBackground = Color(0xFF2A3C54),
@@ -388,10 +402,10 @@ val PlumLight = TuckColors(
     textPrimary = Color(0xFF241026),
     textSecondary = Color(0xFF69486E),
     textMuted = Color(0xFF9E77A4),
-    accent = PlumLightPalette[PaletteSlot.PLUM].fill,
+    accent = PlumLightPalette[PaletteSlot.PRIMARY_CORE].fill,
     accentLight = Color(0xFFA855F7),
     accentContainer = Color(0xFFFAF5FF),
-    textOnAccent = PlumLightPalette[PaletteSlot.PLUM].onFill,
+    textOnAccent = PlumLightPalette[PaletteSlot.PRIMARY_CORE].onFill,
     highlight = Color(0xFFF5D0FE),
     highlightText = Color(0xFF86198F),
     badgeBackground = Color(0xFFEADBEC),
@@ -412,10 +426,10 @@ val PlumDark = TuckColors(
     textPrimary = Color(0xFFFAF3FC),
     textSecondary = Color(0xFFD1B4D9),
     textMuted = Color(0xFF8D6F96),
-    accent = PlumDarkPalette[PaletteSlot.PLUM].fill,
+    accent = PlumDarkPalette[PaletteSlot.PRIMARY_CORE].fill,
     accentLight = Color(0xFFC084FC),
     accentContainer = Color(0xFF3D184E),
-    textOnAccent = PlumDarkPalette[PaletteSlot.PLUM].onFill,
+    textOnAccent = PlumDarkPalette[PaletteSlot.PRIMARY_CORE].onFill,
     highlight = Color(0xFF86198F),
     highlightText = Color(0xFFFAE8FF),
     badgeBackground = Color(0xFF3D2C45),

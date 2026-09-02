@@ -140,8 +140,8 @@ class PaletteValidationTest {
     fun test3b_DeliberatelyFailingBadPaletteFailsDistinctnessFloor() {
         val badPalette = TuckPalette(
             listOf(
-                PaletteEntry(PaletteSlot.TERRACOTTA, Color(0xFFC04030), Color.White, Oklch(0.5, 0.1, 25.0)),
-                PaletteEntry(PaletteSlot.AMBER, Color(0xFFC04131), Color.White, Oklch(0.5, 0.1, 25.5))
+                PaletteEntry(PaletteSlot.PRIMARY_CORE, Color(0xFFC04030), Color.White, Oklch(0.5, 0.1, 25.0)),
+                PaletteEntry(PaletteSlot.SECONDARY_CORE, Color(0xFFC04131), Color.White, Oklch(0.5, 0.1, 25.5))
             )
         )
         val deltaE = oklabDeltaE(badPalette.entries[0].fill, badPalette.entries[1].fill)
@@ -179,8 +179,8 @@ class PaletteValidationTest {
     fun test4b_DeliberatelyFailingBadPaletteFailsCvdFloor() {
         val badPalette = TuckPalette(
             listOf(
-                PaletteEntry(PaletteSlot.SAGE, Color(0xFF558855), Color.White, Oklch(0.5, 0.1, 140.0)),
-                PaletteEntry(PaletteSlot.ROSE, Color(0xFF558855), Color.White, Oklch(0.5, 0.1, 140.0))
+                PaletteEntry(PaletteSlot.PRIMARY_SOFT, Color(0xFF558855), Color.White, Oklch(0.5, 0.1, 140.0)),
+                PaletteEntry(PaletteSlot.SECONDARY_DEEP, Color(0xFF558855), Color.White, Oklch(0.5, 0.1, 140.0))
             )
         )
         val sim1 = simulateCvd(badPalette.entries[0].fill, CvdType.DEUTERANOPIA)

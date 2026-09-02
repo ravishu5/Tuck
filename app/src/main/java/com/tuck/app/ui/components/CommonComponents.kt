@@ -61,16 +61,13 @@ import com.tuck.app.domain.model.EntityType
 import com.tuck.app.domain.model.ExtractedEntity
 import com.tuck.app.domain.model.ProcessingStatus
 import com.tuck.app.domain.model.SavedItem
-import com.tuck.app.ui.theme.AccentAmber
-import com.tuck.app.ui.theme.AccentEmerald
-import com.tuck.app.ui.theme.AccentOrange
-import com.tuck.app.ui.theme.AccentRose
-import com.tuck.app.ui.theme.AccentSky
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import com.tuck.app.ui.theme.color.PaletteSlot
+import com.tuck.app.ui.theme.TuckTheme
 
 @Composable
 fun SavedItemCard(
@@ -135,7 +132,7 @@ fun SavedItemCard(
                         Icon(
                             imageVector = if (item.isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
                             contentDescription = if (item.isFavorite) "Unfavorite" else "Favorite",
-                            tint = if (item.isFavorite) AccentAmber else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            tint = if (item.isFavorite) TuckTheme.colors.favorite else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -200,14 +197,14 @@ fun SavedItemCard(
                         if (item.contentType == ContentType.VIDEO) {
                             Surface(
                                 shape = CircleShape,
-                                color = Color.Black.copy(alpha = 0.6f),
+                                color = TuckTheme.colors.scrim.copy(alpha = 0.6f),
                                 modifier = Modifier.size(24.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
                                         imageVector = Icons.Filled.PlayArrow,
                                         contentDescription = "Play",
-                                        tint = Color.White,
+                                        tint = TuckTheme.colors.onScrim,
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }
@@ -233,19 +230,30 @@ fun SavedItemCard(
     }
 }
 
+/**
+ * Content-type colours come from the active theme's triad, so a badge belongs to the
+ * theme rather than to a fixed rainbow. Types that share a family share a hue - media
+ * on one, documents on another - which is more legible than eight unrelated colours.
+ */
 @Composable
 fun ContentTypeBadge(contentType: ContentType) {
-    val (icon, bgColor, tintColor) = when (contentType) {
-        ContentType.URL -> Triple(Icons.Filled.Link, AccentSky.copy(alpha = 0.15f), AccentSky)
-        ContentType.TEXT -> Triple(Icons.Filled.Notes, AccentAmber.copy(alpha = 0.15f), AccentAmber)
-        ContentType.IMAGE, ContentType.MULTI_IMAGE -> Triple(Icons.Filled.Image, AccentRose.copy(alpha = 0.15f), AccentRose)
-        ContentType.PDF -> Triple(Icons.Filled.PictureAsPdf, AccentOrange.copy(alpha = 0.15f), AccentOrange)
-        ContentType.VIDEO -> Triple(Icons.Filled.Movie, AccentRose.copy(alpha = 0.15f), AccentRose)
-        ContentType.DOCUMENT -> Triple(Icons.Filled.Description, AccentEmerald.copy(alpha = 0.15f), AccentEmerald)
-        ContentType.CONTACT -> Triple(Icons.Filled.Email, AccentAmber.copy(alpha = 0.15f), AccentAmber)
-        ContentType.LOCATION -> Triple(Icons.Filled.ArrowOutward, AccentEmerald.copy(alpha = 0.15f), AccentEmerald)
-        else -> Triple(Icons.Filled.Language, Color.Gray.copy(alpha = 0.15f), Color.Gray)
+    val tuckColors = TuckTheme.colors
+    val palette = tuckColors.palette
+
+    val (icon, slot) = when (contentType) {
+        ContentType.URL -> Icons.Filled.Link to PaletteSlot.PRIMARY_CORE
+        ContentType.TEXT -> Icons.Filled.Notes to PaletteSlot.SECONDARY_CORE
+        ContentType.IMAGE, ContentType.MULTI_IMAGE -> Icons.Filled.Image to PaletteSlot.TERTIARY_CORE
+        ContentType.PDF -> Icons.Filled.PictureAsPdf to PaletteSlot.PRIMARY_DEEP
+        ContentType.VIDEO -> Icons.Filled.Movie to PaletteSlot.TERTIARY_DEEP
+        ContentType.DOCUMENT -> Icons.Filled.Description to PaletteSlot.SECONDARY_DEEP
+        ContentType.CONTACT -> Icons.Filled.Email to PaletteSlot.SECONDARY_SOFT
+        ContentType.LOCATION -> Icons.Filled.ArrowOutward to PaletteSlot.PRIMARY_SOFT
+        else -> Icons.Filled.Language to PaletteSlot.PRIMARY_CORE
     }
+
+    val tintColor = palette[slot].fill
+    val bgColor = tintColor.copy(alpha = 0.15f)
 
     Surface(
         shape = RoundedCornerShape(6.dp),
@@ -275,13 +283,14 @@ fun ContentTypeBadge(contentType: ContentType) {
 
 @Composable
 fun CompactEntityPill(entity: ExtractedEntity) {
+    val palette = TuckTheme.colors.palette
     val (icon, tint) = when (entity.type) {
-        EntityType.MONEY -> Icons.Filled.AttachMoney to AccentEmerald
-        EntityType.PHONE -> Icons.Filled.Call to AccentSky
-        EntityType.EMAIL -> Icons.Filled.Email to AccentAmber
-        EntityType.URL -> Icons.Filled.ArrowOutward to AccentSky
-        EntityType.DATE -> Icons.Filled.CalendarToday to AccentOrange
-        EntityType.HASHTAG -> Icons.Filled.Tag to AccentRose
+        EntityType.MONEY -> Icons.Filled.AttachMoney to palette[PaletteSlot.SECONDARY_DEEP].fill
+        EntityType.PHONE -> Icons.Filled.Call to palette[PaletteSlot.PRIMARY_CORE].fill
+        EntityType.EMAIL -> Icons.Filled.Email to palette[PaletteSlot.SECONDARY_CORE].fill
+        EntityType.URL -> Icons.Filled.ArrowOutward to palette[PaletteSlot.PRIMARY_SOFT].fill
+        EntityType.DATE -> Icons.Filled.CalendarToday to palette[PaletteSlot.TERTIARY_CORE].fill
+        EntityType.HASHTAG -> Icons.Filled.Tag to palette[PaletteSlot.TERTIARY_DEEP].fill
         else -> Icons.Filled.Tag to MaterialTheme.colorScheme.onSurfaceVariant
     }
 

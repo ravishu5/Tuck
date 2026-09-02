@@ -299,7 +299,7 @@ private fun InboxTriageItemCard(
                     Icon(
                         imageVector = if (item.isFavorite) Icons.Default.Star else Icons.Outlined.StarBorder,
                         contentDescription = "Favorite",
-                        tint = if (item.isFavorite) Color(0xFFF59E0B) else tuckColors.textSecondary,
+                        tint = if (item.isFavorite) tuckColors.favorite else tuckColors.textSecondary,
                         modifier = Modifier.size(18.dp)
                     )
                 }
