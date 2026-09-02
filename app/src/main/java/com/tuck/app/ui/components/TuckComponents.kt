@@ -139,7 +139,7 @@ fun TuckSearchBar(
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
     modifier: Modifier = Modifier,
-    placeholder: String = "Search anything...",
+    placeholder: String? = null,
     focusRequester: FocusRequester? = null,
     onClear: (() -> Unit)? = null
 ) {
@@ -151,7 +151,7 @@ fun TuckSearchBar(
         onValueChange = onQueryChange,
         placeholder = {
             Text(
-                text = placeholder,
+                text = placeholder ?: stringResource(R.string.components_search_anything),
                 color = tuckColors.textMuted,
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -224,7 +224,7 @@ fun TuckPlatformBadge(
         item.contentType == ContentType.LOCATION -> Triple(stringResource(R.string.badge_location), tuckColors.palette[PaletteSlot.SECONDARY_SOFT].fill, Icons.Filled.Language)
         item.contentType == ContentType.VIDEO -> Triple(stringResource(R.string.badge_video), tuckColors.palette[PaletteSlot.TERTIARY_DEEP].fill, Icons.Filled.PlayArrow)
         item.contentType == ContentType.AUDIO -> Triple(stringResource(R.string.badge_voice), tuckColors.palette[PaletteSlot.TERTIARY_CORE].fill, Icons.Filled.Mic)
-        else -> Triple(item.sourceDomain ?: item.contentType.displayName, tuckColors.accent, Icons.Filled.Language)
+        else -> Triple(item.sourceDomain ?: stringResource(item.contentType.labelRes), tuckColors.accent, Icons.Filled.Language)
     }
 
     Surface(
@@ -931,11 +931,15 @@ private fun CollectionColorTile(
  * The outstanding count is the whole point of the lifecycle work: it tells the user what
  * a collection still wants from them, which a total never does.
  */
-private fun collectionSubtitle(count: Int, openCount: Int): String = when {
-    count == 0 -> "Empty"
-    openCount == 0 -> "$count ${if (count == 1) "item" else "items"} · all done"
-    openCount == count -> "$count ${if (count == 1) "item" else "items"}"
-    else -> "$count items · $openCount to go"
+@Composable
+private fun collectionSubtitle(count: Int, openCount: Int): String {
+    val items = pluralStringResource(R.plurals.item_count, count, count)
+    return when {
+        count == 0 -> stringResource(R.string.collection_empty)
+        openCount == 0 -> stringResource(R.string.collection_all_done, items)
+        openCount == count -> items
+        else -> stringResource(R.string.collection_to_go, items, openCount)
+    }
 }
 
 @Composable
@@ -1094,7 +1098,13 @@ fun TuckContentCard(
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // Media Preview (YouTube / Reel / Screenshot / Image)
-            val previewImage = item.thumbnailPath ?: item.localFilePath
+            //
+            // Only fall back to the stored file when that file is itself an image. An audio
+            // note has a localFilePath Coil cannot decode, which rendered as an empty grey
+            // block where a picture should be.
+            val fileIsVisual = item.contentType == ContentType.IMAGE ||
+                    item.contentType == ContentType.MULTI_IMAGE
+            val previewImage = item.thumbnailPath ?: item.localFilePath.takeIf { fileIsVisual }
             if (!previewImage.isNullOrBlank()) {
                 Box(
                     modifier = Modifier
@@ -1738,8 +1748,8 @@ fun QuickCaptureSpeedDialSheet(
             Spacer(modifier = Modifier.height(14.dp))
 
             QuickCaptureOption(
-                title = "Take a Quick Note",
-                subtitle = "Save a formatted thought or markdown note",
+                title = stringResource(R.string.quick_take_a_note),
+                subtitle = stringResource(R.string.quick_take_a_note_sub),
                 icon = Icons.Filled.Notes,
                 iconTint = tuckColors.palette[PaletteSlot.PRIMARY_CORE].fill,
                 onClick = {
@@ -1749,8 +1759,8 @@ fun QuickCaptureSpeedDialSheet(
             )
 
             QuickCaptureOption(
-                title = "Scan Document / Screenshot",
-                subtitle = "Local ML Kit OCR extracts all text instantly",
+                title = stringResource(R.string.quick_scan),
+                subtitle = stringResource(R.string.quick_scan_sub),
                 icon = Icons.Filled.CameraAlt,
                 iconTint = tuckColors.palette[PaletteSlot.SECONDARY_CORE].fill,
                 onClick = {
@@ -1760,8 +1770,8 @@ fun QuickCaptureSpeedDialSheet(
             )
 
             QuickCaptureOption(
-                title = "Import PDF or Research Paper",
-                subtitle = "Extract text & generate first-page thumbnail",
+                title = stringResource(R.string.quick_pdf),
+                subtitle = stringResource(R.string.quick_pdf_sub),
                 icon = Icons.Filled.PictureAsPdf,
                 iconTint = tuckColors.palette[PaletteSlot.TERTIARY_CORE].fill,
                 onClick = {
@@ -1771,8 +1781,8 @@ fun QuickCaptureSpeedDialSheet(
             )
 
             QuickCaptureOption(
-                title = "Paste from Clipboard",
-                subtitle = "Save copied links, Reddit URLs, or text",
+                title = stringResource(R.string.quick_paste),
+                subtitle = stringResource(R.string.quick_paste_sub),
                 icon = Icons.Filled.ContentPaste,
                 iconTint = tuckColors.palette[PaletteSlot.SECONDARY_DEEP].fill,
                 onClick = {
@@ -1782,8 +1792,8 @@ fun QuickCaptureSpeedDialSheet(
             )
 
             QuickCaptureOption(
-                title = "Record Audio Voice Memo",
-                subtitle = "App-private local audio note",
+                title = stringResource(R.string.quick_voice),
+                subtitle = stringResource(R.string.quick_voice_sub),
                 icon = Icons.Filled.Mic,
                 iconTint = tuckColors.palette[PaletteSlot.PRIMARY_DEEP].fill,
                 onClick = {
@@ -1974,10 +1984,13 @@ fun CollectionProgressRow(
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = when {
-                    count == 0 -> "Empty"
-                    openCount == 0 -> "$count ${if (count == 1) "item" else "items"} · all done"
-                    else -> "$count items · $done done"
+                text = run {
+                    val items = pluralStringResource(R.plurals.item_count, count, count)
+                    when {
+                        count == 0 -> stringResource(R.string.collection_empty)
+                        openCount == 0 -> stringResource(R.string.collection_all_done, items)
+                        else -> stringResource(R.string.collection_done_count, items, done)
+                    }
                 },
                 style = TuckTheme.typography.numericCount,
                 color = tuckColors.textMuted
@@ -2131,7 +2144,13 @@ fun ItemQuickActionsSheet(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 AssistChip(
                     onClick = { onToggleDone(); onDismiss() },
-                    label = { Text(if (isDone) "Mark not done" else "Mark done") },
+                    label = {
+            Text(
+                stringResource(
+                    if (isDone) R.string.action_mark_not_done else R.string.action_mark_done
+                )
+            )
+        },
                     leadingIcon = {
                         Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(16.dp))
                     }

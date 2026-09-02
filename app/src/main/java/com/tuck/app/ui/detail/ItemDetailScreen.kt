@@ -8,6 +8,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.media.MediaMetadataRetriever
 import android.media.MediaPlayer
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -208,7 +209,7 @@ fun ItemDetailScreen(
                     ContentTypeBadge(contentType = item.contentType)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = item.sourceDomain ?: item.sourceApp ?: item.contentType.displayName,
+                        text = item.sourceDomain ?: item.sourceApp ?: stringResource(item.contentType.labelRes),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary
@@ -451,7 +452,10 @@ fun ItemDetailScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = if (!item.ocrText.isNullOrBlank()) "On-Device OCR Text" else "Extracted Content",
+                        text = stringResource(
+                        if (!item.ocrText.isNullOrBlank()) R.string.detail_ocr_text
+                        else R.string.detail_extracted_content
+                    ),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -860,7 +864,7 @@ fun ItemPreviewCard(
                                     item.sourceDomain?.contains("YouTube", ignoreCase = true) == true || item.originalUrl?.contains("youtube") == true || item.originalUrl?.contains("youtu.be") == true -> "Watch on YouTube"
                                     item.sourceDomain?.contains("TikTok", ignoreCase = true) == true || item.originalUrl?.contains("tiktok.com") == true -> "Watch on TikTok"
                                     item.sourceDomain?.contains("Twitter", ignoreCase = true) == true || item.originalUrl?.contains("twitter.com") == true || item.originalUrl?.contains("x.com") == true -> "Open on X"
-                                    else -> "Open in Browser"
+                                    else -> stringResource(R.string.action_open_in_browser)
                                 }
 
                                 Button(
@@ -939,7 +943,7 @@ fun shareItem(context: Context, item: SavedItem) {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
     }
-    context.startActivitySafe(Intent.createChooser(sendIntent, "Share via"))
+    context.startActivitySafe(Intent.createChooser(sendIntent, context.getString(R.string.action_share_via)))
 }
 
 fun openPdfFile(context: Context, filePath: String?) {
@@ -953,7 +957,7 @@ fun openPdfFile(context: Context, filePath: String?) {
         }
         context.startActivity(intent)
     } catch (e: Exception) {
-        Toast.makeText(context, "No PDF viewer app found", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, R.string.detail_no_pdf_viewer, Toast.LENGTH_SHORT).show()
     }
 }
 
@@ -967,7 +971,7 @@ fun copyToClipboard(context: Context, label: String, text: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     val clip = ClipData.newPlainText(label, text)
     clipboard.setPrimaryClip(clip)
-    Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+    Toast.makeText(context, R.string.detail_copied, Toast.LENGTH_SHORT).show()
 }
 
 @Composable
@@ -1002,7 +1006,11 @@ fun ThreadedCommentTreeSection(
 
                 if (totalCount > 4) {
                     Text(
-                        text = if (isExpanded) "Show Top Only" else "Show Full Tree ($totalCount)",
+                        text = if (isExpanded) {
+                        stringResource(R.string.action_show_top_only)
+                    } else {
+                        stringResource(R.string.action_show_full_tree, totalCount)
+                    },
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary,
@@ -1242,7 +1250,13 @@ private fun FollowUpSection(
             FilterChip(
                 selected = isCompleted,
                 onClick = onToggleCompleted,
-                label = { Text(if (isCompleted) "Done" else "Mark done") }
+                label = {
+                Text(
+                    stringResource(
+                        if (isCompleted) R.string.detail_done else R.string.action_mark_done
+                    )
+                )
+            }
             )
 
             Spacer(modifier = Modifier.width(8.dp))
@@ -1279,10 +1293,10 @@ private fun FollowUpSection(
             Spacer(modifier = Modifier.height(8.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(
-                    ReminderPreset.LATER_TODAY to "Later today",
-                    ReminderPreset.TOMORROW_MORNING to "Tomorrow",
-                    ReminderPreset.THIS_WEEKEND to "This weekend",
-                    ReminderPreset.NEXT_WEEK to "Next week"
+                    ReminderPreset.LATER_TODAY to stringResource(R.string.reminder_later_today),
+                    ReminderPreset.TOMORROW_MORNING to stringResource(R.string.reminder_tomorrow),
+                    ReminderPreset.THIS_WEEKEND to stringResource(R.string.reminder_this_weekend),
+                    ReminderPreset.NEXT_WEEK to stringResource(R.string.reminder_next_week)
                 ).forEach { (preset, label) ->
                     AssistChip(
                         onClick = {
@@ -1392,7 +1406,7 @@ private fun FindWithinItem(
             ) {
                 Text(
                     text = when {
-                        matches.isEmpty() -> "No matches in this item"
+                        matches.isEmpty() -> stringResource(R.string.detail_no_matches)
                         else -> "${matchIndex + 1} of ${matches.size} · in ${current?.blockLabel.orEmpty()}"
                     },
                     style = MaterialTheme.typography.bodySmall,
@@ -1483,7 +1497,9 @@ private fun ChecklistSection(
             ) {
                 Icon(
                     imageVector = if (entry.isDone) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
-                    contentDescription = if (entry.isDone) "Done" else "Not done",
+                    contentDescription = stringResource(
+                        if (entry.isDone) R.string.detail_done else R.string.action_not_done
+                    ),
                     tint = if (entry.isDone) tuckColors.success else tuckColors.textMuted,
                     modifier = Modifier.size(19.dp)
                 )
@@ -1545,7 +1561,26 @@ private fun AudioPlayerBlock(path: String) {
     var player by remember { mutableStateOf<MediaPlayer?>(null) }
     var isPlaying by remember { mutableStateOf(false) }
     var positionMs by remember { mutableIntStateOf(0) }
-    var durationMs by remember { mutableIntStateOf(0) }
+
+    // Read the length up front so the row shows "0:00 / 0:42" rather than "0:00 / 0:00"
+    // until the first play. A retriever is far cheaper than holding a prepared player.
+    var durationMs by remember(path) {
+        mutableIntStateOf(
+            try {
+                val retriever = MediaMetadataRetriever()
+                try {
+                    retriever.setDataSource(file.absolutePath)
+                    retriever
+                        .extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                        ?.toIntOrNull() ?: 0
+                } finally {
+                    retriever.release()
+                }
+            } catch (e: Exception) {
+                0
+            }
+        )
+    }
 
     DisposableEffect(path) {
         onDispose {
@@ -1600,7 +1635,9 @@ private fun AudioPlayerBlock(path: String) {
             ) {
                 Icon(
                     imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                    contentDescription = if (isPlaying) "Pause" else "Play"
+                    contentDescription = stringResource(
+                        if (isPlaying) R.string.action_pause else R.string.components_play
+                    )
                 )
             }
             Spacer(modifier = Modifier.width(14.dp))

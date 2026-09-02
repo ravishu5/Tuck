@@ -215,13 +215,13 @@ fun InPlaceMediaViewer(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val buttonLabel = when {
-                    rawUrl.contains("linkedin.com") -> "Open on LinkedIn"
-                    rawUrl.contains("instagram.com") -> "Open in Instagram"
-                    rawUrl.contains("reddit.com") -> "Open on Reddit"
-                    rawUrl.contains("youtube.com") || rawUrl.contains("youtu.be") -> "Open on YouTube"
-                    rawUrl.contains("tiktok.com") -> "Open on TikTok"
-                    rawUrl.contains("twitter.com") || rawUrl.contains("x.com") -> "Open on X"
-                    else -> "Open in Browser"
+                    rawUrl.contains("linkedin.com") -> stringResource(R.string.action_open_on, "LinkedIn")
+                    rawUrl.contains("instagram.com") -> stringResource(R.string.action_open_on, "Instagram")
+                    rawUrl.contains("reddit.com") -> stringResource(R.string.action_open_on, "Reddit")
+                    rawUrl.contains("youtube.com") || rawUrl.contains("youtu.be") -> stringResource(R.string.action_open_on, "YouTube")
+                    rawUrl.contains("tiktok.com") -> stringResource(R.string.action_open_on, "TikTok")
+                    rawUrl.contains("twitter.com") || rawUrl.contains("x.com") -> stringResource(R.string.action_open_on, "X")
+                    else -> stringResource(R.string.action_open_in_browser)
                 }
 
                 Button(

@@ -108,7 +108,7 @@ fun SavedItemCard(
                     ContentTypeBadge(contentType = item.contentType)
                     Spacer(modifier = Modifier.width(8.dp))
 
-                    val sourceText = item.sourceDomain ?: item.sourceApp ?: item.contentType.displayName
+                    val sourceText = item.sourceDomain ?: item.sourceApp ?: stringResource(item.contentType.labelRes)
                     Text(
                         text = "$sourceText · ${formatRelativeTime(item.createdAt)}",
                         style = MaterialTheme.typography.labelSmall,
@@ -277,7 +277,7 @@ fun ContentTypeBadge(contentType: ContentType) {
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
-                text = contentType.displayName,
+                text = stringResource(contentType.labelRes),
                 style = MaterialTheme.typography.labelSmall,
                 color = tintColor,
                 fontWeight = FontWeight.Bold,

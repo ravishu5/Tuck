@@ -111,7 +111,7 @@
     <string name="home_doc_pdf">Doc/PDF</string>
     <string name="home_quick_note">Quick note</string>
     <string name="home_document">Document</string>
-    <string name="home_add_file">Add file</string>
+    <string name="home_add_file">File</string>
     <string name="inbox_inbox">Inbox</string>
     <string name="inbox_file_into_collection">File into Collection</string>
     <string name="inbox_collection">Collection</string>
@@ -221,7 +221,10 @@
     <string name="home_voice_too_short">Too short to save</string>
     <string name="home_voice_failed">Could not start recording</string>
     <string name="home_voice_needs_mic">Microphone access is needed for voice notes</string>
-    <string name="home_scan_multi_page">Scan · %1$d pages</string>
+    <!-- Titles for a scanned document. Separate from the Scan button, whose label is a
+         verb in most languages and reads wrong as the name of a saved item. -->
+    <string name="title_scan">Scanned document</string>
+    <string name="home_scan_multi_page">Scanned document · %1$d pages</string>
 
     <!-- Relative time, so dates read naturally in every language -->
     <string name="time_just_now">Just now</string>
@@ -379,4 +382,50 @@
     <string name="title_imported_document">Imported Document</string>
     <string name="title_voice_note">Voice note · %1$ds</string>
     <string name="collection_empty">Empty</string>
+
+    <!-- Notifications -->
+    <string name="notif_memory_channel">Vault Memories &amp; Rediscovery</string>
+    <string name="notif_memory_channel_desc">Weekly resurfacing of forgotten saved items</string>
+    <string name="notif_memory_title">Rediscover from your vault</string>
+    <string name="notif_reminder_channel">Reminders</string>
+    <string name="notif_reminder_channel_desc">Items you asked Tuck to bring back</string>
+    <string name="notif_reminder_body">You asked to be reminded about this</string>
+    <string name="notif_snooze_a_day">Snooze a day</string>
+    <string name="tile_tuck_away">Tuck Away</string>
+
+    <!-- Vault health checks -->
+    <string name="health_search_index">Search index</string>
+    <string name="health_search_index_ok">Every save is searchable.</string>
+    <string name="health_rebuild_index">Rebuild index</string>
+    <string name="health_background_processing">Background processing</string>
+    <string name="health_background_ok">Nothing is stuck.</string>
+    <string name="health_try_again">Try again</string>
+    <string name="health_missing_files">Missing files</string>
+    <string name="health_missing_files_ok">Every saved file is present.</string>
+    <string name="health_clear_broken_links">Clear broken links</string>
+    <string name="health_unused_storage">Unused storage</string>
+    <string name="health_unused_storage_ok">No wasted space.</string>
+    <string name="health_reclaim_space">Reclaim space</string>
+    <string name="health_nothing_to_do">Nothing to do.</string>
+    <string name="health_nothing_needed_fixing">Nothing needed fixing.</string>
+
+    <string name="setting_save_comments_sub">Index top discussions from Reddit and social posts for offline search</string>
+    <string name="collection_all_done">%1$s · all done</string>
+    <string name="collection_to_go">%1$s · %2$d to go</string>
+    <string name="collection_done_count">%1$s · %2$d done</string>
+    <string name="empty_drawer_body">Save articles, screenshots, PDFs, notes, or links.\nEverything is indexed locally and private.</string>
+    <string name="empty_no_source_body">Tuck items from %1$s to see them here.</string>
+
+    <!-- Content type labels -->
+    <string name="type_link">Link</string>
+    <string name="type_note">Note</string>
+    <string name="type_image">Image</string>
+    <string name="type_pdf" translatable="false">PDF</string>
+    <string name="type_document">Document</string>
+    <string name="type_video">Video</string>
+    <string name="type_audio">Voice</string>
+    <string name="type_gallery">Gallery</string>
+    <string name="type_contact">Contact</string>
+    <string name="type_location">Location</string>
+    <string name="type_item">Item</string>
 </resources>

@@ -20,8 +20,9 @@ data class FilingRulesUiState(
     val rules: List<FilingRuleEntity> = emptyList(),
     val collections: List<Collection> = emptyList()
 ) {
-    fun collectionNameFor(id: Long): String =
-        collections.firstOrNull { it.id == id }?.name ?: "Unknown collection"
+    /** Null when the collection is gone; the screen supplies the localised fallback. */
+    fun collectionNameFor(id: Long): String? =
+        collections.firstOrNull { it.id == id }?.name
 }
 
 @HiltViewModel

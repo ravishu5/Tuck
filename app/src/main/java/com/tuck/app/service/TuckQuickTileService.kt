@@ -1,5 +1,6 @@
 package com.tuck.app.service
 
+import com.tuck.app.R
 import android.app.PendingIntent
 import android.content.Intent
 import android.os.Build
@@ -13,7 +14,7 @@ class TuckQuickTileService : TileService() {
         super.onStartListening()
         val tile = qsTile ?: return
         tile.state = Tile.STATE_ACTIVE
-        tile.label = "Tuck Away"
+        tile.label = getString(R.string.tile_tuck_away)
         tile.updateTile()
     }
 

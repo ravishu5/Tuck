@@ -1,5 +1,6 @@
 package com.tuck.app.ui.home
 
+import com.tuck.app.R
 import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
@@ -250,7 +251,7 @@ class HomeViewModel @Inject constructor(
                 val domain = urlMetadataProcessor.extractDomain(trimmed)
                 Quad(ContentType.URL, domain.ifBlank { "Shared Link" }, trimmed, null)
             } else {
-                val titlePreview = trimmed.lines().firstOrNull { it.isNotBlank() }?.take(50) ?: "Quick Note"
+                val titlePreview = trimmed.lines().firstOrNull { it.isNotBlank() }?.take(50) ?: context.getString(R.string.title_quick_note)
                 Quad(ContentType.TEXT, titlePreview, null, trimmed)
             }
 
@@ -281,7 +282,7 @@ class HomeViewModel @Inject constructor(
                     val saveResult = fileStorageService.saveImageFromUri(uri)
                     val item = SavedItem(
                         contentType = ContentType.IMAGE,
-                        title = "Saved Photo",
+                        title = context.getString(R.string.title_saved_photo),
                         localFilePath = saveResult.localFilePath,
                         thumbnailPath = saveResult.thumbnailPath,
                         mimeType = "image/jpeg",
@@ -331,10 +332,9 @@ class HomeViewModel @Inject constructor(
             val seconds = (note.durationMs / 1000).coerceAtLeast(1)
             val item = SavedItem(
                 contentType = ContentType.AUDIO,
-                title = "Voice note · ${seconds}s",
+                title = context.getString(R.string.title_voice_note, seconds),
                 localFilePath = note.file.absolutePath,
                 mimeType = "audio/mp4",
-                sourceDomain = "Voice note",
                 sourceApp = "Tuck"
             )
             val id = savedItemRepository.insertItem(item)
@@ -357,7 +357,7 @@ class HomeViewModel @Inject constructor(
                 val saveResult = fileStorageService.saveStreamUri(uri, mimeType)
                 val item = SavedItem(
                     contentType = if (isPdf) ContentType.PDF else ContentType.DOCUMENT,
-                    title = titleOverride ?: "Imported Document",
+                    title = titleOverride ?: context.getString(R.string.title_imported_document),
                     localFilePath = saveResult.localFilePath,
                     thumbnailPath = saveResult.thumbnailPath,
                     mimeType = mimeType,

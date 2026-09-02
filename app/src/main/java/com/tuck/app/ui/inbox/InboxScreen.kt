@@ -108,7 +108,7 @@ fun InboxScreen(
                     color = tuckColors.textPrimary
                 )
                 Text(
-                    text = if (uiState.inboxItems.isEmpty()) "All caught up" else "${uiState.inboxItems.size} items to review",
+                    text = if (uiState.inboxItems.isEmpty()) stringResource(R.string.empty_all_caught_up) else "${uiState.inboxItems.size} items to review",
                     style = MaterialTheme.typography.bodySmall,
                     color = tuckColors.textSecondary
                 )

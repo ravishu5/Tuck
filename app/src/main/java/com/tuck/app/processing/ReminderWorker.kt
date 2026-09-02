@@ -53,8 +53,12 @@ class ReminderWorker @AssistedInject constructor(
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             manager.createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, "Reminders", NotificationManager.IMPORTANCE_DEFAULT)
-                    .apply { description = "Items you asked Tuck to bring back" }
+                NotificationChannel(
+                CHANNEL_ID,
+                appContext.getString(R.string.notif_reminder_channel),
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
+                    .apply { description = appContext.getString(R.string.notif_reminder_channel_desc) }
             )
         }
 
@@ -72,11 +76,11 @@ class ReminderWorker @AssistedInject constructor(
         val notification = NotificationCompat.Builder(appContext, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
-            .setContentText("You asked to be reminded about this")
+            .setContentText(appContext.getString(R.string.notif_reminder_body))
             .setAutoCancel(true)
             .setContentIntent(open)
             .addAction(0, "Done", ReminderActionReceiver.pendingIntent(appContext, itemId, ReminderActionReceiver.ACTION_DONE))
-            .addAction(0, "Snooze a day", ReminderActionReceiver.pendingIntent(appContext, itemId, ReminderActionReceiver.ACTION_SNOOZE))
+            .addAction(0, appContext.getString(R.string.notif_snooze_a_day), ReminderActionReceiver.pendingIntent(appContext, itemId, ReminderActionReceiver.ACTION_SNOOZE))
             .build()
 
         manager.notify(notificationIdFor(itemId), notification)

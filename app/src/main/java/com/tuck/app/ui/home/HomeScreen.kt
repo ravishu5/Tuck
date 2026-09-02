@@ -191,7 +191,7 @@ fun HomeScreen(
                 titleOverride = if (pages > 1) {
                     context.getString(R.string.home_scan_multi_page, pages)
                 } else {
-                    context.getString(R.string.home_scan)
+                    context.getString(R.string.title_scan)
                 }
             )
         }
@@ -348,7 +348,7 @@ fun HomeScreen(
                 item {
                     TuckSectionHeader(
                         title = stringResource(R.string.home_collections),
-                        actionText = "View all"
+                        actionText = stringResource(R.string.action_view_all)
                     )
                     CollectionsRail(
                         collections = uiState.collections
@@ -366,7 +366,8 @@ fun HomeScreen(
             // 7. Feed Title
             item {
                 TuckSectionHeader(
-                    title = if (uiState.selectedSource != null) "${uiState.selectedSource} Items" else "All Tucked Items"
+                    title = uiState.selectedSource?.let { stringResource(R.string.home_source_items, it) }
+                            ?: stringResource(R.string.home_all_tucked_items)
                 )
             }
 
@@ -374,9 +375,12 @@ fun HomeScreen(
             if (uiState.items.isEmpty()) {
                 item {
                     TuckEmptyState(
-                        title = if (uiState.selectedSource != null) "No ${uiState.selectedSource} items found" else "Your drawer is empty.",
-                        description = if (uiState.selectedSource != null) "Tuck items from ${uiState.selectedSource} to see them here." else "Save articles, screenshots, PDFs, notes, or links.\nEverything is indexed locally and private.",
-                        actionLabel = "Quick Save (+)",
+                        title = uiState.selectedSource?.let { stringResource(R.string.empty_no_source_items, it) }
+                            ?: stringResource(R.string.empty_drawer),
+                        description = uiState.selectedSource?.let {
+                            stringResource(R.string.empty_no_source_body, it)
+                        } ?: stringResource(R.string.empty_drawer_body),
+                        actionLabel = stringResource(R.string.action_quick_save),
                         onAction = { showQuickAddSheet = true },
                         modifier = Modifier.padding(top = 24.dp)
                     )
@@ -772,20 +776,20 @@ private fun HomePlatformChipsRow(
     onSelectSource: (String?) -> Unit
 ) {
     val platforms = listOf(
-        "All" to null,
-        "Screenshots" to "Screenshots",
+        stringResource(R.string.filter_all) to null,
+        stringResource(R.string.filter_screenshots) to "Screenshots",
         "Reddit" to "Reddit",
         "YouTube" to "YouTube",
         "Twitter / X" to "Twitter",
         "LinkedIn" to "LinkedIn",
         "Instagram" to "Instagram",
-        "Articles" to "Articles",
-        "Education" to "Education",
-        "Finance" to "Finance",
-        "Programming" to "Programming",
+        stringResource(R.string.filter_articles) to "Articles",
+        stringResource(R.string.filter_education) to "Education",
+        stringResource(R.string.filter_finance) to "Finance",
+        stringResource(R.string.filter_programming) to "Programming",
         "Web" to "Web",
-        "Notes" to "Notes",
-        "PDFs" to "PDFs"
+        stringResource(R.string.filter_notes) to "Notes",
+        stringResource(R.string.filter_pdfs) to "PDFs"
     )
 
     LazyRow(
@@ -963,9 +967,9 @@ private fun QuickThemePickerSheet(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 listOf(
-                    "System" to com.tuck.app.domain.repository.AppTheme.SYSTEM,
-                    "Light" to com.tuck.app.domain.repository.AppTheme.LIGHT,
-                    "Dark" to com.tuck.app.domain.repository.AppTheme.DARK
+                    stringResource(R.string.theme_system) to com.tuck.app.domain.repository.AppTheme.SYSTEM,
+                    stringResource(R.string.theme_light) to com.tuck.app.domain.repository.AppTheme.LIGHT,
+                    stringResource(R.string.theme_dark) to com.tuck.app.domain.repository.AppTheme.DARK
                 ).forEach { (label, theme) ->
                     TuckCategoryChip(
                         label = label,

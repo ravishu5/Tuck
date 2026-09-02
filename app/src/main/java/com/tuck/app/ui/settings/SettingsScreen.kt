@@ -96,7 +96,7 @@ fun SettingsScreen(
         if (!granted) {
             Toast.makeText(
                 context,
-                "Weekly Memory is on, but notifications are blocked for Tuck",
+                context.getString(R.string.setting_notifications_blocked),
                 Toast.LENGTH_LONG
             ).show()
         }
@@ -217,9 +217,9 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         listOf(
-                            "System" to AppTheme.SYSTEM,
-                            "Light" to AppTheme.LIGHT,
-                            "Dark" to AppTheme.DARK
+                            stringResource(R.string.theme_system) to AppTheme.SYSTEM,
+                            stringResource(R.string.theme_light) to AppTheme.LIGHT,
+                            stringResource(R.string.theme_dark) to AppTheme.DARK
                         ).forEach { (label, theme) ->
                             TuckCategoryChip(
                                 label = label,
@@ -293,8 +293,8 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     SettingsSwitchRow(
-                        title = "On-Device OCR",
-                        subtitle = "Recognize and index text inside screenshots & images",
+                        title = stringResource(R.string.setting_ocr),
+                        subtitle = stringResource(R.string.setting_ocr_sub),
                         checked = uiState.settings.ocrEnabled,
                         onCheckedChange = { viewModel.setOcrEnabled(it) }
                     )
@@ -302,8 +302,8 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     SettingsSwitchRow(
-                        title = "Auto-Categorize",
-                        subtitle = "Automatically organize content into smart folders",
+                        title = stringResource(R.string.setting_auto_categorize),
+                        subtitle = stringResource(R.string.setting_auto_categorize_sub),
                         checked = uiState.settings.autoCategorizeEnabled,
                         onCheckedChange = { viewModel.setAutoCategorizeEnabled(it) }
                     )
@@ -311,8 +311,8 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     SettingsSwitchRow(
-                        title = "Save Community Comments",
-                        subtitle = "Index top discussions from Reddit and social posts for offline search",
+                        title = stringResource(R.string.setting_save_comments),
+                        subtitle = stringResource(R.string.setting_save_comments_sub),
                         checked = uiState.settings.saveCommentsEnabled,
                         onCheckedChange = { viewModel.setSaveCommentsEnabled(it) }
                     )
@@ -321,16 +321,16 @@ fun SettingsScreen(
 
                     SettingsActionRow(
                         icon = Icons.Filled.Rule,
-                        title = "Auto-filing rules",
-                        subtitle = "Send matching saves straight to a collection",
+                        title = stringResource(R.string.rules_auto_filing_rules),
+                        subtitle = stringResource(R.string.setting_rules_sub),
                         onClick = onNavigateToFilingRules
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
 
                     SettingsSwitchRow(
-                        title = "Weekly Memory",
-                        subtitle = "Resurface one forgotten save each week. Off by default.",
+                        title = stringResource(R.string.setting_weekly_memory),
+                        subtitle = stringResource(R.string.setting_weekly_memory_sub),
                         checked = uiState.settings.memoryResurfacingEnabled,
                         onCheckedChange = { enabled ->
                             if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
@@ -348,8 +348,8 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     SettingsSwitchRow(
-                        title = "Wi-Fi Only for Previews",
-                        subtitle = "Fetch rich link previews and metadata only on Wi-Fi",
+                        title = stringResource(R.string.setting_wifi_only),
+                        subtitle = stringResource(R.string.setting_wifi_only_sub),
                         checked = uiState.settings.wifiOnlyMetadata,
                         onCheckedChange = { viewModel.setWifiOnlyMetadata(it) }
                     )
@@ -377,8 +377,8 @@ fun SettingsScreen(
 
                     SettingsActionRow(
                         icon = Icons.Filled.HealthAndSafety,
-                        title = "Vault health",
-                        subtitle = "Check that every save is intact and searchable",
+                        title = stringResource(R.string.health_vault_health),
+                        subtitle = stringResource(R.string.setting_vault_health_sub),
                         onClick = onNavigateToVaultHealth
                     )
 
@@ -386,8 +386,8 @@ fun SettingsScreen(
 
                     SettingsActionRow(
                         icon = Icons.Filled.Download,
-                        title = "Export Full Vault Archive (.tuck)",
-                        subtitle = "Complete archive with photos, PDFs, and notes",
+                        title = stringResource(R.string.setting_export_archive),
+                        subtitle = stringResource(R.string.setting_export_archive_sub),
                         onClick = {
                             viewModel.exportFullArchive { path ->
                                 Toast.makeText(context, "Archive exported: $path", Toast.LENGTH_SHORT).show()
@@ -399,8 +399,8 @@ fun SettingsScreen(
 
                     SettingsActionRow(
                         icon = Icons.Filled.Download,
-                        title = "Export Vault JSON",
-                        subtitle = "Lightweight text and metadata backup",
+                        title = stringResource(R.string.setting_export_json),
+                        subtitle = stringResource(R.string.setting_export_json_sub),
                         onClick = {
                             viewModel.exportVault { path ->
                                 Toast.makeText(context, "Backup exported: $path", Toast.LENGTH_SHORT).show()
@@ -416,7 +416,11 @@ fun SettingsScreen(
                             viewModel.reclaimSpace { freed ->
                                 Toast.makeText(
                                     context,
-                                    if (freed > 0) "Freed ${formatBytes(freed)}" else "Nothing to reclaim",
+                                    if (freed > 0) {
+                                    context.getString(R.string.setting_freed, formatBytes(freed))
+                                } else {
+                                    context.getString(R.string.setting_nothing_to_reclaim)
+                                },
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
@@ -427,7 +431,7 @@ fun SettingsScreen(
 
                     SettingsActionRow(
                         icon = Icons.Filled.Delete,
-                        title = "Trash & Recovery",
+                        title = stringResource(R.string.setting_trash_recovery),
                         subtitle = "${uiState.trashedCount} items in trash",
                         onClick = onNavigateToTrash
                     )
@@ -618,11 +622,11 @@ private fun StorageBreakdown(
     val palette = tuckColors.palette
 
     val segments = listOf(
-        Triple("Images", usage.imagesSizeBytes, palette[PaletteSlot.PRIMARY_CORE].fill),
-        Triple("PDFs", usage.pdfsSizeBytes, palette[PaletteSlot.SECONDARY_CORE].fill),
-        Triple("Documents", usage.documentsSizeBytes, palette[PaletteSlot.TERTIARY_CORE].fill),
-        Triple("Previews", usage.thumbnailsSizeBytes, palette[PaletteSlot.PRIMARY_SOFT].fill),
-        Triple("Cache", usage.cacheSizeBytes, palette[PaletteSlot.SECONDARY_SOFT].fill)
+        Triple(stringResource(R.string.storage_images), usage.imagesSizeBytes, palette[PaletteSlot.PRIMARY_CORE].fill),
+        Triple(stringResource(R.string.storage_pdfs), usage.pdfsSizeBytes, palette[PaletteSlot.SECONDARY_CORE].fill),
+        Triple(stringResource(R.string.storage_documents), usage.documentsSizeBytes, palette[PaletteSlot.TERTIARY_CORE].fill),
+        Triple(stringResource(R.string.storage_previews), usage.thumbnailsSizeBytes, palette[PaletteSlot.PRIMARY_SOFT].fill),
+        Triple(stringResource(R.string.storage_cache), usage.cacheSizeBytes, palette[PaletteSlot.SECONDARY_SOFT].fill)
     ).filter { it.second > 0 }
 
     Column(modifier = Modifier.fillMaxWidth()) {

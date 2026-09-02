@@ -1,5 +1,6 @@
 package com.tuck.app.ui.share
 
+import com.tuck.app.R
 import android.content.Context
 import android.content.Intent
 import androidx.lifecycle.ViewModel
@@ -48,6 +49,7 @@ sealed interface ShareUiState {
 
 @HiltViewModel
 class ShareViewModel @Inject constructor(
+    @ApplicationContext private val context: android.content.Context,
     private val shareParser: ShareParser,
     private val savedItemRepository: SavedItemRepository,
     private val collectionRepository: CollectionRepository,
@@ -68,7 +70,7 @@ class ShareViewModel @Inject constructor(
             try {
                 val parsed = shareParser.parseIntent(intent, callerPackage)
                 if (parsed == null) {
-                    _uiState.value = ShareUiState.Error("Unable to handle shared content")
+                    _uiState.value = ShareUiState.Error(context.getString(R.string.share_unable_to_handle))
                     return@launch
                 }
 
@@ -100,7 +102,12 @@ class ShareViewModel @Inject constructor(
                     selectedCollectionIds = emptySet()
                 )
             } catch (e: Exception) {
-                _uiState.value = ShareUiState.Error("Failed to save: ${e.localizedMessage ?: "Unknown error"}")
+                _uiState.value = ShareUiState.Error(
+                context.getString(
+                    R.string.share_failed,
+                    e.localizedMessage ?: context.getString(R.string.share_unknown_error)
+                )
+            )
             }
         }
     }

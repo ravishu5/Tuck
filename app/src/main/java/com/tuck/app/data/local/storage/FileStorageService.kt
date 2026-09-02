@@ -413,14 +413,14 @@ class FileStorageService @Inject constructor(
         }
     }
 
+    /** Destination for a new voice note, inside app-private storage like every other save. */
+    fun newVoiceNoteFile(): File = File(documentsDir, "voice_" + UUID.randomUUID() + ".m4a")
+
     /**
      * Every file Tuck has written, so the health check can spot files no database row
      * points at any more. Thumbnails are excluded: they are regenerable and are keyed to
      * their source rather than referenced directly by an item.
      */
-    /** Destination for a new voice note, inside app-private storage like every other save. */
-    fun newVoiceNoteFile(): File = File(documentsDir, "voice_${'$'}{UUID.randomUUID()}.m4a")
-
     suspend fun listStoredFiles(): List<File> = withContext(Dispatchers.IO) {
         listOf(imagesDir, pdfsDir, documentsDir)
             .flatMap { it.listFiles()?.toList().orEmpty() }

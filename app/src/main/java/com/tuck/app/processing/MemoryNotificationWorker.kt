@@ -35,7 +35,7 @@ class MemoryNotificationWorker @AssistedInject constructor(
             .firstOrNull()
 
         if (forgottenItem != null) {
-            postMemoryNotification(forgottenItem.id, forgottenItem.title ?: "Rediscover from your vault")
+            postMemoryNotification(forgottenItem.id, forgottenItem.title ?: applicationContext.getString(R.string.notif_memory_title))
         }
 
         Result.success()
@@ -48,10 +48,10 @@ class MemoryNotificationWorker @AssistedInject constructor(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 channelId,
-                "Vault Memories & Rediscovery",
+                applicationContext.getString(R.string.notif_memory_channel),
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
-                description = "Weekly resurfacing of forgotten saved items"
+                description = applicationContext.getString(R.string.notif_memory_channel_desc)
             }
             notificationManager.createNotificationChannel(channel)
         }
@@ -71,7 +71,7 @@ class MemoryNotificationWorker @AssistedInject constructor(
 
         val notification = NotificationCompat.Builder(appContext, channelId)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("Rediscover from your vault")
+            .setContentTitle(applicationContext.getString(R.string.notif_memory_title))
             .setContentText(itemTitle)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)

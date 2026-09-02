@@ -1,5 +1,6 @@
 package com.tuck.app.ui.security
 
+import com.tuck.app.R
 import android.app.KeyguardManager
 import android.content.Context
 import androidx.biometric.BiometricManager
@@ -24,8 +25,8 @@ class BiometricAuthManager @Inject constructor(
 
     fun authenticate(
         activity: FragmentActivity,
-        title: String = "Unlock Collection",
-        subtitle: String = "Verify your identity to access locked items",
+        title: String = context.getString(R.string.biometric_title),
+        subtitle: String = context.getString(R.string.biometric_subtitle),
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
