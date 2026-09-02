@@ -226,12 +226,18 @@ fun CollectionsScreen(
             } else {
                 // All Collections View
                 val totalSaves = (uiState.customCollections + uiState.autoCollections).sumOf { it.itemCount }
+                // Each query already returns fullest-first, but concatenating two of them
+                // would restart the count at the join, so the merged list is re-sorted.
+                val byFullest = compareByDescending<com.tuck.app.domain.model.Collection> { it.itemCount }
+                    .thenBy { it.name.lowercase() }
+                val allCollections = (uiState.customCollections + uiState.autoCollections).sortedWith(byFullest)
+
                 val displayCollections = when (filterTab) {
-                    0 -> uiState.customCollections + uiState.autoCollections
+                    0 -> allCollections
                     1 -> uiState.customCollections
                     2 -> uiState.autoCollections
-                    3 -> (uiState.customCollections + uiState.autoCollections).filter { it.isLocked }
-                    else -> uiState.customCollections + uiState.autoCollections
+                    3 -> allCollections.filter { it.isLocked }
+                    else -> allCollections
                 }
 
                 LazyVerticalGrid(

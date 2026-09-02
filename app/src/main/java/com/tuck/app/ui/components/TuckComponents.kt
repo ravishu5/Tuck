@@ -794,7 +794,15 @@ private fun PreviewImage(
     )
 }
 
-/** An empty or locked collection, identified by its colour rather than its contents. */
+/**
+ * An empty or locked collection: tinted rather than filled.
+ *
+ * A saturated tile beside a white preview tile makes the grid read unevenly, and since
+ * most collections are empty early on, the wall of colour was the loudest thing on screen
+ * while carrying the least information. Tinting keeps the colour as identity - it is still
+ * the collection's own hue - but hands the visual weight to collections that actually have
+ * something in them. The icon chip stays saturated so the identity survives the softening.
+ */
 @Composable
 private fun CollectionColorTile(
     name: String,
@@ -813,22 +821,26 @@ private fun CollectionColorTile(
     val visual = getCollectionVisual(name, iconHint, colorId, collectionId)
     val interactionSource = remember { MutableInteractionSource() }
 
+    val surface = TuckGradients.tint(colorEntry.background, tuckColors.isDark)
+    val edge = TuckGradients.tintEdge(colorEntry.background, tuckColors.isDark)
+
     Box(
         modifier = modifier
             .fillMaxWidth()
             .pressScale(interactionSource)
+            // Matches the preview tile's elevation, so a mixed grid sits on one plane.
             .shadow(
-                elevation = 10.dp,
+                elevation = 6.dp,
                 shape = RoundedCornerShape(22.dp),
-                ambientColor = colorEntry.background.copy(alpha = 0.5f),
-                spotColor = colorEntry.background.copy(alpha = 0.5f)
+                ambientColor = tuckColors.scrim.copy(alpha = 0.35f),
+                spotColor = tuckColors.scrim.copy(alpha = 0.35f)
             )
             .clip(RoundedCornerShape(22.dp))
-            .background(TuckGradients.tile(colorEntry.background, tuckColors.isDark))
-            .background(TuckGradients.sheen(colorEntry.foreground))
+            .background(surface)
+            .border(1.dp, edge, RoundedCornerShape(22.dp))
             .clickable(
                 interactionSource = interactionSource,
-                indication = ripple(color = colorEntry.foreground),
+                indication = ripple(color = colorEntry.background),
                 onClick = onClick
             )
             .padding(15.dp)
@@ -838,14 +850,14 @@ private fun CollectionColorTile(
                 modifier = Modifier
                     .size(22.dp)
                     .clip(CircleShape)
-                    .background(colorEntry.foreground)
+                    .background(colorEntry.background)
                     .align(Alignment.TopEnd),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Filled.Check,
                     contentDescription = "Selected",
-                    tint = colorEntry.background,
+                    tint = colorEntry.foreground,
                     modifier = Modifier.size(14.dp)
                 )
             }
@@ -853,7 +865,7 @@ private fun CollectionColorTile(
             Icon(
                 imageVector = Icons.Filled.Lock,
                 contentDescription = "Locked",
-                tint = colorEntry.foreground.copy(alpha = 0.75f),
+                tint = tuckColors.textMuted,
                 modifier = Modifier.size(15.dp).align(Alignment.TopEnd)
             )
         }
@@ -863,8 +875,7 @@ private fun CollectionColorTile(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(colorEntry.foreground.copy(alpha = 0.20f))
-                    .border(1.dp, colorEntry.foreground.copy(alpha = 0.18f), CircleShape),
+                    .background(TuckGradients.tile(colorEntry.background, tuckColors.isDark)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -880,7 +891,7 @@ private fun CollectionColorTile(
             Text(
                 text = name,
                 style = TuckTheme.typography.tileTitle,
-                color = colorEntry.foreground,
+                color = tuckColors.textPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -890,7 +901,7 @@ private fun CollectionColorTile(
             Text(
                 text = collectionSubtitle(count, openCount),
                 style = TuckTheme.typography.numericCount,
-                color = colorEntry.foreground.copy(alpha = 0.72f)
+                color = tuckColors.textMuted
             )
         }
     }

@@ -52,6 +52,31 @@ object TuckGradients {
         1f to scrim.copy(alpha = 0.78f)
     )
 
+    /**
+     * A surface-weight version of a palette colour: same hue, lifted to near-canvas
+     * lightness with most of the chroma removed.
+     *
+     * Computed in OKLCH rather than by lowering alpha over the canvas - an alpha wash
+     * inherits whatever is behind it and shifts as the background does, where this stays
+     * a fixed, predictable colour in the same family.
+     */
+    fun tint(color: Color, isDark: Boolean): Color {
+        val oklch = color.toOklch()
+        return oklch.copy(
+            l = if (isDark) 0.235 else 0.945,
+            c = minOf(oklch.c, if (isDark) 0.045 else 0.032)
+        ).toSrgb(clamp = true)
+    }
+
+    /** A half-step stronger than [tint], for borders and separators on a tinted surface. */
+    fun tintEdge(color: Color, isDark: Boolean): Color {
+        val oklch = color.toOklch()
+        return oklch.copy(
+            l = if (isDark) 0.30 else 0.895,
+            c = minOf(oklch.c, if (isDark) 0.055 else 0.045)
+        ).toSrgb(clamp = true)
+    }
+
     /** The faint highlight along a tile's top edge that suggests a lit surface. */
     fun sheen(foreground: Color): Brush = Brush.verticalGradient(
         0f to foreground.copy(alpha = 0.14f),
