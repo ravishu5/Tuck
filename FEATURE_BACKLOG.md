@@ -353,6 +353,93 @@ hold links, PDFs or posts.
 
 ---
 
+# J. Second competitor: Stashy — and what the fifth thread changes
+
+Four of the five threads supplied were Stash Anything, already mined in §I. The fifth
+(`r/iosapps` 1vmuiqs) is a **different product** and the more strategically interesting one.
+
+## J-0. Stashy is the sharper competitive threat
+
+| | Stash Anything | **Stashy** |
+|---|---|---|
+| Price | $9.99 lifetime / $7.99 mo | **Free forever. No IAP, no pro tier planned** |
+| AI | Refuses it on principle | **On-device model categorises everything and answers questions** |
+| Rating | 4.6★ (76) | **4.91★ (22)** |
+| Platforms | iPhone, iPad, Mac | iPhone, iPad, Mac |
+| Server cost | iCloud only | iCloud only |
+
+Two things follow.
+
+**The free tier is now the floor, not a differentiator.** Stash's 100-item limit looked
+reasonable next to nothing; next to a genuinely free competitor it looks mean. Tuck has *no*
+server costs at all, so generosity here is close to free.
+
+**Someone is shipping on-device AI in a free app.** Stashy's pitch is precisely the thing Tuck
+cut: *"ask it questions about your items or find anything you saved, even if you only vaguely
+remember what it was"*, running offline in flight mode via Apple's local model. Android's
+equivalent (ML Kit GenAI / Gemini Nano via AICore) is only available on some devices, which is
+the real reason to be careful — not cost.
+
+**But their own users show why the AI must never overwrite the source.** One reviewer saved a
+note and got back *"a computer like language"* with *"some of the tags in German"* — auto-generated
+summaries and tags rendered as if they were the content, in the wrong language. That is exactly
+the failure Tuck's source/derived split exists to prevent, and it cost that user their trust in
+one sitting. Another user asked plainly for **an option to turn the AI off**.
+
+If AI ever returns to Tuck, the shape is already right: derived, labelled, collapsible, deletable,
+and off by default.
+
+## J-1. Genuinely new gaps
+
+| # | Gap | Status in Tuck | Why it matters |
+|---|---|---|---|
+| **J1** | **Sync Doctor** — diagnoses sync problems in plain English and repairs them | ❌ | Stash's single best idea. Sync failure is the category's defining failure, and they turned support load into a feature. Tuck has no sync yet, but the same idea applies now as a **storage and index health check**: rebuild the search index, re-run failed enrichment, find items whose media file is missing, report what it fixed |
+| **J2** | **In-item search / jump to the match** — *"when a search result involves a long block of text, I'd like a way to focus on the specific part where the keyword appears"* | ❌ | Tuck stores whole articles, OCR blocks and 300-comment threads. Finding the item is solved; finding the line inside it is not. This is a natural extension of the match-reason work |
+| **J3** | **In-app voice notes** | ❌ | Tuck accepts shared audio but cannot record. Stashy captures voice notes directly - the fastest possible capture when your hands are busy |
+| **J4** | **Real document scanner** (edge detection, deskew, multi-page → PDF) | 🟡 | Home has a "Scan" button; there is no scanner behind it. ML Kit Document Scanner does this natively |
+| **J5** | **Checklists inside an item** | ❌ | Requested directly. Pairs naturally with the lifecycle work already shipped - a save becomes a small piece of work with steps |
+| **J6** | **Move item from the long-press menu** | 🟡 | Bulk move exists in Inbox; single-item move needs opening the item |
+| **J7** | **Localisation** | ❌ | Spanish, French and Italian requests across *both* apps' threads. Spanish alone is 400M+ speakers, and the same commenter noted the app was otherwise not worth it to them |
+| **J8** | **Storage bloat control** | 🟡 | *"It created a Containers/Stash folder that gets thousands of files and fills up my hard drive. Money lost."* Tuck reports storage usage but has no per-category breakdown or reclaim |
+
+## J-2. Two bugs from their threads worth pre-empting
+
+- **Truncated button labels.** *"Unope…"* and *"This We…"* were enough to put one user off
+  downloading. Tuck should test every screen at 200% type for exactly this.
+- **Tap targets that only register in the centre.** *"When I tap quickly near its outer edge, the
+  visual effect triggers, but the action isn't registered."* Ripple bounds and click bounds have to
+  be the same 48dp; the polish pass moved several components to custom `clickable` modifiers, so
+  this is worth an explicit check.
+
+## J-3. The strongest confirmation yet of the lifecycle bet
+
+The clearest statement of the problem in any of the five threads, from `u/eternus`, after being
+told to re-read the post:
+
+> *"I can sort and save with the best of them. My issue isn't that I can't find them later - my
+> issue is that I don't actually DO anything with the images… I save things with the absurd
+> assumption that saving it is the work. Your solution is great for organizing; my problem is
+> advancing the things I've organized into something actionable."*
+
+Note also that Stash ships **a built-in to-do list** "for when you find something you want to act
+on later". Tuck's reminders and done-state (D1) already cover this ground - J5 checklists would
+extend it.
+
+## J-4. The catastrophe, updated
+
+§I recorded a sync data-loss report. The same thread now carries a worse one:
+
+> *"I had over 650 stashes saved in about 35 different stash folders, and now absolutely everything
+> is gone. The iCloud backup was erased. I messaged the developer and sent an email, and have had
+> zero response. User and buyer beware!"* — a lifetime buyer who had recommended it to others
+
+Alongside *"Wonder if the App has been abandoned"* and the repeated vibe-coded-abandonment worry,
+the pattern is consistent: **in this category, trust is lost through data loss and silence, not
+through missing features.** Tuck's answers are structural - local-first, working import, an open
+schema, tests that run on device - and J1 is the feature that makes that visible to a user.
+
+---
+
 # G. Suggested order
 
 *Revised after the Reddit threads. Two things changed: the lifecycle argument went from my inference
@@ -391,8 +478,9 @@ what happens **after** the save. That is where Tuck should compete.
   loading state never resolves for a missing id instead of showing an empty state
 
 ### Phase 1 — retrieval made visible
-B3 search on home · D4 match-reason chips · B5 bulk select everywhere · R7 global timeline ·
-R5 full-screen swipe between items · B9 storage screen · B13 richer details
+B3 search on home · D4 match-reason chips · **J2 in-item search / jump to the match** ·
+B5 bulk select everywhere · **J6 move from long-press** · R7 global timeline ·
+R5 full-screen swipe between items · B9 storage screen + **J8 reclaim space** · B13 richer details
 
 ### Phase 2 — organisation catch-up
 B6 grid view (redesign R4) · B4/R16 pin collections · B7/B8 sub-stashes · C2 icon and colour pickers ·
@@ -403,6 +491,10 @@ B10 Markdown export · **working import** (Stash cannot restore its own export) 
 **H5 folder preservation** · **R1 offline page archive** — people screenshot because content
 disappears · H3 reader view · H6 refresh a save
 
+### Phase 3.5 — trust made visible
+**J1 health check** — rebuild the index, retry failed enrichment, find items whose media file is
+missing, and say what it fixed. Stash turned the same idea into their best-received feature.
+
 ### Phase 4 — hardening before launch
 D10 measured budgets — the incumbent lags at **200 items**, so 10k is a marketing claim ·
 baseline profile · APK size · **R26 onboarding**, built once and built short ·
@@ -412,9 +504,11 @@ baseline profile · APK size · **R26 onboarding**, built once and built short �
 D6 entities · D8 comment-tree reading · D9 actionable entities · D7 source/derived convention ·
 R22 richer social extraction
 
-### Phase 6 — reach
-R2 browser extension (7 requests, second only to Android) · R13 localisation · R14 regional pricing ·
-R19 system search integration · R24 themed icon and dark share sheet
+### Phase 6 — reach and capture breadth
+R2 browser extension (7 requests, second only to Android) · **J7 localisation** (Spanish, French,
+Italian across both apps' threads) · R14 regional pricing · **J3 voice notes** ·
+**J4 real document scanner** · **J5 checklists** · R19 system search integration ·
+R24 themed icon and dark share sheet
 
 **Deferred pending decisions:** everything marked 🚫 — sync, shared collections, anything AI-shaped.
 Note that sync is both the most-requested capability *and* the incumbent's most damaging failure.
