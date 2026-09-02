@@ -17,6 +17,7 @@ hiltWork = "1.2.0"
 coil = "2.7.0"
 jsoup = "1.18.3"
 mlkitTextRecognition = "16.0.1"
+mlkitDocumentScanner = "16.0.0-beta1"
 kotlinxCoroutines = "1.9.0"
 kotlinxSerialization = "1.7.3"
 datastore = "1.1.1"
@@ -67,6 +68,7 @@ coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coi
 
 # ML Kit OCR
 mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version.ref = "mlkitTextRecognition" }
+mlkit-document-scanner = { group = "com.google.android.gms", name = "play-services-mlkit-document-scanner", version.ref = "mlkitDocumentScanner" }
 
 # Jsoup
 jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }

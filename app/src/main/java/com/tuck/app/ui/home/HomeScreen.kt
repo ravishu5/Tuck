@@ -1,12 +1,15 @@
 package com.tuck.app.ui.home
 
 import android.Manifest
+import android.app.Activity
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.core.content.ContextCompat
+import com.tuck.app.processing.DocumentScanner
 import androidx.compose.ui.platform.LocalContext
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -172,6 +175,21 @@ fun HomeScreen(
         }
     }
 
+    // The Scan button used to open the photo picker, which was a promise the app did not
+    // keep. Real scanning now; the picker stays as the fallback where Play Services is absent.
+    val scannerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        val pdf = DocumentScanner.pdfFrom(result.data)
+        if (pdf != null) {
+            val pages = DocumentScanner.pageCount(result.data)
+            viewModel.importDocumentFromUri(
+                uri = pdf,
+                titleOverride = if (pages > 1) "Scan · $pages pages" else "Scan"
+            )
+        }
+    }
+
     val docPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -215,9 +233,27 @@ fun HomeScreen(
                         showPasteDialog = true
                     },
                     onScan = {
-                        photoPickerLauncher.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                        )
+                        val activity = context as? Activity
+                        if (activity == null) {
+                            photoPickerLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        } else {
+                            DocumentScanner.start(
+                                activity = activity,
+                                onReady = {
+                                    scannerLauncher.launch(IntentSenderRequest.Builder(it).build())
+                                },
+                                onUnavailable = {
+                                    // Expected on de-Googled devices - fall back, do not scold.
+                                    photoPickerLauncher.launch(
+                                        PickVisualMediaRequest(
+                                            ActivityResultContracts.PickVisualMedia.ImageOnly
+                                        )
+                                    )
+                                }
+                            )
+                        }
                     },
                     onPdf = {
                         docPickerLauncher.launch(arrayOf("application/pdf", "text/*"))
@@ -633,7 +669,7 @@ private fun HomeQuickActionRow(
         )
         QuickActionButton(
             label = "Scan",
-            sublabel = "Camera",
+            sublabel = "Document",
             icon = Icons.Filled.CameraAlt,
             tint = TuckTheme.colors.palette[PaletteSlot.SECONDARY_CORE].fill,
             modifier = Modifier.weight(1f),

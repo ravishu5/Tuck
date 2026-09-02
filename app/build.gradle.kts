@@ -149,6 +149,8 @@ dependencies {
 
     // ML Kit Text Recognition
     implementation(libs.mlkit.text.recognition)
+    // Play-Services delivered: the scanner model is downloaded on demand, not bundled.
+    implementation(libs.mlkit.document.scanner)
 
     // Jsoup
     implementation(libs.jsoup)

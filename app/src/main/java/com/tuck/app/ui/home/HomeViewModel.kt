@@ -349,7 +349,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun importDocumentFromUri(uri: Uri) {
+    fun importDocumentFromUri(uri: Uri, titleOverride: String? = null) {
         viewModelScope.launch {
             try {
                 val mimeType = context.contentResolver.getType(uri) ?: "application/octet-stream"
@@ -357,11 +357,12 @@ class HomeViewModel @Inject constructor(
                 val saveResult = fileStorageService.saveStreamUri(uri, mimeType)
                 val item = SavedItem(
                     contentType = if (isPdf) ContentType.PDF else ContentType.DOCUMENT,
-                    title = "Imported Document",
+                    title = titleOverride ?: "Imported Document",
                     localFilePath = saveResult.localFilePath,
                     thumbnailPath = saveResult.thumbnailPath,
                     mimeType = mimeType,
-                    sourceDomain = if (isPdf) "PDF" else "Document"
+                    sourceDomain = if (isPdf) "PDF" else "Document",
+                    sourceApp = if (titleOverride != null) "Tuck" else null
                 )
                 val id = savedItemRepository.insertItem(item)
                 if (id > 0) {
