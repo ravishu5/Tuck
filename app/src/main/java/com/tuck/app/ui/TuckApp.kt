@@ -194,6 +194,9 @@ fun TuckApp(
                         onNavigateToFilingRules = {
                             navController.navigate(NavRoutes.FILING_RULES)
                         },
+                        onNavigateToVaultHealth = {
+                            navController.navigate(NavRoutes.VAULT_HEALTH)
+                        },
                         onNavigateToTrash = {
                             navController.navigate(NavRoutes.TRASH)
                         },
@@ -208,6 +211,12 @@ fun TuckApp(
                     arguments = listOf(navArgument("itemId") { type = NavType.LongType })
                 ) {
                     ItemDetailScreen(
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+
+                composable(NavRoutes.VAULT_HEALTH) {
+                    com.tuck.app.ui.health.VaultHealthScreen(
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }

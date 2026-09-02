@@ -161,6 +161,14 @@ class SavedItemFtsDaoImpl @Inject constructor(
     override suspend fun searchFtsRowIds(ftsQuery: String): List<Long> =
         searchFtsWithSnippet(ftsQuery).map { it.rowid }
 
+    override suspend fun allIndexedRowIds(): List<Long> = withContext(Dispatchers.IO) {
+        val ids = mutableListOf<Long>()
+        database.query(SimpleSQLiteQuery("SELECT rowid FROM $TABLE")).use { cursor ->
+            while (cursor.moveToNext()) ids.add(cursor.getLong(0))
+        }
+        ids
+    }
+
     override suspend fun rebuildIndex() = withContext(Dispatchers.IO) {
         writable.execSQL("DELETE FROM $TABLE")
         writable.execSQL(backfillSql())

@@ -393,8 +393,8 @@ and off by default.
 
 | # | Gap | Status in Tuck | Why it matters |
 |---|---|---|---|
-| **J1** | **Sync Doctor** — diagnoses sync problems in plain English and repairs them | ❌ | Stash's single best idea. Sync failure is the category's defining failure, and they turned support load into a feature. Tuck has no sync yet, but the same idea applies now as a **storage and index health check**: rebuild the search index, re-run failed enrichment, find items whose media file is missing, report what it fixed |
-| **J2** | **In-item search / jump to the match** — *"when a search result involves a long block of text, I'd like a way to focus on the specific part where the keyword appears"* | ❌ | Tuck stores whole articles, OCR blocks and 300-comment threads. Finding the item is solved; finding the line inside it is not. This is a natural extension of the match-reason work |
+| **J1** | **Sync Doctor** — diagnoses sync problems in plain English and repairs them | ✅ *shipped 2026-09-02* as **Vault health** | Stash's single best idea. Sync failure is the category's defining failure, and they turned support load into a feature. Tuck has no sync yet, but the same idea applies now as a **storage and index health check**: rebuild the search index, re-run failed enrichment, find items whose media file is missing, report what it fixed |
+| **J2** | ✅ *shipped 2026-09-02* — **In-item search / jump to the match** — *"when a search result involves a long block of text, I'd like a way to focus on the specific part where the keyword appears"* | ❌ | Tuck stores whole articles, OCR blocks and 300-comment threads. Finding the item is solved; finding the line inside it is not. This is a natural extension of the match-reason work |
 | **J3** | **In-app voice notes** | ❌ | Tuck accepts shared audio but cannot record. Stashy captures voice notes directly - the fastest possible capture when your hands are busy |
 | **J4** | **Real document scanner** (edge detection, deskew, multi-page → PDF) | 🟡 | Home has a "Scan" button; there is no scanner behind it. ML Kit Document Scanner does this natively |
 | **J5** | **Checklists inside an item** | ❌ | Requested directly. Pairs naturally with the lifecycle work already shipped - a save becomes a small piece of work with steps |
@@ -491,9 +491,12 @@ B10 Markdown export · **working import** (Stash cannot restore its own export) 
 **H5 folder preservation** · **R1 offline page archive** — people screenshot because content
 disappears · H3 reader view · H6 refresh a save
 
-### Phase 3.5 — trust made visible
-**J1 health check** — rebuild the index, retry failed enrichment, find items whose media file is
-missing, and say what it fixed. Stash turned the same idea into their best-received feature.
+### Phase 3.5 — trust made visible — *done 2026-09-02*
+- [x] **J1 Vault health** — four checks (search index, background processing, missing files, unused
+  storage), each in plain language, each with a repair that reports what it did. Repairs never delete
+  a save: a missing file clears the link and keeps the item
+- [x] **J2 In-item search** — find and step through matches inside one item, across its content,
+  recognised text, notes and comments, with the containing section named
 
 ### Phase 4 — hardening before launch
 D10 measured budgets — the incumbent lags at **200 items**, so 10k is a marketing claim ·

@@ -60,6 +60,7 @@ object NavRoutes {
     const val SETTINGS = "settings"
     const val TRASH = "trash"
     const val FILING_RULES = "filing_rules"
+    const val VAULT_HEALTH = "vault_health"
     const val DETAIL = "detail/{itemId}"
     const val CATEGORY_DETAIL = "category_detail/{collectionId}/{collectionName}"
 

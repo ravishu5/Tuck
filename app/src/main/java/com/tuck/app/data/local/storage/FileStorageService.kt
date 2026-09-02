@@ -408,6 +408,17 @@ class FileStorageService @Inject constructor(
         }
     }
 
+    /**
+     * Every file Tuck has written, so the health check can spot files no database row
+     * points at any more. Thumbnails are excluded: they are regenerable and are keyed to
+     * their source rather than referenced directly by an item.
+     */
+    suspend fun listStoredFiles(): List<File> = withContext(Dispatchers.IO) {
+        listOf(imagesDir, pdfsDir, documentsDir)
+            .flatMap { it.listFiles()?.toList().orEmpty() }
+            .filter { it.isFile }
+    }
+
     suspend fun deleteFile(path: String?): Boolean = withContext(Dispatchers.IO) {
         if (path.isNullOrBlank()) return@withContext false
         try {

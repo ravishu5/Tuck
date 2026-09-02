@@ -31,6 +31,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.HealthAndSafety
 import androidx.compose.material.icons.filled.Rule
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
@@ -72,6 +73,7 @@ import com.tuck.app.ui.theme.TuckTheme
 @Composable
 fun SettingsScreen(
     onNavigateToFilingRules: () -> Unit,
+    onNavigateToVaultHealth: () -> Unit,
     onNavigateToTrash: () -> Unit,
     onNavigateBack: (() -> Unit)? = null,
     viewModel: SettingsViewModel = hiltViewModel()
@@ -364,6 +366,15 @@ fun SettingsScreen(
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
+
+                    SettingsActionRow(
+                        icon = Icons.Filled.HealthAndSafety,
+                        title = "Vault health",
+                        subtitle = "Check that every save is intact and searchable",
+                        onClick = onNavigateToVaultHealth
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     SettingsActionRow(
                         icon = Icons.Filled.Download,

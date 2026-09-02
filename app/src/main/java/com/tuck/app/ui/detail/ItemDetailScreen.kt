@@ -95,6 +95,15 @@ import java.util.Date
 import java.util.Locale
 import com.tuck.app.processing.ReminderPreset
 import com.tuck.app.ui.theme.TuckTheme
+import kotlinx.coroutines.launch
+import com.tuck.app.domain.model.SearchableBlock
+import com.tuck.app.domain.model.InItemSearch
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.foundation.layout.PaddingValues
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -110,6 +119,13 @@ fun ItemDetailScreen(
     var showCollectionDialog by remember { mutableStateOf(false) }
     var showFullImageViewer by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var findQuery by remember { mutableStateOf("") }
+    var findMatchIndex by remember { mutableIntStateOf(0) }
+    // Scroll offsets of the searchable regions, recorded as they lay out, so a match can
+    // be scrolled to. The screen is a plain scrolling Column rather than a lazy list, so
+    // there is no index to scroll to - only a pixel offset.
+    val blockOffsets = remember { mutableStateMapOf<String, Int>() }
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(uiState.isDeleted) {
         if (uiState.isDeleted) {
@@ -152,6 +168,25 @@ fun ItemDetailScreen(
                 .verticalScroll(scrollState)
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
+            FindWithinItem(
+                item = item,
+                commentsTree = uiState.commentsTree,
+                query = findQuery,
+                onQueryChange = {
+                    findQuery = it
+                    findMatchIndex = 0
+                },
+                matchIndex = findMatchIndex,
+                onStep = { forward, total ->
+                    findMatchIndex = InItemSearch.step(findMatchIndex, total, forward)
+                },
+                onJumpTo = { blockId ->
+                    blockOffsets[blockId]?.let { offset ->
+                        coroutineScope.launch { scrollState.animateScrollTo(offset) }
+                    }
+                }
+            )
+
             // Source & Date Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1236,3 +1271,124 @@ private fun FollowUpSection(
         }
     }
 }
+
+/**
+ * Find within one saved item.
+ *
+ * Search finds the item; this finds the line inside it. Tuck stores whole articles, pages
+ * of recognised text and long comment threads, so once an item is longer than a screen
+ * "it's in here somewhere" becomes its own problem.
+ *
+ * Collapsed to a single row until used, because most visits to an item are not searches.
+ */
+@Composable
+private fun FindWithinItem(
+    item: com.tuck.app.domain.model.SavedItem,
+    commentsTree: List<com.tuck.app.data.local.db.entity.SourceCommentEntity>,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    matchIndex: Int,
+    onStep: (forward: Boolean, total: Int) -> Unit,
+    onJumpTo: (blockId: String) -> Unit
+) {
+    val tuckColors = TuckTheme.colors
+    var isOpen by remember { mutableStateOf(false) }
+
+    val blocks: List<SearchableBlock> = remember(item, commentsTree) {
+        buildList<SearchableBlock> {
+            listOfNotNull(item.originalText, item.extractedText).firstOrNull()?.let {
+                add(SearchableBlock(BLOCK_CONTENT, "Content", 0, it))
+            }
+            item.ocrText?.takeIf { it.isNotBlank() }?.let {
+                add(SearchableBlock(BLOCK_OCR, "Recognised text", 1, it))
+            }
+            item.userNote?.takeIf { it.isNotBlank() }?.let {
+                add(SearchableBlock(BLOCK_NOTES, "Your notes", 2, it))
+            }
+            if (commentsTree.isNotEmpty()) {
+                add(
+                    SearchableBlock(
+                        BLOCK_COMMENTS,
+                        "Comments",
+                        3,
+                        commentsTree.joinToString(" ") { it.bodyText }
+                    )
+                )
+            }
+        }
+    }
+
+    // Nothing to search through: an item with only a title does not need this control.
+    if (blocks.isEmpty()) return
+
+    val matches = remember(blocks, query) { InItemSearch.find(blocks, query) }
+    val current = matches.getOrNull(matchIndex)
+
+    LaunchedEffect(current) {
+        current?.let { onJumpTo(it.blockId) }
+    }
+
+    if (!isOpen) {
+        TextButton(onClick = { isOpen = true }, contentPadding = PaddingValues(0.dp)) {
+            Icon(
+                imageVector = Icons.Filled.Search,
+                contentDescription = null,
+                tint = tuckColors.textSecondary,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(Modifier.width(6.dp))
+            Text("Find in this item", style = MaterialTheme.typography.labelLarge, color = tuckColors.textSecondary)
+        }
+        return
+    }
+
+    Column(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            placeholder = { Text("Find in this item") },
+            singleLine = true,
+            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+            trailingIcon = {
+                IconButton(onClick = {
+                    onQueryChange("")
+                    isOpen = false
+                }) {
+                    Icon(Icons.Filled.Close, contentDescription = "Close find")
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        if (query.isNotBlank()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = when {
+                        matches.isEmpty() -> "No matches in this item"
+                        else -> "${matchIndex + 1} of ${matches.size} · in ${current?.blockLabel.orEmpty()}"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (matches.isEmpty()) tuckColors.textMuted else tuckColors.textSecondary,
+                    modifier = Modifier.weight(1f)
+                )
+
+                if (matches.isNotEmpty()) {
+                    IconButton(onClick = { onStep(false, matches.size) }) {
+                        Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "Previous match")
+                    }
+                    IconButton(onClick = { onStep(true, matches.size) }) {
+                        Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Next match")
+                    }
+                }
+            }
+        }
+    }
+}
+
+private const val BLOCK_CONTENT = "content"
+private const val BLOCK_OCR = "ocr"
+private const val BLOCK_NOTES = "notes"
+private const val BLOCK_COMMENTS = "comments"

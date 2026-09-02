@@ -61,6 +61,12 @@ interface SavedItemDao {
     """)
     suspend fun getItemsByCollectionList(collectionId: Long): List<SavedItemEntity>
 
+    @Query("SELECT * FROM saved_items WHERE isDeleted = 0 AND processingStatus IN ('FAILED', 'PROCESSING')")
+    suspend fun getStalledItems(): List<SavedItemEntity>
+
+    @Query("SELECT * FROM saved_items WHERE isDeleted = 0 AND localFilePath IS NOT NULL AND localFilePath != ''")
+    suspend fun getItemsWithFiles(): List<SavedItemEntity>
+
     @Query("UPDATE saved_items SET remindAt = :remindAt, updatedAt = :now WHERE id = :id")
     suspend fun setRemindAt(id: Long, remindAt: Long?, now: Long = System.currentTimeMillis())
 

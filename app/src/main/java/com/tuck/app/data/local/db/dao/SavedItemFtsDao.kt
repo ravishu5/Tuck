@@ -16,5 +16,7 @@ interface SavedItemFtsDao {
     suspend fun searchFtsWithSnippet(ftsQuery: String): List<FtsSearchResult>
     suspend fun searchFtsRowIds(ftsQuery: String): List<Long>
     /** Drops and repopulates the whole index from the source tables. */
+    /** Every rowid currently in the index, to find saves that fell out of it. */
+    suspend fun allIndexedRowIds(): List<Long>
     suspend fun rebuildIndex()
 }
