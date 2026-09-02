@@ -1,20 +1,22 @@
 # Tuck — Future work
 
-Items deferred out of the active backlog. Nothing here is blocked; it is simply not next.
-Each entry keeps its original id so it can be traced back to `FEATURE_BACKLOG.md`.
+Items deferred out of the active backlog. Each entry keeps its original id so it can be traced
+back to `FEATURE_BACKLOG.md`.
+
+---
+
+## Shipped since this file was written
+
+| Item | Where it landed |
+|---|---|
+| J3 — In-app voice notes | `VoiceNoteRecorder`, the **Voice** quick action on Home, `AudioPlayerBlock` in the detail screen |
+| J5 — Checklists inside an item | `checklist_items` table (schema v8), inline list in the detail screen |
+| J6 — Move an item from the long-press menu | `ItemQuickActionsSheet` |
+| J8 — Storage reclaim UI | `StorageBreakdown` in Settings, on top of J1's orphan cleanup |
 
 ---
 
 ## From Section J — remaining competitor gaps
-
-### J3 — In-app voice notes
-Tuck accepts shared audio but cannot record. Stashy captures voice notes directly, which is
-the fastest possible capture when hands or eyes are busy.
-
-**Scope:** a record button in the quick-capture sheet, `MediaRecorder` to app-private storage,
-waveform-free playback in the detail screen, duration on the card.
-**Note:** requires `RECORD_AUDIO`, which is a sensitive permission — request it at the point of
-first use, never at startup, and state plainly that recordings never leave the device.
 
 ### J4 — Real document scanner
 Home already shows a **Scan** button with no scanner behind it — the app promises something it
@@ -23,17 +25,8 @@ does not do, which is worse than not offering it.
 **Scope:** ML Kit Document Scanner (edge detection, deskew, multi-page, PDF output) behind the
 existing button. Falls back to the camera picker where Play Services is unavailable.
 **Recommended as the next J item**, precisely because the promise already exists in the UI.
-
-### J5 — Checklists inside an item
-Requested directly on the Stashy thread. Pairs with the lifecycle work already shipped: a save
-becomes a small piece of work with steps rather than one binary done state.
-
-**Scope:** a `checklist_items` table keyed to an item, inline add/tick/reorder in the detail
-screen, and a progress count on the card. Feeds the per-collection progress idea in the design
-review.
-
-### J6 — Move an item from the long-press menu
-Bulk move exists in Inbox; moving a single item currently means opening it first.
+**Needs a decision first:** ML Kit Document Scanner is a new dependency, and the APK is already
+43.6 MB against a 25 MB budget — see the size row below.
 
 ### J7 — Localisation
 Spanish, French and Italian were requested across *both* competitors' threads, and one commenter
@@ -41,14 +34,6 @@ said the app was not worth it to them without their language. Spanish alone is 4
 
 **Scope:** extract every hardcoded string to `strings.xml` first — that is the real work — then
 translate. Do this before the string count grows further.
-
-### J8 — Storage reclaim UI
-A competitor's user: *"it created a folder that gets thousands of files and fills up my hard
-drive. Money lost."*
-
-**Scope:** per-category storage breakdown (images, PDFs, documents, thumbnails, cache) with a
-one-tap reclaim. **Partly done**: Vault health (J1) already finds and deletes orphaned files and
-reports the bytes freed; what remains is the breakdown view.
 
 ---
 

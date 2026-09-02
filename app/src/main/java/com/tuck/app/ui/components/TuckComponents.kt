@@ -219,6 +219,7 @@ fun TuckPlatformBadge(
         item.contentType == ContentType.CONTACT -> Triple("Contact", tuckColors.palette[PaletteSlot.SECONDARY_SOFT].fill, Icons.Filled.Description)
         item.contentType == ContentType.LOCATION -> Triple("Location", tuckColors.palette[PaletteSlot.SECONDARY_SOFT].fill, Icons.Filled.Language)
         item.contentType == ContentType.VIDEO -> Triple("Video", tuckColors.palette[PaletteSlot.TERTIARY_DEEP].fill, Icons.Filled.PlayArrow)
+        item.contentType == ContentType.AUDIO -> Triple("Voice", tuckColors.palette[PaletteSlot.TERTIARY_CORE].fill, Icons.Filled.Mic)
         else -> Triple(item.sourceDomain ?: item.contentType.displayName, tuckColors.accent, Icons.Filled.Language)
     }
 

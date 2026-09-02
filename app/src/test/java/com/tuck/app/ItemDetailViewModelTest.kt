@@ -33,6 +33,11 @@ class ItemDetailViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private val savedStateHandle = SavedStateHandle(mapOf("itemId" to 42L))
+    private val checklistDao: com.tuck.app.data.local.db.dao.ChecklistDao = mockk(relaxed = true) {
+        // A relaxed mock returns a Flow that never emits, and combine waits for every
+        // source - so without this the whole detail state would never produce a value.
+        every { getForItem(any()) } returns flowOf(emptyList())
+    }
     private val savedItemRepository = mockk<SavedItemRepository>(relaxed = true)
     private val collectionRepository = mockk<CollectionRepository>(relaxed = true)
     private val sourceContentDao = mockk<SourceContentDao>(relaxed = true)
@@ -88,6 +93,7 @@ class ItemDetailViewModelTest {
         val viewModel = ItemDetailViewModel(
             savedStateHandle = savedStateHandle,
             savedItemRepository = savedItemRepository,
+            checklistDao = checklistDao,
             collectionRepository = collectionRepository,
             sourceContentDao = sourceContentDao,
             relatedItemsEngine = relatedItemsEngine

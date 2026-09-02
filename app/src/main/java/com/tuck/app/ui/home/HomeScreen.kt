@@ -1,7 +1,12 @@
 package com.tuck.app.ui.home
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.core.content.ContextCompat
+import androidx.compose.ui.platform.LocalContext
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -36,7 +41,9 @@ import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notes
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Search
@@ -60,6 +67,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -124,6 +133,37 @@ fun HomeScreen(
     var pasteContent by remember { mutableStateOf("") }
     var isDismissedResurface by remember { mutableStateOf(false) }
 
+    val context = LocalContext.current
+    val isRecording by viewModel.isRecording.collectAsStateWithLifecycle()
+    var voiceMessage by remember { mutableStateOf<String?>(null) }
+
+    fun hasAudioPermission() = ContextCompat.checkSelfPermission(
+        context, Manifest.permission.RECORD_AUDIO
+    ) == PackageManager.PERMISSION_GRANTED
+
+    val audioPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        // Start straight away on grant, so the tap that asked is the tap that records.
+        if (granted) {
+            if (!viewModel.startVoiceNote()) voiceMessage = "Could not start recording"
+        } else {
+            voiceMessage = "Microphone access is needed for voice notes"
+        }
+    }
+
+    LaunchedEffect(voiceMessage) {
+        voiceMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            voiceMessage = null
+        }
+    }
+
+    // A recording left running when the screen goes away would hold the mic open.
+    DisposableEffect(Unit) {
+        onDispose { if (viewModel.isRecording.value) viewModel.cancelVoiceNote() }
+    }
+
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 20)
     ) { uris ->
@@ -182,10 +222,25 @@ fun HomeScreen(
                     onPdf = {
                         docPickerLauncher.launch(arrayOf("application/pdf", "text/*"))
                     },
-                    onPaste = {
-                        pasteContent = ""
-                        showPasteDialog = true
-                    }
+                    onVoice = {
+                        if (isRecording) {
+                            viewModel.stopAndSaveVoiceNote { saved ->
+                                voiceMessage = if (saved) {
+                                    "Voice note saved"
+                                } else {
+                                    "Too short to save"
+                                }
+                            }
+                        } else if (hasAudioPermission()) {
+                            if (!viewModel.startVoiceNote()) {
+                                voiceMessage = "Could not start recording"
+                            }
+                        } else {
+                            // Asked at the point of use, never on first launch.
+                            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                        }
+                    },
+                    isRecording = isRecording
                 )
                 Spacer(modifier = Modifier.height(14.dp))
             }
@@ -559,7 +614,8 @@ private fun HomeQuickActionRow(
     onNote: () -> Unit,
     onScan: () -> Unit,
     onPdf: () -> Unit,
-    onPaste: () -> Unit
+    onVoice: () -> Unit,
+    isRecording: Boolean
 ) {
     Row(
         modifier = Modifier
@@ -592,12 +648,15 @@ private fun HomeQuickActionRow(
             onClick = onPdf
         )
         QuickActionButton(
-            label = "Paste",
-            sublabel = "Clipboard",
-            icon = Icons.Filled.ContentPaste,
-            tint = TuckTheme.colors.palette[PaletteSlot.PRIMARY_SOFT].fill,
+            label = if (isRecording) "Stop" else "Voice",
+            sublabel = if (isRecording) "Recording" else "Record",
+            icon = if (isRecording) Icons.Filled.Stop else Icons.Filled.Mic,
+            // The recording state gets the deep tone so a live mic is unmistakable.
+            tint = TuckTheme.colors.palette[
+                if (isRecording) PaletteSlot.PRIMARY_DEEP else PaletteSlot.PRIMARY_SOFT
+            ].fill,
             modifier = Modifier.weight(1f),
-            onClick = onPaste
+            onClick = onVoice
         )
     }
 }

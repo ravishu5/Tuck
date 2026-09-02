@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.media.MediaPlayer
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -37,6 +38,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
@@ -51,7 +53,9 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
@@ -62,6 +66,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -721,6 +726,12 @@ fun ItemPreviewCard(
                                 .clickable { onOpenImage() },
                             contentScale = ContentScale.Crop
                         )
+                    }
+                }
+
+                ContentType.AUDIO -> {
+                    if (item.localFilePath != null) {
+                        AudioPlayerBlock(path = item.localFilePath)
                     }
                 }
 
@@ -1517,4 +1528,99 @@ private fun ChecklistSection(
             }
         }
     }
+}
+
+/**
+ * Playback for voice notes and any shared audio.
+ *
+ * A plain MediaPlayer: these are short recordings held in app-private storage, so there
+ * is nothing for a heavier player to buy us.
+ */
+@Composable
+private fun AudioPlayerBlock(path: String) {
+    val file = remember(path) { File(path) }
+    var player by remember { mutableStateOf<MediaPlayer?>(null) }
+    var isPlaying by remember { mutableStateOf(false) }
+    var positionMs by remember { mutableIntStateOf(0) }
+    var durationMs by remember { mutableIntStateOf(0) }
+
+    DisposableEffect(path) {
+        onDispose {
+            player?.release()
+            player = null
+        }
+    }
+
+    LaunchedEffect(isPlaying) {
+        while (isPlaying) {
+            player?.let { positionMs = it.currentPosition }
+            kotlinx.coroutines.delay(200)
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(20.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            FilledIconButton(
+                onClick = {
+                    val active = player
+                    when {
+                        active == null -> {
+                            // Created on first play so a note you never open costs nothing.
+                            val created = MediaPlayer().apply {
+                                setDataSource(file.absolutePath)
+                                prepare()
+                                setOnCompletionListener {
+                                    isPlaying = false
+                                    positionMs = 0
+                                    seekTo(0)
+                                }
+                            }
+                            durationMs = created.duration
+                            created.start()
+                            player = created
+                            isPlaying = true
+                        }
+                        active.isPlaying -> {
+                            active.pause()
+                            isPlaying = false
+                        }
+                        else -> {
+                            active.start()
+                            isPlaying = true
+                        }
+                    }
+                }
+            ) {
+                Icon(
+                    imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    contentDescription = if (isPlaying) "Pause" else "Play"
+                )
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                val total = if (durationMs > 0) durationMs else 0
+                LinearProgressIndicator(
+                    progress = {
+                        if (total > 0) (positionMs.toFloat() / total).coerceIn(0f, 1f) else 0f
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "${formatClock(positionMs)} / ${formatClock(total)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+private fun formatClock(ms: Int): String {
+    val totalSeconds = ms / 1000
+    return "%d:%02d".format(totalSeconds / 60, totalSeconds % 60)
 }

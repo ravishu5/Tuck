@@ -22,6 +22,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
@@ -58,6 +59,7 @@ class HomeViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val savedItemRepository: SavedItemRepository,
     private val collectionRepository: CollectionRepository,
+    private val voiceNoteRecorder: com.tuck.app.processing.VoiceNoteRecorder,
     private val screenshotImporter: ScreenshotImporter,
     private val fileStorageService: FileStorageService,
     private val urlMetadataProcessor: UrlMetadataProcessor,
@@ -298,6 +300,52 @@ class HomeViewModel @Inject constructor(
             } finally {
                 _isImporting.value = false
             }
+        }
+    }
+
+    // --- Voice notes -------------------------------------------------------------
+
+    private val _isRecording = MutableStateFlow(false)
+    val isRecording: StateFlow<Boolean> = _isRecording.asStateFlow()
+
+    fun startVoiceNote(): Boolean {
+        val started = voiceNoteRecorder.start()
+        _isRecording.value = started
+        return started
+    }
+
+    fun cancelVoiceNote() {
+        voiceNoteRecorder.cancel()
+        _isRecording.value = false
+    }
+
+    /** Stops recording and saves it. Returns false when nothing usable was captured. */
+    fun stopAndSaveVoiceNote(onResult: (Boolean) -> Unit) {
+        val note = voiceNoteRecorder.stop()
+        _isRecording.value = false
+        if (note == null) {
+            onResult(false)
+            return
+        }
+        viewModelScope.launch {
+            val seconds = (note.durationMs / 1000).coerceAtLeast(1)
+            val item = SavedItem(
+                contentType = ContentType.AUDIO,
+                title = "Voice note · ${seconds}s",
+                localFilePath = note.file.absolutePath,
+                mimeType = "audio/mp4",
+                sourceDomain = "Voice note",
+                sourceApp = "Tuck"
+            )
+            val id = savedItemRepository.insertItem(item)
+            if (id > 0) {
+                WorkManager.getInstance(context).enqueue(
+                    OneTimeWorkRequestBuilder<ItemProcessingWorker>()
+                        .setInputData(workDataOf(ItemProcessingWorker.KEY_ITEM_ID to id))
+                        .build()
+                )
+            }
+            onResult(id > 0)
         }
     }
 
