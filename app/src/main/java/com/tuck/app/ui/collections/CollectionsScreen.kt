@@ -1,5 +1,9 @@
 package com.tuck.app.ui.collections
 
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+import com.tuck.app.R
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -120,7 +124,7 @@ fun CollectionsScreen(
                             IconButton(onClick = { viewModel.selectCollection(null) }) {
                                 Icon(
                                     imageVector = Icons.Filled.ArrowBack,
-                                    contentDescription = "Back",
+                                    contentDescription = stringResource(R.string.collections_back),
                                     tint = tuckColors.textPrimary
                                 )
                             }
@@ -133,7 +137,11 @@ fun CollectionsScreen(
                                     color = tuckColors.textPrimary
                                 )
                                 Text(
-                                    text = "${uiState.collectionItems.size} items",
+                                    text = pluralStringResource(
+                                        R.plurals.item_count,
+                                        uiState.collectionItems.size,
+                                        uiState.collectionItems.size
+                                    ),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = tuckColors.textMuted
                                 )
@@ -144,7 +152,7 @@ fun CollectionsScreen(
                             IconButton(onClick = { viewModel.deleteCollection(currentSelected.id) }) {
                                 Icon(
                                     imageVector = Icons.Filled.Delete,
-                                    contentDescription = "Delete Collection",
+                                    contentDescription = stringResource(R.string.collections_delete_collection),
                                     tint = tuckColors.accent.copy(alpha = 0.8f)
                                 )
                             }
@@ -157,7 +165,7 @@ fun CollectionsScreen(
                             query = categorySearchQuery,
                             onQueryChange = { categorySearchQuery = it },
                             onSearch = {},
-                            placeholder = "Search in ${currentSelected.name}...",
+                            placeholder = stringResource(R.string.search_in_collection, currentSelected.name),
                             onClear = { categorySearchQuery = "" }
                         )
                     }
@@ -166,7 +174,7 @@ fun CollectionsScreen(
 
                     if (filteredItems.isEmpty()) {
                         TuckEmptyState(
-                            title = "Nothing here yet.",
+                            title = stringResource(R.string.empty_nothing_here_yet),
                             description = "Share something to Tuck\nand file it into ${currentSelected.name}.",
                             icon = Icons.Filled.Folder,
                             modifier = Modifier.padding(top = 40.dp)
@@ -187,7 +195,7 @@ fun CollectionsScreen(
                             if (outstanding.isNotEmpty() && finished.isNotEmpty()) {
                                 item(key = "hdr_open") {
                                     CollectionSectionHeader(
-                                        label = "Still to go",
+                                        label = stringResource(R.string.collections_still_to_go),
                                         count = outstanding.size
                                     )
                                 }
@@ -206,7 +214,7 @@ fun CollectionsScreen(
                             if (finished.isNotEmpty()) {
                                 item(key = "hdr_done") {
                                     CollectionSectionHeader(
-                                        label = "Done",
+                                        label = stringResource(R.string.collections_done),
                                         count = finished.size
                                     )
                                 }
@@ -258,7 +266,7 @@ fun CollectionsScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Collections",
+                                    text = stringResource(R.string.collections_collections),
                                     style = TuckTheme.typography.displayLarge,
                                     color = tuckColors.textPrimary
                                 )
@@ -268,7 +276,10 @@ fun CollectionsScreen(
                                 ) {
                                     Icon(
                                         imageVector = if (isGridView) Icons.Filled.ViewList else Icons.Filled.GridView,
-                                        contentDescription = if (isGridView) "Switch to List View" else "Switch to Grid View",
+                                        contentDescription = stringResource(
+                            if (isGridView) R.string.action_switch_to_list
+                            else R.string.action_switch_to_grid
+                        ),
                                         tint = tuckColors.textSecondary,
                                         modifier = Modifier.size(22.dp)
                                     )
@@ -290,7 +301,7 @@ fun CollectionsScreen(
                         ) {
                             item {
                                 FilterPill(
-                                    label = "All",
+                                    label = stringResource(R.string.collections_all),
                                     isSelected = filterTab == 0,
                                     count = uiState.customCollections.size + uiState.autoCollections.size,
                                     onClick = { filterTab = 0 }
@@ -298,7 +309,7 @@ fun CollectionsScreen(
                             }
                             item {
                                 FilterPill(
-                                    label = "Curated",
+                                    label = stringResource(R.string.collections_curated),
                                     isSelected = filterTab == 1,
                                     count = uiState.customCollections.size,
                                     onClick = { filterTab = 1 }
@@ -306,7 +317,7 @@ fun CollectionsScreen(
                             }
                             item {
                                 FilterPill(
-                                    label = "Smart",
+                                    label = stringResource(R.string.collections_smart),
                                     isSelected = filterTab == 2,
                                     count = uiState.autoCollections.size,
                                     onClick = { filterTab = 2 }
@@ -316,7 +327,7 @@ fun CollectionsScreen(
                             if (lockedCount > 0) {
                                 item {
                                     FilterPill(
-                                        label = "Locked 🔒",
+                                        label = stringResource(R.string.collections_locked),
                                         isSelected = filterTab == 3,
                                         count = lockedCount,
                                         onClick = { filterTab = 3 }
@@ -329,8 +340,14 @@ fun CollectionsScreen(
                     if (displayCollections.isEmpty()) {
                         item(span = { GridItemSpan(maxLineSpan) }) {
                             TuckEmptyState(
-                                title = if (filterTab == 1) "No custom collections" else "No collections found",
-                                description = if (filterTab == 1) "Create your first custom collection with (+)" else "Collections will appear automatically as you save items.",
+                                title = stringResource(
+                        if (filterTab == 1) R.string.empty_no_custom_collections
+                        else R.string.empty_no_collections_found
+                    ),
+                                description = stringResource(
+                        if (filterTab == 1) R.string.empty_create_first_collection
+                        else R.string.empty_collections_appear
+                    ),
                                 icon = Icons.Filled.Folder,
                                 modifier = Modifier.padding(top = 32.dp)
                             )
@@ -397,7 +414,7 @@ fun CollectionsScreen(
             if (uiState.selectedCollection == null) {
                 TuckFab(
                     onClick = { showCreateDialog = true },
-                    contentDescription = "New Collection",
+                    contentDescription = stringResource(R.string.collections_new_collection),
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(end = 16.dp, bottom = 16.dp)
@@ -415,7 +432,7 @@ fun CollectionsScreen(
             },
             title = {
                 Text(
-                    text = "New Collection",
+                    text = stringResource(R.string.collections_new_collection),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.ExtraBold,
                     color = tuckColors.textPrimary
@@ -424,7 +441,7 @@ fun CollectionsScreen(
             text = {
                 Column {
                     Text(
-                        text = "Create a custom collection for organizing your saves:",
+                        text = stringResource(R.string.collections_create_a_custom_collection_for_organizing),
                         style = MaterialTheme.typography.bodySmall,
                         color = tuckColors.textSecondary
                     )
@@ -434,7 +451,7 @@ fun CollectionsScreen(
                         onValueChange = { newCollectionName = it },
                         placeholder = {
                             Text(
-                                text = "e.g. Research, Tech, Recipes",
+                                text = stringResource(R.string.collections_e_g_research_tech_recipes),
                                 color = tuckColors.textMuted,
                                 style = MaterialTheme.typography.bodyMedium
                             )
@@ -455,7 +472,7 @@ fun CollectionsScreen(
                     Spacer(modifier = Modifier.height(14.dp))
 
                     Text(
-                        text = "CHOOSE COLOR",
+                        text = stringResource(R.string.collections_choose_color),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = tuckColors.textSecondary,
@@ -480,7 +497,7 @@ fun CollectionsScreen(
                                 if (isSelected) {
                                     Icon(
                                         imageVector = Icons.Filled.Check,
-                                        contentDescription = "Selected",
+                                        contentDescription = stringResource(R.string.collections_selected),
                                         tint = colorEntry.foreground,
                                         modifier = Modifier.size(16.dp)
                                     )
@@ -507,7 +524,7 @@ fun CollectionsScreen(
                     ),
                     enabled = newCollectionName.isNotBlank()
                 ) {
-                    Text("Create", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.collections_create), fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -516,7 +533,7 @@ fun CollectionsScreen(
                     newCollectionName = ""
                     selectedColorId = "terracotta"
                 }) {
-                    Text("Cancel", color = tuckColors.textMuted)
+                    Text(stringResource(R.string.collections_cancel), color = tuckColors.textMuted)
                 }
             },
             containerColor = tuckColors.surface,

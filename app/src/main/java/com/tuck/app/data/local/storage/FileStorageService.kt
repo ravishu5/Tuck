@@ -135,10 +135,15 @@ class FileStorageService @Inject constructor(
 
     private fun readDurationMs(file: File, mimeType: String?): Long = try {
         if (mimeType?.startsWith("video/") == true || mimeType?.startsWith("audio/") == true) {
-            android.media.MediaMetadataRetriever().use { retriever ->
+            // MediaMetadataRetriever only became AutoCloseable in API 29, and minSdk is 26 -
+            // `use` here would have thrown NoSuchMethodError on Android 8 and 9.
+            val retriever = android.media.MediaMetadataRetriever()
+            try {
                 retriever.setDataSource(file.absolutePath)
                 retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
                     ?.toLongOrNull() ?: 0L
+            } finally {
+                retriever.release()
             }
         } else {
             0L

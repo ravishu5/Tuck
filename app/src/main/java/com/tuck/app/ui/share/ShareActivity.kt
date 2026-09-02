@@ -1,5 +1,8 @@
 package com.tuck.app.ui.share
 
+import androidx.compose.ui.res.stringResource
+import com.tuck.app.R
+
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -176,7 +179,7 @@ fun ShareDialogOverlay(
                                 )
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Text(
-                                    text = "Saving to Tuck…",
+                                    text = stringResource(R.string.share_saving_to_tuck),
                                     style = MaterialTheme.typography.titleMedium,
                                     color = tuckColors.textPrimary
                                 )
@@ -197,7 +200,7 @@ fun ShareDialogOverlay(
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
                                             imageVector = Icons.Filled.Check,
-                                            contentDescription = "Saved",
+                                            contentDescription = stringResource(R.string.share_saved),
                                             tint = tuckColors.success,
                                             modifier = Modifier.size(20.dp)
                                         )
@@ -206,7 +209,7 @@ fun ShareDialogOverlay(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "✓ Tucked into Vault",
+                                        text = stringResource(R.string.share_tucked_into_vault),
                                         style = MaterialTheme.typography.titleMedium,
                                         color = tuckColors.textPrimary,
                                         fontWeight = FontWeight.Bold
@@ -235,7 +238,7 @@ fun ShareDialogOverlay(
 
                             // Category Selector Section
                             Text(
-                                text = "Add to collection:",
+                                text = stringResource(R.string.share_add_to_collection),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = tuckColors.textSecondary
@@ -270,7 +273,7 @@ fun ShareDialogOverlay(
                                         )
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Text(
-                                            text = "New",
+                                            text = stringResource(R.string.share_new),
                                             style = MaterialTheme.typography.labelMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = tuckColors.accent
@@ -307,7 +310,7 @@ fun ShareDialogOverlay(
                                         .weight(1f)
                                         .height(46.dp)
                                 ) {
-                                    Text("Done", fontWeight = FontWeight.Bold)
+                                    Text(stringResource(R.string.collections_done), fontWeight = FontWeight.Bold)
                                 }
 
                                 Button(
@@ -322,7 +325,7 @@ fun ShareDialogOverlay(
                                         .weight(1.2f)
                                         .height(46.dp)
                                 ) {
-                                    Text("Open in Tuck", fontWeight = FontWeight.SemiBold)
+                                    Text(stringResource(R.string.share_open_in_tuck), fontWeight = FontWeight.SemiBold)
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
@@ -336,7 +339,7 @@ fun ShareDialogOverlay(
 
                         is ShareUiState.Error -> {
                             Text(
-                                text = "Could not save item",
+                                text = stringResource(R.string.share_could_not_save_item),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = tuckColors.destructive,
                                 fontWeight = FontWeight.Bold
@@ -352,7 +355,7 @@ fun ShareDialogOverlay(
                                 shape = tuckShapes.small,
                                 colors = ButtonDefaults.buttonColors(containerColor = tuckColors.accent)
                             ) {
-                                Text("Dismiss", fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.components_dismiss), fontWeight = FontWeight.Bold)
                             }
                         }
 
@@ -370,7 +373,7 @@ fun ShareDialogOverlay(
             onDismissRequest = { onOpenCustomCategoryDialog(false) },
             title = {
                 Text(
-                    text = "New Category",
+                    text = stringResource(R.string.share_new_category),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = tuckColors.textPrimary
@@ -380,7 +383,7 @@ fun ShareDialogOverlay(
                 OutlinedTextField(
                     value = newCatName,
                     onValueChange = { newCatName = it },
-                    placeholder = { Text("Category name…", color = tuckColors.textMuted) },
+                    placeholder = { Text(stringResource(R.string.share_category_name), color = tuckColors.textMuted) },
                     singleLine = true,
                     shape = tuckShapes.medium,
                     colors = OutlinedTextFieldDefaults.colors(
@@ -409,12 +412,12 @@ fun ShareDialogOverlay(
                     ),
                     enabled = newCatName.isNotBlank()
                 ) {
-                    Text("Add", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.share_add), fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { onOpenCustomCategoryDialog(false) }) {
-                    Text("Cancel", color = tuckColors.textMuted)
+                    Text(stringResource(R.string.collections_cancel), color = tuckColors.textMuted)
                 }
             },
             containerColor = tuckColors.surface,

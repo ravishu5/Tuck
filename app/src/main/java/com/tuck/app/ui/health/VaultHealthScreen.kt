@@ -1,5 +1,8 @@
 package com.tuck.app.ui.health
 
+import androidx.compose.ui.res.stringResource
+import com.tuck.app.R
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -69,15 +72,15 @@ fun VaultHealthScreen(
         containerColor = tuckColors.canvas,
         topBar = {
             TopAppBar(
-                title = { Text("Vault health") },
+                title = { Text(stringResource(R.string.health_vault_health)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Filled.ArrowBack, contentDescription = stringResource(R.string.collections_back))
                     }
                 },
                 actions = {
                     TextButton(onClick = { viewModel.runCheck() }, enabled = !uiState.isChecking) {
-                        Text("Check again")
+                        Text(stringResource(R.string.health_check_again))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = tuckColors.canvas)
@@ -99,7 +102,7 @@ fun VaultHealthScreen(
             item {
                 Text(
                     text = if (report?.isAllClear == true) {
-                        "Everything checks out. Your saves are complete and searchable."
+                        stringResource(R.string.health_all_clear)
                     } else {
                         "${report?.problemCount ?: 0} things need attention. Nothing here deletes " +
                             "a save - repairs only rebuild, retry or free unused space."
@@ -142,7 +145,12 @@ fun VaultHealthScreen(
                         ),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(if (uiState.isRepairing) "Repairing…" else "Repair everything")
+                        Text(
+                    stringResource(
+                        if (uiState.isRepairing) R.string.action_repairing
+                        else R.string.action_repair_everything
+                    )
+                )
                     }
                 }
             }

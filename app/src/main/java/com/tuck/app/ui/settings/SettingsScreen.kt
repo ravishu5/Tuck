@@ -1,5 +1,8 @@
 package com.tuck.app.ui.settings
 
+import androidx.compose.ui.res.stringResource
+import com.tuck.app.R
+
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -133,7 +136,7 @@ fun SettingsScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
+                                contentDescription = stringResource(R.string.collections_back),
                                 tint = tuckColors.textPrimary
                             )
                         }
@@ -141,12 +144,12 @@ fun SettingsScreen(
                     }
                     Column {
                         Text(
-                            text = "Settings",
+                            text = stringResource(R.string.home_settings),
                             style = TuckTheme.typography.displayLarge,
                             color = tuckColors.textPrimary
                         )
                         Text(
-                            text = "Personalize your Tuck experience and digital vault.",
+                            text = stringResource(R.string.settings_personalize_your_tuck_experience_and_digital),
                             style = MaterialTheme.typography.bodyMedium,
                             color = tuckColors.textSecondary
                         )
@@ -173,14 +176,14 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Make Tuck yours",
+                            text = stringResource(R.string.settings_make_tuck_yours),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.ExtraBold,
                             color = tuckColors.textPrimary
                         )
                     }
                     Text(
-                        text = "Choose a visual theme designed with intentional color harmony.",
+                        text = stringResource(R.string.settings_choose_a_visual_theme_designed_with),
                         style = MaterialTheme.typography.bodySmall,
                         color = tuckColors.textSecondary
                     )
@@ -202,7 +205,7 @@ fun SettingsScreen(
 
                     // Light / Dark / System Mode Selector
                     Text(
-                        text = "Appearance Mode",
+                        text = stringResource(R.string.home_appearance_mode),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = tuckColors.textPrimary
@@ -247,20 +250,20 @@ fun SettingsScreen(
                         ) {
                             Column {
                                 Text(
-                                    text = "Inspect Color Palettes",
+                                    text = stringResource(R.string.settings_inspect_color_palettes),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = tuckColors.textPrimary
                                 )
                                 Text(
-                                    text = "Review 8-hue slots, contrast ratios & CVD simulations",
+                                    text = stringResource(R.string.settings_review_8_hue_slots_contrast_ratios),
                                     style = MaterialTheme.typography.bodySmall,
                                     fontSize = 11.sp,
                                     color = tuckColors.textSecondary
                                 )
                             }
                             Text(
-                                text = "View →",
+                                text = stringResource(R.string.settings_view),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = tuckColors.accent
@@ -281,7 +284,7 @@ fun SettingsScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Tuck Intelligence",
+                        text = stringResource(R.string.settings_tuck_intelligence),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.ExtraBold,
                         color = tuckColors.textPrimary
@@ -364,7 +367,7 @@ fun SettingsScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Vault & Storage",
+                        text = stringResource(R.string.settings_vault_storage),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.ExtraBold,
                         color = tuckColors.textPrimary
@@ -453,13 +456,13 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.width(14.dp))
                     Column {
                         Text(
-                            text = "100% Local-First & Private",
+                            text = stringResource(R.string.settings_100_local_first_private),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             color = tuckColors.textPrimary
                         )
                         Text(
-                            text = "Your data, OCR text, and saved content live entirely on this device.",
+                            text = stringResource(R.string.settings_your_data_ocr_text_and_saved),
                             style = MaterialTheme.typography.bodySmall,
                             color = tuckColors.textSecondary
                         )
@@ -477,13 +480,13 @@ fun SettingsScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Tuck v1.0.0",
+                    text = stringResource(R.string.settings_tuck_v1_0_0),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = tuckColors.textMuted
                 )
                 Text(
-                    text = "Tuck it away. Find it later.",
+                    text = stringResource(R.string.settings_tuck_it_away_find_it_later),
                     style = MaterialTheme.typography.bodySmall,
                     color = tuckColors.textMuted
                 )
@@ -630,7 +633,7 @@ private fun StorageBreakdown(
             color = tuckColors.textPrimary
         )
         Text(
-            text = "used on this device",
+            text = stringResource(R.string.settings_used_on_this_device),
             style = MaterialTheme.typography.bodySmall,
             color = tuckColors.textMuted
         )
@@ -639,7 +642,7 @@ private fun StorageBreakdown(
 
         if (segments.isEmpty()) {
             Text(
-                text = "Nothing stored yet.",
+                text = stringResource(R.string.settings_nothing_stored_yet),
                 style = MaterialTheme.typography.bodySmall,
                 color = tuckColors.textMuted
             )
@@ -695,13 +698,13 @@ private fun StorageBreakdown(
             Spacer(modifier = Modifier.height(12.dp))
             TextButton(onClick = onReclaim, contentPadding = PaddingValues(0.dp)) {
                 Text(
-                    text = "Reclaim ${formatBytes(usage.reclaimableBytes)}",
+                    text = stringResource(R.string.reclaim_bytes, formatBytes(usage.reclaimableBytes)),
                     fontWeight = FontWeight.Bold,
                     color = tuckColors.accent
                 )
             }
             Text(
-                text = "Removes previews and cache only. Your saves are untouched.",
+                text = stringResource(R.string.settings_removes_previews_and_cache_only_your),
                 style = MaterialTheme.typography.labelSmall,
                 color = tuckColors.textMuted
             )

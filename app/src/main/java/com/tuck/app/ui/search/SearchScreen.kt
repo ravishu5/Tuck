@@ -1,5 +1,8 @@
 package com.tuck.app.ui.search
 
+import androidx.compose.ui.res.stringResource
+import com.tuck.app.R
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -89,7 +92,7 @@ fun SearchScreen(
                 query = uiState.query,
                 onQueryChange = { viewModel.onQueryChange(it) },
                 onSearch = { focusManager.clearFocus() },
-                placeholder = "Search anything...",
+                placeholder = stringResource(R.string.components_search_anything),
                 focusRequester = focusRequester,
                 onClear = { viewModel.onQueryChange("") }
             )
@@ -121,7 +124,7 @@ fun SearchScreen(
                         trailingIcon = {
                             Icon(
                                 imageVector = Icons.Filled.Close,
-                                contentDescription = "Remove ${token.label} filter",
+                                contentDescription = stringResource(R.string.remove_filter, token.label),
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -142,7 +145,7 @@ fun SearchScreen(
         } else {
             if (uiState.results.isEmpty()) {
                 TuckEmptyState(
-                    title = "Nothing tucked matches that.",
+                    title = stringResource(R.string.empty_no_search_match),
                     description = "Try searching:\n\"React\"\n\"Travel\"\n\"things I saved last week\"",
                     icon = Icons.Filled.Search,
                     modifier = Modifier.padding(top = 40.dp)
@@ -191,7 +194,7 @@ private fun SearchFiltersRow(
         // Favorites Filter
         item {
             TuckCategoryChip(
-                label = "Favorites",
+                label = stringResource(R.string.favorites_favorites),
                 isSelected = isFavoriteOnly,
                 onClick = onToggleFavorite,
                 icon = if (isFavoriteOnly) "⭐" else null
@@ -201,7 +204,7 @@ private fun SearchFiltersRow(
         // Date Range: 7 Days
         item {
             TuckCategoryChip(
-                label = "Past 7 Days",
+                label = stringResource(R.string.search_past_7_days),
                 isSelected = selectedDays == 7,
                 onClick = { onSelectDays(if (selectedDays == 7) null else 7) }
             )
@@ -210,7 +213,7 @@ private fun SearchFiltersRow(
         // Date Range: 30 Days
         item {
             TuckCategoryChip(
-                label = "Past 30 Days",
+                label = stringResource(R.string.search_past_30_days),
                 isSelected = selectedDays == 30,
                 onClick = { onSelectDays(if (selectedDays == 30) null else 30) }
             )
@@ -219,7 +222,7 @@ private fun SearchFiltersRow(
         // Content Types
         item {
             TuckCategoryChip(
-                label = "Images & OCR",
+                label = stringResource(R.string.search_images_ocr),
                 isSelected = selectedType == ContentType.IMAGE,
                 onClick = { onSelectType(if (selectedType == ContentType.IMAGE) null else ContentType.IMAGE) }
             )
@@ -227,7 +230,7 @@ private fun SearchFiltersRow(
 
         item {
             TuckCategoryChip(
-                label = "Videos & Reels",
+                label = stringResource(R.string.search_videos_reels),
                 isSelected = selectedType == ContentType.VIDEO,
                 onClick = { onSelectType(if (selectedType == ContentType.VIDEO) null else ContentType.VIDEO) }
             )
@@ -235,7 +238,7 @@ private fun SearchFiltersRow(
 
         item {
             TuckCategoryChip(
-                label = "Notes",
+                label = stringResource(R.string.search_notes),
                 isSelected = selectedType == ContentType.TEXT,
                 onClick = { onSelectType(if (selectedType == ContentType.TEXT) null else ContentType.TEXT) }
             )
@@ -246,10 +249,10 @@ private fun SearchFiltersRow(
             Box {
                 TuckCategoryChip(
                     label = when (sortOrder) {
-                        SortOrder.RELEVANCE -> "Sort: Relevance"
-                        SortOrder.NEWEST -> "Sort: Newest"
-                        SortOrder.OLDEST -> "Sort: Oldest"
-                        SortOrder.RECENTLY_OPENED -> "Sort: Opened"
+                        SortOrder.RELEVANCE -> stringResource(R.string.sort_prefix, stringResource(R.string.search_relevance))
+                        SortOrder.NEWEST -> stringResource(R.string.sort_prefix, stringResource(R.string.sort_newest))
+                        SortOrder.OLDEST -> stringResource(R.string.sort_prefix, stringResource(R.string.sort_oldest))
+                        SortOrder.RECENTLY_OPENED -> stringResource(R.string.sort_prefix, stringResource(R.string.sort_opened))
                     },
                     isSelected = false,
                     onClick = { sortMenuExpanded = true }
@@ -260,28 +263,28 @@ private fun SearchFiltersRow(
                     onDismissRequest = { sortMenuExpanded = false }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Relevance") },
+                        text = { Text(stringResource(R.string.search_relevance)) },
                         onClick = {
                             onSelectSort(SortOrder.RELEVANCE)
                             sortMenuExpanded = false
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Newest first") },
+                        text = { Text(stringResource(R.string.search_newest_first)) },
                         onClick = {
                             onSelectSort(SortOrder.NEWEST)
                             sortMenuExpanded = false
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Oldest first") },
+                        text = { Text(stringResource(R.string.search_oldest_first)) },
                         onClick = {
                             onSelectSort(SortOrder.OLDEST)
                             sortMenuExpanded = false
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Recently opened") },
+                        text = { Text(stringResource(R.string.search_recently_opened)) },
                         onClick = {
                             onSelectSort(SortOrder.RECENTLY_OPENED)
                             sortMenuExpanded = false
@@ -332,7 +335,7 @@ private fun SearchSuggestionsContent(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Recent Searches",
+                            text = stringResource(R.string.search_recent_searches),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             color = tuckColors.textPrimary
@@ -341,7 +344,7 @@ private fun SearchSuggestionsContent(
 
                     TextButton(onClick = onClearHistory) {
                         Text(
-                            text = "Clear",
+                            text = stringResource(R.string.components_clear),
                             style = MaterialTheme.typography.labelSmall,
                             color = tuckColors.textMuted
                         )
@@ -388,7 +391,7 @@ private fun SearchSuggestionsContent(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "Try searching naturally",
+                    text = stringResource(R.string.search_try_searching_naturally),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = tuckColors.textPrimary

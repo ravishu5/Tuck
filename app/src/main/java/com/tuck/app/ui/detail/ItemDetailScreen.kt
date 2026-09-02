@@ -1,5 +1,8 @@
 package com.tuck.app.ui.detail
 
+import androidx.compose.ui.res.stringResource
+import com.tuck.app.R
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -231,16 +234,16 @@ fun ItemDetailScreen(
                         value = uiState.editedTitle,
                         onValueChange = { viewModel.onTitleChange(it) },
                         modifier = Modifier.weight(1f),
-                        label = { Text("Title") },
+                        label = { Text(stringResource(R.string.detail_title)) },
                         singleLine = false,
                         maxLines = 3
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     IconButton(onClick = { viewModel.saveTitle() }) {
-                        Icon(imageVector = Icons.Filled.Check, contentDescription = "Save", tint = MaterialTheme.colorScheme.primary)
+                        Icon(imageVector = Icons.Filled.Check, contentDescription = stringResource(R.string.detail_save), tint = MaterialTheme.colorScheme.primary)
                     }
                     IconButton(onClick = { viewModel.cancelEditTitle() }) {
-                        Icon(imageVector = Icons.Filled.Close, contentDescription = "Cancel", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(imageVector = Icons.Filled.Close, contentDescription = stringResource(R.string.collections_cancel), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             } else {
@@ -262,7 +265,7 @@ fun ItemDetailScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Edit,
-                            contentDescription = "Edit Title",
+                            contentDescription = stringResource(R.string.detail_edit_title),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(18.dp)
                         )
@@ -368,7 +371,7 @@ fun ItemDetailScreen(
             if (item.entities.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(20.dp))
                 Text(
-                    text = "Detected Entities & Actions",
+                    text = stringResource(R.string.detail_detected_entities_actions),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -393,7 +396,7 @@ fun ItemDetailScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Collections & Tags",
+                    text = stringResource(R.string.detail_collections_tags),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -401,7 +404,7 @@ fun ItemDetailScreen(
                 TextButton(onClick = { showCollectionDialog = true }) {
                     Icon(imageVector = Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Manage")
+                    Text(stringResource(R.string.detail_manage))
                 }
             }
             Spacer(modifier = Modifier.height(6.dp))
@@ -459,7 +462,7 @@ fun ItemDetailScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.ContentCopy,
-                            contentDescription = "Copy Text",
+                            contentDescription = stringResource(R.string.detail_copy_text),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp)
                         )
@@ -491,14 +494,14 @@ fun ItemDetailScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Personal Notes",
+                    text = stringResource(R.string.detail_personal_notes),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 if (userNoteText != (item.userNote ?: "")) {
                     TextButton(onClick = { viewModel.saveUserNote(userNoteText) }) {
-                        Text("Save Note", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.detail_save_note), fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -506,7 +509,7 @@ fun ItemDetailScreen(
             OutlinedTextField(
                 value = userNoteText,
                 onValueChange = { userNoteText = it },
-                placeholder = { Text("Add your thoughts, key takeaways, or follow-ups...") },
+                placeholder = { Text(stringResource(R.string.detail_add_your_thoughts_key_takeaways_or)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
                 maxLines = 8,
@@ -517,7 +520,7 @@ fun ItemDetailScreen(
             if (uiState.relatedItems.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(28.dp))
                 Text(
-                    text = "Related Saves in Your Vault",
+                    text = stringResource(R.string.detail_related_saves_in_your_vault),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -577,7 +580,7 @@ fun ItemDetailScreen(
             ) {
                 AsyncImage(
                     model = File(item.localFilePath),
-                    contentDescription = "Full image",
+                    contentDescription = stringResource(R.string.detail_full_image),
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp)),
@@ -591,8 +594,8 @@ fun ItemDetailScreen(
     if (showDeleteConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = false },
-            title = { Text("Move to Trash?") },
-            text = { Text("This item will be moved to Trash. You can restore it later or permanently delete it.") },
+            title = { Text(stringResource(R.string.detail_move_to_trash)) },
+            text = { Text(stringResource(R.string.detail_this_item_will_be_moved_to)) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -601,12 +604,12 @@ fun ItemDetailScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = TuckTheme.colors.destructive)
                 ) {
-                    Text("Move to Trash")
+                    Text(stringResource(R.string.detail_move_to_trash_2))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirmDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.collections_cancel))
                 }
             }
         )
@@ -616,7 +619,7 @@ fun ItemDetailScreen(
     if (showCollectionDialog) {
         AlertDialog(
             onDismissRequest = { showCollectionDialog = false },
-            title = { Text("Add to Collections") },
+            title = { Text(stringResource(R.string.detail_add_to_collections)) },
             text = {
                 Column(
                     modifier = Modifier
@@ -654,7 +657,7 @@ fun ItemDetailScreen(
             },
             confirmButton = {
                 Button(onClick = { showCollectionDialog = false }) {
-                    Text("Done")
+                    Text(stringResource(R.string.collections_done))
                 }
             }
         )
@@ -677,22 +680,22 @@ fun DetailTopBar(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         IconButton(onClick = onBack) {
-            Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Back")
+            Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = stringResource(R.string.collections_back))
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onToggleFavorite) {
                 Icon(
                     imageVector = if (item.isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
-                    contentDescription = "Favorite",
+                    contentDescription = stringResource(R.string.components_favorite),
                     tint = if (item.isFavorite) TuckTheme.colors.favorite else MaterialTheme.colorScheme.onSurface
                 )
             }
             IconButton(onClick = onShare) {
-                Icon(imageVector = Icons.Filled.Share, contentDescription = "Share")
+                Icon(imageVector = Icons.Filled.Share, contentDescription = stringResource(R.string.detail_share))
             }
             IconButton(onClick = onDelete) {
-                Icon(imageVector = Icons.Filled.Delete, contentDescription = "Delete", tint = TuckTheme.colors.destructive)
+                Icon(imageVector = Icons.Filled.Delete, contentDescription = stringResource(R.string.components_delete), tint = TuckTheme.colors.destructive)
             }
         }
     }
@@ -718,7 +721,7 @@ fun ItemPreviewCard(
                     if (item.localFilePath != null) {
                         AsyncImage(
                             model = File(item.localFilePath),
-                            contentDescription = "Image preview",
+                            contentDescription = stringResource(R.string.detail_image_preview),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(260.dp)
@@ -745,7 +748,7 @@ fun ItemPreviewCard(
                         if (item.thumbnailPath != null) {
                             AsyncImage(
                                 model = File(item.thumbnailPath),
-                                contentDescription = "PDF page 1 preview",
+                                contentDescription = stringResource(R.string.detail_pdf_page_1_preview),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(200.dp)
@@ -760,7 +763,7 @@ fun ItemPreviewCard(
                         ) {
                             Icon(imageVector = Icons.Filled.PictureAsPdf, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Open PDF in Viewer")
+                            Text(stringResource(R.string.detail_open_pdf_in_viewer))
                         }
                     }
                 }
@@ -786,7 +789,7 @@ fun ItemPreviewCard(
                                 }
                                 AsyncImage(
                                     model = imageModel,
-                                    contentDescription = "Cover preview",
+                                    contentDescription = stringResource(R.string.detail_cover_preview),
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.Crop
                                 )
@@ -806,7 +809,7 @@ fun ItemPreviewCard(
                                         Box(contentAlignment = Alignment.Center) {
                                             Icon(
                                                 imageVector = Icons.Filled.PlayArrow,
-                                                contentDescription = "Play",
+                                                contentDescription = stringResource(R.string.components_play),
                                                 tint = TuckTheme.colors.onScrim,
                                                 modifier = Modifier.size(32.dp)
                                             )
@@ -879,7 +882,7 @@ fun ItemPreviewCard(
                                 ) {
                                     Icon(imageVector = Icons.Filled.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Copy")
+                                    Text(stringResource(R.string.detail_copy))
                                 }
                             }
                         }
@@ -900,7 +903,7 @@ fun ItemPreviewCard(
                         ) {
                             Icon(imageVector = Icons.Filled.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Copy Note")
+                            Text(stringResource(R.string.detail_copy_note))
                         }
                     }
                 }
@@ -991,7 +994,7 @@ fun ThreadedCommentTreeSection(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "💬 Threaded Discussion ($totalCount)",
+                    text = stringResource(R.string.threaded_discussion, totalCount),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -1094,7 +1097,7 @@ fun ThreadedCommentTreeSection(
                                                 color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
                                             ) {
                                                 Text(
-                                                    text = "OP",
+                                                    text = stringResource(R.string.detail_op),
                                                     style = MaterialTheme.typography.labelSmall,
                                                     fontWeight = FontWeight.Bold,
                                                     color = MaterialTheme.colorScheme.tertiary,
@@ -1133,7 +1136,7 @@ fun ThreadedCommentTreeSection(
                                     ) {
                                         Icon(
                                             imageVector = Icons.Filled.ContentCopy,
-                                            contentDescription = "Copy comment",
+                                            contentDescription = stringResource(R.string.detail_copy_comment),
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.size(13.dp)
                                         )
@@ -1183,7 +1186,7 @@ fun ThreadedCommentTreeSection(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Filled.ContentCopy,
-                                        contentDescription = "Copy comment",
+                                        contentDescription = stringResource(R.string.detail_copy_comment),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.size(13.dp)
                                     )
@@ -1226,7 +1229,7 @@ private fun FollowUpSection(
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
-            text = "FOLLOW UP",
+            text = stringResource(R.string.detail_follow_up),
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.ExtraBold,
             letterSpacing = 1.2.sp,
@@ -1249,7 +1252,7 @@ private fun FollowUpSection(
                     onClick = onClearReminder,
                     label = {
                         Text(
-                            "Reminder " + android.text.format.DateUtils.getRelativeTimeSpanString(
+                            stringResource(R.string.detail_reminder) + android.text.format.DateUtils.getRelativeTimeSpanString(
                                 remindAt,
                                 System.currentTimeMillis(),
                                 android.text.format.DateUtils.MINUTE_IN_MILLIS
@@ -1259,7 +1262,7 @@ private fun FollowUpSection(
                     trailingIcon = {
                         Icon(
                             imageVector = Icons.Filled.Close,
-                            contentDescription = "Clear reminder",
+                            contentDescription = stringResource(R.string.detail_clear_reminder),
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -1267,7 +1270,7 @@ private fun FollowUpSection(
             } else if (!isCompleted) {
                 AssistChip(
                     onClick = { isPicking = !isPicking },
-                    label = { Text("Remind me") }
+                    label = { Text(stringResource(R.string.detail_remind_me)) }
                 )
             }
         }
@@ -1359,7 +1362,7 @@ private fun FindWithinItem(
                 modifier = Modifier.size(16.dp)
             )
             Spacer(Modifier.width(6.dp))
-            Text("Find in this item", style = MaterialTheme.typography.labelLarge, color = tuckColors.textSecondary)
+            Text(stringResource(R.string.detail_find_in_this_item), style = MaterialTheme.typography.labelLarge, color = tuckColors.textSecondary)
         }
         return
     }
@@ -1368,7 +1371,7 @@ private fun FindWithinItem(
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChange,
-            placeholder = { Text("Find in this item") },
+            placeholder = { Text(stringResource(R.string.detail_find_in_this_item)) },
             singleLine = true,
             leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
             trailingIcon = {
@@ -1376,7 +1379,7 @@ private fun FindWithinItem(
                     onQueryChange("")
                     isOpen = false
                 }) {
-                    Icon(Icons.Filled.Close, contentDescription = "Close find")
+                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.detail_close_find))
                 }
             },
             modifier = Modifier.fillMaxWidth()
@@ -1399,10 +1402,10 @@ private fun FindWithinItem(
 
                 if (matches.isNotEmpty()) {
                     IconButton(onClick = { onStep(false, matches.size) }) {
-                        Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "Previous match")
+                        Icon(Icons.Filled.KeyboardArrowUp, contentDescription = stringResource(R.string.detail_previous_match))
                     }
                     IconButton(onClick = { onStep(true, matches.size) }) {
-                        Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Next match")
+                        Icon(Icons.Filled.KeyboardArrowDown, contentDescription = stringResource(R.string.detail_next_match))
                     }
                 }
             }
@@ -1442,7 +1445,7 @@ private fun ChecklistSection(
                 modifier = Modifier.size(16.dp)
             )
             Spacer(Modifier.width(6.dp))
-            Text("Add a step", style = MaterialTheme.typography.labelLarge, color = tuckColors.textSecondary)
+            Text(stringResource(R.string.detail_add_a_step), style = MaterialTheme.typography.labelLarge, color = tuckColors.textSecondary)
         }
         return
     }
@@ -1452,7 +1455,7 @@ private fun ChecklistSection(
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "CHECKLIST",
+                text = stringResource(R.string.detail_checklist),
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.ExtraBold,
                 letterSpacing = 1.2.sp,
@@ -1461,7 +1464,7 @@ private fun ChecklistSection(
             if (entries.isNotEmpty()) {
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = "$done of ${entries.size}",
+                    text = stringResource(R.string.checklist_progress, done, entries.size),
                     style = MaterialTheme.typography.labelSmall,
                     color = tuckColors.textMuted
                 )
@@ -1495,7 +1498,7 @@ private fun ChecklistSection(
                 IconButton(onClick = { onDelete(entry) }, modifier = Modifier.size(30.dp)) {
                     Icon(
                         imageVector = Icons.Filled.Close,
-                        contentDescription = "Remove step",
+                        contentDescription = stringResource(R.string.detail_remove_step),
                         tint = tuckColors.textMuted,
                         modifier = Modifier.size(14.dp)
                     )
@@ -1507,7 +1510,7 @@ private fun ChecklistSection(
             OutlinedTextField(
                 value = draft,
                 onValueChange = { draft = it },
-                placeholder = { Text("What needs doing?") },
+                placeholder = { Text(stringResource(R.string.detail_what_needs_doing)) },
                 singleLine = true,
                 trailingIcon = {
                     IconButton(
@@ -1517,14 +1520,14 @@ private fun ChecklistSection(
                         },
                         enabled = draft.isNotBlank()
                     ) {
-                        Icon(Icons.Filled.Add, contentDescription = "Add step")
+                        Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.detail_add_step))
                     }
                 },
                 modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
             )
         } else {
             TextButton(onClick = { isAdding = true }, contentPadding = PaddingValues(0.dp)) {
-                Text("Add a step", style = MaterialTheme.typography.labelLarge, color = tuckColors.accent)
+                Text(stringResource(R.string.detail_add_a_step), style = MaterialTheme.typography.labelLarge, color = tuckColors.accent)
             }
         }
     }

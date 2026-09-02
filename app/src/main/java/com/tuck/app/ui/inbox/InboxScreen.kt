@@ -1,5 +1,8 @@
 package com.tuck.app.ui.inbox
 
+import androidx.compose.ui.res.stringResource
+import com.tuck.app.R
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -70,14 +73,14 @@ fun InboxScreen(
         val twoDays = TimeUnit.DAYS.toMillis(2)
         val sevenDays = TimeUnit.DAYS.toMillis(7)
 
-        val groups = linkedMapOf<String, MutableList<SavedItem>>()
+        val groups = linkedMapOf<Int, MutableList<SavedItem>>()
         for (item in uiState.inboxItems) {
             val diff = now - item.createdAt
             val groupKey = when {
-                diff < oneDay -> "TODAY"
-                diff < twoDays -> "YESTERDAY"
-                diff < sevenDays -> "THIS WEEK"
-                else -> "EARLIER"
+                diff < oneDay -> R.string.group_today
+                diff < twoDays -> R.string.group_yesterday
+                diff < sevenDays -> R.string.group_this_week
+                else -> R.string.group_earlier
             }
             groups.getOrPut(groupKey) { mutableListOf() }.add(item)
         }
@@ -99,7 +102,7 @@ fun InboxScreen(
         ) {
             Column {
                 Text(
-                    text = "Inbox",
+                    text = stringResource(R.string.inbox_inbox),
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.ExtraBold,
                     color = tuckColors.textPrimary
@@ -119,7 +122,7 @@ fun InboxScreen(
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Default.Inbox,
-                        contentDescription = "Inbox",
+                        contentDescription = stringResource(R.string.inbox_inbox),
                         tint = tuckColors.accent,
                         modifier = Modifier.size(20.dp)
                     )
@@ -139,7 +142,7 @@ fun InboxScreen(
                 contentAlignment = Alignment.Center
             ) {
                 EmptyState(
-                    title = "Inbox Zero",
+                    title = stringResource(R.string.empty_inbox_zero),
                     description = "Everything saved has been reviewed and filed.\nNew saves will appear here first.",
                     icon = Icons.Default.Check
                 )
@@ -152,7 +155,7 @@ fun InboxScreen(
                 groupedItems.forEach { (header, items) ->
                     item(key = "header_$header") {
                         Text(
-                            text = header,
+                            text = stringResource(header),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.ExtraBold,
                             color = tuckColors.textMuted,
@@ -186,7 +189,7 @@ fun InboxScreen(
             onDismissRequest = { viewModel.closeCategorizeDialog() },
             title = {
                 Text(
-                    text = "File into Collection",
+                    text = stringResource(R.string.inbox_file_into_collection),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = tuckColors.textPrimary
@@ -233,7 +236,7 @@ fun InboxScreen(
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { viewModel.closeCategorizeDialog() }) {
-                    Text("Cancel", color = tuckColors.textSecondary)
+                    Text(stringResource(R.string.collections_cancel), color = tuckColors.textSecondary)
                 }
             },
             containerColor = tuckColors.surface,
@@ -285,7 +288,7 @@ private fun InboxTriageItemCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Folder,
-                        contentDescription = "Collection",
+                        contentDescription = stringResource(R.string.inbox_collection),
                         tint = tuckColors.accent,
                         modifier = Modifier.size(18.dp)
                     )
@@ -298,7 +301,7 @@ private fun InboxTriageItemCard(
                 ) {
                     Icon(
                         imageVector = if (item.isFavorite) Icons.Default.Star else Icons.Outlined.StarBorder,
-                        contentDescription = "Favorite",
+                        contentDescription = stringResource(R.string.components_favorite),
                         tint = if (item.isFavorite) tuckColors.favorite else tuckColors.textSecondary,
                         modifier = Modifier.size(18.dp)
                     )
@@ -311,7 +314,7 @@ private fun InboxTriageItemCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Archive,
-                        contentDescription = "Archive",
+                        contentDescription = stringResource(R.string.inbox_archive),
                         tint = tuckColors.textSecondary,
                         modifier = Modifier.size(18.dp)
                     )
@@ -324,7 +327,7 @@ private fun InboxTriageItemCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete",
+                        contentDescription = stringResource(R.string.components_delete),
                         tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(18.dp)
                     )

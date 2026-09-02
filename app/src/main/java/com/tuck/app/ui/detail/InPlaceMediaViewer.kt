@@ -1,5 +1,8 @@
 package com.tuck.app.ui.detail
 
+import androidx.compose.ui.res.stringResource
+import com.tuck.app.R
+
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.view.ViewGroup
@@ -244,7 +247,7 @@ fun InPlaceMediaViewer(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Refresh,
-                        contentDescription = "Reload Post",
+                        contentDescription = stringResource(R.string.detail_reload_post),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
                     )
@@ -256,7 +259,7 @@ fun InPlaceMediaViewer(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.ContentCopy,
-                        contentDescription = "Copy Link",
+                        contentDescription = stringResource(R.string.detail_copy_link),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp)
                     )

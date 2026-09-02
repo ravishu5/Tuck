@@ -1,5 +1,8 @@
 package com.tuck.app.ui.theme
 
+import androidx.compose.ui.res.stringResource
+import com.tuck.app.R
+
 import android.provider.Settings
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState

@@ -1,5 +1,6 @@
 package com.tuck.app.ui
 
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -109,12 +110,12 @@ fun TuckApp(
                                     icon = {
                                         Icon(
                                             imageVector = if (selected) screen.selectedIcon else screen.unselectedIcon,
-                                            contentDescription = screen.title
+                                            contentDescription = stringResource(screen.titleRes)
                                         )
                                     },
                                     label = {
                                         Text(
-                                            text = screen.title,
+                                            text = stringResource(screen.titleRes),
                                             style = MaterialTheme.typography.labelSmall
                                         )
                                     },

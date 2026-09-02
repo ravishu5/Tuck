@@ -1,5 +1,8 @@
 package com.tuck.app.ui.components
 
+import androidx.compose.ui.res.stringResource
+import com.tuck.app.R
+
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -131,7 +134,10 @@ fun SavedItemCard(
                     ) {
                         Icon(
                             imageVector = if (item.isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
-                            contentDescription = if (item.isFavorite) "Unfavorite" else "Favorite",
+                            contentDescription = stringResource(
+                            if (item.isFavorite) R.string.action_unfavorite
+                            else R.string.components_favorite
+                        ),
                             tint = if (item.isFavorite) TuckTheme.colors.favorite else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                             modifier = Modifier.size(20.dp)
                         )
@@ -189,7 +195,7 @@ fun SavedItemCard(
                         }
                         AsyncImage(
                             model = imageModel,
-                            contentDescription = "Item preview",
+                            contentDescription = stringResource(R.string.components_item_preview),
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
@@ -203,7 +209,7 @@ fun SavedItemCard(
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
                                         imageVector = Icons.Filled.PlayArrow,
-                                        contentDescription = "Play",
+                                        contentDescription = stringResource(R.string.components_play),
                                         tint = TuckTheme.colors.onScrim,
                                         modifier = Modifier.size(16.dp)
                                     )
@@ -419,6 +425,7 @@ fun EmptyState(
     }
 }
 
+@Composable
 fun formatRelativeTime(timestamp: Long): String {
     val now = System.currentTimeMillis()
     val diff = now - timestamp
@@ -428,11 +435,11 @@ fun formatRelativeTime(timestamp: Long): String {
     val days = TimeUnit.MILLISECONDS.toDays(diff)
 
     return when {
-        seconds < 60 -> "Just now"
-        minutes < 60 -> "${minutes}m ago"
-        hours < 24 -> "${hours}h ago"
-        days == 1L -> "Yesterday"
-        days < 7 -> "${days}d ago"
+        seconds < 60 -> stringResource(R.string.time_just_now)
+        minutes < 60 -> stringResource(R.string.time_minutes_ago, minutes)
+        hours < 24 -> stringResource(R.string.time_hours_ago, hours)
+        days == 1L -> stringResource(R.string.time_yesterday)
+        days < 7 -> stringResource(R.string.time_days_ago, days)
         else -> SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(timestamp))
     }
 }

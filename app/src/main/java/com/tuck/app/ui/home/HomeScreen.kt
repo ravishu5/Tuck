@@ -1,5 +1,8 @@
 package com.tuck.app.ui.home
 
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+
 import android.Manifest
 import android.app.Activity
 import android.content.pm.PackageManager
@@ -138,7 +141,7 @@ fun HomeScreen(
 
     val context = LocalContext.current
     val isRecording by viewModel.isRecording.collectAsStateWithLifecycle()
-    var voiceMessage by remember { mutableStateOf<String?>(null) }
+    var voiceMessage by remember { mutableStateOf<Int?>(null) }
 
     fun hasAudioPermission() = ContextCompat.checkSelfPermission(
         context, Manifest.permission.RECORD_AUDIO
@@ -149,9 +152,9 @@ fun HomeScreen(
     ) { granted ->
         // Start straight away on grant, so the tap that asked is the tap that records.
         if (granted) {
-            if (!viewModel.startVoiceNote()) voiceMessage = "Could not start recording"
+            if (!viewModel.startVoiceNote()) voiceMessage = R.string.home_voice_failed
         } else {
-            voiceMessage = "Microphone access is needed for voice notes"
+            voiceMessage = R.string.home_voice_needs_mic
         }
     }
 
@@ -185,7 +188,11 @@ fun HomeScreen(
             val pages = DocumentScanner.pageCount(result.data)
             viewModel.importDocumentFromUri(
                 uri = pdf,
-                titleOverride = if (pages > 1) "Scan · $pages pages" else "Scan"
+                titleOverride = if (pages > 1) {
+                    context.getString(R.string.home_scan_multi_page, pages)
+                } else {
+                    context.getString(R.string.home_scan)
+                }
             )
         }
     }
@@ -262,14 +269,14 @@ fun HomeScreen(
                         if (isRecording) {
                             viewModel.stopAndSaveVoiceNote { saved ->
                                 voiceMessage = if (saved) {
-                                    "Voice note saved"
+                                    R.string.home_voice_saved
                                 } else {
-                                    "Too short to save"
+                                    R.string.home_voice_too_short
                                 }
                             }
                         } else if (hasAudioPermission()) {
                             if (!viewModel.startVoiceNote()) {
-                                voiceMessage = "Could not start recording"
+                                voiceMessage = R.string.home_voice_failed
                             }
                         } else {
                             // Asked at the point of use, never on first launch.
@@ -322,7 +329,7 @@ fun HomeScreen(
             if (uiState.selectedSource == null && uiState.items.isNotEmpty()) {
                 item {
                     TuckSectionHeader(
-                        title = "Recently Tucked",
+                        title = stringResource(R.string.home_recently_tucked),
                         actionText = "See All (${uiState.items.size})"
                     )
                     RecentlySavedRail(
@@ -340,7 +347,7 @@ fun HomeScreen(
             if (uiState.selectedSource == null && uiState.collections.any { it.itemCount > 0 }) {
                 item {
                     TuckSectionHeader(
-                        title = "Collections",
+                        title = stringResource(R.string.home_collections),
                         actionText = "View all"
                     )
                     CollectionsRail(
@@ -393,7 +400,7 @@ fun HomeScreen(
         // Floating Action Button anchored to bottom-end
         TuckFab(
                     onClick = { showQuickAddSheet = true },
-                    contentDescription = "Quick Save",
+                    contentDescription = stringResource(R.string.home_quick_save),
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(end = 16.dp, bottom = 16.dp)
@@ -459,7 +466,7 @@ fun HomeScreen(
             },
             title = {
                 Text(
-                    text = "Quick Save",
+                    text = stringResource(R.string.home_quick_save),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.ExtraBold,
                     color = tuckColors.textPrimary
@@ -468,7 +475,7 @@ fun HomeScreen(
             text = {
                 Column {
                     Text(
-                        text = "Paste a URL, Reddit thread, tweet, or write a quick note:",
+                        text = stringResource(R.string.home_paste_a_url_reddit_thread_tweet),
                         style = MaterialTheme.typography.bodySmall,
                         color = tuckColors.textSecondary
                     )
@@ -478,7 +485,7 @@ fun HomeScreen(
                         onValueChange = { pasteContent = it },
                         placeholder = {
                             Text(
-                                text = "https://... or type your thought",
+                                text = stringResource(R.string.home_https_or_type_your_thought),
                                 color = tuckColors.textMuted,
                                 style = MaterialTheme.typography.bodySmall
                             )
@@ -515,7 +522,7 @@ fun HomeScreen(
                     ),
                     enabled = pasteContent.isNotBlank()
                 ) {
-                    Text("Tuck Away", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.home_tuck_away), fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -523,7 +530,7 @@ fun HomeScreen(
                     showPasteDialog = false
                     pasteContent = ""
                 }) {
-                    Text("Cancel", color = tuckColors.textMuted)
+                    Text(stringResource(R.string.collections_cancel), color = tuckColors.textMuted)
                 }
             },
             containerColor = tuckColors.surface,
@@ -556,7 +563,7 @@ private fun HomeHeroHeader(
         ) {
             Column {
                 Text(
-                    text = "My Stash",
+                    text = stringResource(R.string.home_my_stash),
                     style = TuckTheme.typography.displayLarge,
                     color = tuckColors.textPrimary
                 )
@@ -582,7 +589,7 @@ private fun HomeHeroHeader(
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.Filled.Palette,
-                            contentDescription = "Switch Theme & Palette",
+                            contentDescription = stringResource(R.string.home_switch_theme_palette),
                             tint = tuckColors.accent,
                             modifier = Modifier.size(22.dp)
                         )
@@ -600,7 +607,7 @@ private fun HomeHeroHeader(
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.Filled.Settings,
-                            contentDescription = "Settings",
+                            contentDescription = stringResource(R.string.home_settings),
                             tint = tuckColors.textPrimary,
                             modifier = Modifier.size(22.dp)
                         )
@@ -630,13 +637,13 @@ private fun HomeHeroHeader(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Search,
-                    contentDescription = "Search",
+                    contentDescription = stringResource(R.string.components_search),
                     tint = tuckColors.accent,
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = "Search anything, OCR text, or tags...",
+                    text = stringResource(R.string.home_search_anything_ocr_text_or_tags),
                     style = MaterialTheme.typography.bodyMedium,
                     color = tuckColors.textMuted
                 )
@@ -660,32 +667,32 @@ private fun HomeQuickActionRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         QuickActionButton(
-            label = "Note",
-            sublabel = "Quick note",
+            label = stringResource(R.string.home_note),
+            sublabel = stringResource(R.string.home_quick_note),
             icon = Icons.Filled.Notes,
             tint = TuckTheme.colors.palette[PaletteSlot.PRIMARY_CORE].fill,
             modifier = Modifier.weight(1f),
             onClick = onNote
         )
         QuickActionButton(
-            label = "Scan",
-            sublabel = "Document",
+            label = stringResource(R.string.home_scan),
+            sublabel = stringResource(R.string.home_document),
             icon = Icons.Filled.CameraAlt,
             tint = TuckTheme.colors.palette[PaletteSlot.SECONDARY_CORE].fill,
             modifier = Modifier.weight(1f),
             onClick = onScan
         )
         QuickActionButton(
-            label = "Doc/PDF",
-            sublabel = "Add file",
+            label = stringResource(R.string.home_doc_pdf),
+            sublabel = stringResource(R.string.home_add_file),
             icon = Icons.Filled.PictureAsPdf,
             tint = TuckTheme.colors.palette[PaletteSlot.TERTIARY_CORE].fill,
             modifier = Modifier.weight(1f),
             onClick = onPdf
         )
         QuickActionButton(
-            label = if (isRecording) "Stop" else "Voice",
-            sublabel = if (isRecording) "Recording" else "Record",
+            label = stringResource(if (isRecording) R.string.home_stop else R.string.home_voice),
+            sublabel = stringResource(if (isRecording) R.string.home_recording else R.string.home_record),
             icon = if (isRecording) Icons.Filled.Stop else Icons.Filled.Mic,
             // The recording state gets the deep tone so a live mic is unmistakable.
             tint = TuckTheme.colors.palette[
@@ -860,13 +867,13 @@ private fun ScreenshotSyncBanner(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "📸 Found $count Screenshots",
+                    text = pluralStringResource(R.plurals.screenshots_found, count, count),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = tuckColors.textPrimary
                 )
                 Text(
-                    text = "Import & index text with on-device OCR",
+                    text = stringResource(R.string.home_import_index_text_with_on_device),
                     style = MaterialTheme.typography.bodySmall,
                     color = tuckColors.textSecondary
                 )
@@ -887,7 +894,7 @@ private fun ScreenshotSyncBanner(
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = tuckColors.accent)
                 ) {
-                    Text("Import", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.home_import), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
 
                 IconButton(
@@ -896,7 +903,7 @@ private fun ScreenshotSyncBanner(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Close,
-                        contentDescription = "Dismiss",
+                        contentDescription = stringResource(R.string.components_dismiss),
                         tint = tuckColors.textMuted,
                         modifier = Modifier.size(18.dp)
                     )
@@ -936,19 +943,19 @@ private fun QuickThemePickerSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Appearance & Themes",
+                    text = stringResource(R.string.home_appearance_themes),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.ExtraBold,
                     color = tuckColors.textPrimary
                 )
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Filled.Close, contentDescription = "Close", tint = tuckColors.textMuted)
+                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.home_close), tint = tuckColors.textMuted)
                 }
             }
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            SectionLabel(text = "Appearance Mode")
+            SectionLabel(text = stringResource(R.string.home_appearance_mode))
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(
@@ -971,7 +978,7 @@ private fun QuickThemePickerSheet(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            SectionLabel(text = "Theme Palette")
+            SectionLabel(text = stringResource(R.string.home_theme_palette))
             Spacer(modifier = Modifier.height(10.dp))
 
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {

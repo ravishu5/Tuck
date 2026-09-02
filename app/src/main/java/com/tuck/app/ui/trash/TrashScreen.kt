@@ -1,5 +1,9 @@
 package com.tuck.app.ui.trash
 
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+import com.tuck.app.R
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -74,18 +78,18 @@ fun TrashScreen(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onNavigateBack) {
-                    Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = stringResource(R.string.collections_back))
                 }
                 Spacer(modifier = Modifier.width(4.dp))
                 Column {
                     Text(
-                        text = "Trash",
+                        text = stringResource(R.string.trash_trash),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = "${items.size} deleted items",
+                        text = pluralStringResource(R.plurals.deleted_items, items.size, items.size),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -99,15 +103,15 @@ fun TrashScreen(
                 ) {
                     Icon(imageVector = Icons.Filled.DeleteForever, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Empty Trash")
+                    Text(stringResource(R.string.trash_empty_trash))
                 }
             }
         }
 
         if (items.isEmpty()) {
             EmptyState(
-                title = "Trash is empty",
-                description = "Deleted items will appear here and can be restored anytime.",
+                title = stringResource(R.string.empty_trash_title),
+                description = stringResource(R.string.empty_trash_body),
                 icon = Icons.Filled.Delete,
                 modifier = Modifier
                     .fillMaxSize()
@@ -136,8 +140,8 @@ fun TrashScreen(
     if (showEmptyConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showEmptyConfirmDialog = false },
-            title = { Text("Empty Trash?") },
-            text = { Text("All items in the trash will be permanently deleted along with their stored files. This cannot be undone.") },
+            title = { Text(stringResource(R.string.trash_empty_trash_2)) },
+            text = { Text(stringResource(R.string.trash_all_items_in_the_trash_will)) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -146,12 +150,12 @@ fun TrashScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = TuckTheme.colors.destructive)
                 ) {
-                    Text("Empty Trash")
+                    Text(stringResource(R.string.trash_empty_trash))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showEmptyConfirmDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.collections_cancel))
                 }
             }
         )
@@ -182,7 +186,7 @@ fun TrashedItemCard(
             ) {
                 ContentTypeBadge(contentType = item.contentType)
                 Text(
-                    text = "Saved ${formatRelativeTime(item.createdAt)}",
+                    text = stringResource(R.string.saved_at, formatRelativeTime(item.createdAt)),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -212,7 +216,7 @@ fun TrashedItemCard(
                 ) {
                     Icon(imageVector = Icons.Filled.Restore, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Restore")
+                    Text(stringResource(R.string.trash_restore))
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))
@@ -223,7 +227,7 @@ fun TrashedItemCard(
                 ) {
                     Icon(imageVector = Icons.Filled.DeleteForever, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Delete")
+                    Text(stringResource(R.string.components_delete))
                 }
             }
         }

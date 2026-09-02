@@ -1,12 +1,12 @@
 <resources>
-    <string name="app_name">Tuck</string>
+    <string name="app_name" translatable="false">Tuck</string>
     <string name="share_target_title">Save to Tuck</string>
     <string name="saving_content">Saving…</string>
     <string name="saved_success">Saved ✓</string>
     <string name="saved_processing">Saved ✓ Processing in background…</string>
     <string name="open_item">Open</string>
     <string name="search_hint">Search your saved things…</string>
-    <string name="home_title">Tuck</string>
+    <string name="home_title" translatable="false">Tuck</string>
     <string name="recent_saves">Recently Saved</string>
     <string name="categories">Categories</string>
     <string name="collections">Collections</string>
@@ -17,4 +17,366 @@
     <string name="shortcut_search_long">Search tucked items</string>
     <string name="shortcut_quick_stash_short">Quick Stash</string>
     <string name="shortcut_quick_stash_long">Quickly stash a note</string>
+    <string name="collections_create">Create</string>
+    <string name="collections_cancel">Cancel</string>
+    <string name="collections_collections">Collections</string>
+    <string name="collections_new_collection">New Collection</string>
+    <string name="collections_create_a_custom_collection_for_organizing">Create a custom collection for organizing your saves:</string>
+    <string name="collections_e_g_research_tech_recipes">e.g. Research, Tech, Recipes</string>
+    <string name="collections_choose_color">CHOOSE COLOR</string>
+    <string name="collections_back">Back</string>
+    <string name="collections_delete_collection">Delete Collection</string>
+    <string name="collections_selected">Selected</string>
+    <string name="collections_still_to_go">Still to go</string>
+    <string name="collections_done">Done</string>
+    <string name="collections_all">All</string>
+    <string name="collections_curated">Curated</string>
+    <string name="collections_smart">Smart</string>
+    <string name="collections_locked">Locked 🔒</string>
+    <string name="components_item_preview">Item preview</string>
+    <string name="components_play">Play</string>
+    <string name="components_delete">Delete</string>
+    <string name="components_ocr_indexed">📸 OCR Indexed</string>
+    <string name="components_search_anything">Search anything…</string>
+    <string name="components_recently_tucked">Recently tucked</string>
+    <string name="components_resurfaced_memory">RESURFACED MEMORY</string>
+    <string name="components_tap_to_review">Tap to review ›</string>
+    <string name="components_quick_capture">QUICK CAPTURE</string>
+    <string name="components_move_to">MOVE TO</string>
+    <string name="components_search">Search</string>
+    <string name="components_clear">Clear</string>
+    <string name="components_locked">Locked</string>
+    <string name="components_favorite">Favorite</string>
+    <string name="components_dismiss">Dismiss</string>
+    <string name="detail_reload_post">Reload Post</string>
+    <string name="detail_copy_link">Copy Link</string>
+    <string name="detail_title">Title</string>
+    <string name="detail_manage">Manage</string>
+    <string name="detail_save_note">Save Note</string>
+    <string name="detail_add_your_thoughts_key_takeaways_or">Add your thoughts, key takeaways, or follow-ups...</string>
+    <string name="detail_move_to_trash">Move to Trash?</string>
+    <string name="detail_this_item_will_be_moved_to">This item will be moved to Trash. You can restore it later or permanently delete it.</string>
+    <string name="detail_move_to_trash_2">Move to Trash</string>
+    <string name="detail_add_to_collections">Add to Collections</string>
+    <string name="detail_open_pdf_in_viewer">Open PDF in Viewer</string>
+    <string name="detail_copy">Copy</string>
+    <string name="detail_copy_note">Copy Note</string>
+    <string name="detail_reminder">"Reminder "</string>
+    <string name="detail_remind_me">Remind me</string>
+    <string name="detail_find_in_this_item">Find in this item</string>
+    <string name="detail_add_a_step">Add a step</string>
+    <string name="detail_what_needs_doing">What needs doing?</string>
+    <string name="detail_detected_entities_actions">Detected Entities &amp; Actions</string>
+    <string name="detail_collections_tags">Collections &amp; Tags</string>
+    <string name="detail_personal_notes">Personal Notes</string>
+    <string name="detail_related_saves_in_your_vault">Related Saves in Your Vault</string>
+    <string name="detail_op">OP</string>
+    <string name="detail_follow_up">FOLLOW UP</string>
+    <string name="detail_checklist">CHECKLIST</string>
+    <string name="detail_save">Save</string>
+    <string name="detail_edit_title">Edit Title</string>
+    <string name="detail_copy_text">Copy Text</string>
+    <string name="detail_full_image">Full image</string>
+    <string name="detail_share">Share</string>
+    <string name="detail_image_preview">Image preview</string>
+    <string name="detail_pdf_page_1_preview">PDF page 1 preview</string>
+    <string name="detail_cover_preview">Cover preview</string>
+    <string name="detail_copy_comment">Copy comment</string>
+    <string name="detail_clear_reminder">Clear reminder</string>
+    <string name="detail_close_find">Close find</string>
+    <string name="detail_previous_match">Previous match</string>
+    <string name="detail_next_match">Next match</string>
+    <string name="detail_remove_step">Remove step</string>
+    <string name="detail_add_step">Add step</string>
+    <string name="favorites_favorites">Favorites</string>
+    <string name="favorites_things_you_definitely_want_to_keep">Things you definitely want to keep close.</string>
+    <string name="health_vault_health">Vault health</string>
+    <string name="health_check_again">Check again</string>
+    <string name="home_tuck_away">Tuck Away</string>
+    <string name="home_import">Import</string>
+    <string name="home_quick_save">Quick Save</string>
+    <string name="home_paste_a_url_reddit_thread_tweet">Paste a URL, Reddit thread, tweet, or write a quick note:</string>
+    <string name="home_https_or_type_your_thought">https://... or type your thought</string>
+    <string name="home_my_stash">My Stash</string>
+    <string name="home_search_anything_ocr_text_or_tags">Search anything, OCR text, or tags...</string>
+    <string name="home_import_index_text_with_on_device">Import &amp; index text with on-device OCR</string>
+    <string name="home_appearance_themes">Appearance &amp; Themes</string>
+    <string name="home_appearance_mode">Appearance Mode</string>
+    <string name="home_theme_palette">Theme Palette</string>
+    <string name="home_switch_theme_palette">Switch Theme &amp; Palette</string>
+    <string name="home_settings">Settings</string>
+    <string name="home_close">Close</string>
+    <string name="home_note">Note</string>
+    <string name="home_scan">Scan</string>
+    <string name="home_doc_pdf">Doc/PDF</string>
+    <string name="home_quick_note">Quick note</string>
+    <string name="home_document">Document</string>
+    <string name="home_add_file">Add file</string>
+    <string name="inbox_inbox">Inbox</string>
+    <string name="inbox_file_into_collection">File into Collection</string>
+    <string name="inbox_collection">Collection</string>
+    <string name="inbox_archive">Archive</string>
+    <string name="rules_auto_filing_rules">Auto-filing rules</string>
+    <string name="rules_new_rule">NEW RULE</string>
+    <string name="rules_when_a_save_matches">When a save matches</string>
+    <string name="rules_source_reddit" translatable="false">source:reddit</string>
+    <string name="rules_this_would_match_everything_add_a">This would match everything. Add a condition such as source: or type:</string>
+    <string name="rules_file_it_into">FILE IT INTO</string>
+    <string name="rules_add_rule">Add rule</string>
+    <string name="rules_no_rules_yet_everything_you_save">No rules yet. Everything you save goes to your Inbox until you file it.</string>
+    <string name="rules_anything_you_save_that_matches_a">"Anything you save that matches a rule is filed automatically. "</string>
+    <string name="rules_delete_rule">Delete rule</string>
+    <string name="search_relevance">Relevance</string>
+    <string name="search_newest_first">Newest first</string>
+    <string name="search_oldest_first">Oldest first</string>
+    <string name="search_recently_opened">Recently opened</string>
+    <string name="search_recent_searches">Recent Searches</string>
+    <string name="search_try_searching_naturally">Try searching naturally</string>
+    <string name="search_past_7_days">Past 7 Days</string>
+    <string name="search_past_30_days">Past 30 Days</string>
+    <string name="search_images_ocr">Images &amp; OCR</string>
+    <string name="search_videos_reels">Videos &amp; Reels</string>
+    <string name="search_notes">Notes</string>
+    <string name="settings_personalize_your_tuck_experience_and_digital">Personalize your Tuck experience and digital vault.</string>
+    <string name="settings_make_tuck_yours">Make Tuck yours</string>
+    <string name="settings_choose_a_visual_theme_designed_with">Choose a visual theme designed with intentional color harmony.</string>
+    <string name="settings_inspect_color_palettes">Inspect Color Palettes</string>
+    <string name="settings_review_8_hue_slots_contrast_ratios">Review 8-hue slots, contrast ratios &amp; CVD simulations</string>
+    <string name="settings_view">View →</string>
+    <string name="settings_tuck_intelligence">Tuck Intelligence</string>
+    <string name="settings_vault_storage">Vault &amp; Storage</string>
+    <string name="settings_100_local_first_private" formatted="false">100% Local-First &amp; Private</string>
+    <string name="settings_your_data_ocr_text_and_saved">Your data, OCR text, and saved content live entirely on this device.</string>
+    <string name="settings_tuck_v1_0_0" translatable="false">Tuck v1.0.0</string>
+    <string name="settings_tuck_it_away_find_it_later">Tuck it away. Find it later.</string>
+    <string name="settings_used_on_this_device">used on this device</string>
+    <string name="settings_nothing_stored_yet">Nothing stored yet.</string>
+    <string name="settings_removes_previews_and_cache_only_your">Removes previews and cache only. Your saves are untouched.</string>
+    <string name="share_open_in_tuck">Open in Tuck</string>
+    <string name="share_category_name">Category name…</string>
+    <string name="share_add">Add</string>
+    <string name="share_saving_to_tuck">Saving to Tuck…</string>
+    <string name="share_tucked_into_vault">✓ Tucked into Vault</string>
+    <string name="share_add_to_collection">Add to collection:</string>
+    <string name="share_new">New</string>
+    <string name="share_could_not_save_item">Could not save item</string>
+    <string name="share_new_category">New Category</string>
+    <string name="share_saved">Saved</string>
+    <string name="trash_empty_trash">Empty Trash</string>
+    <string name="trash_empty_trash_2">Empty Trash?</string>
+    <string name="trash_all_items_in_the_trash_will">All items in the trash will be permanently deleted along with their stored files. This cannot be undone.</string>
+    <string name="trash_restore">Restore</string>
+    <string name="trash_trash">Trash</string>
+
+    <!-- Counted things. Kept as plurals so translations can use their own rules;
+         English needs two forms, other languages need more. -->
+    <plurals name="screenshots_found">
+        <item quantity="one">📸 Found %d screenshot</item>
+        <item quantity="other">📸 Found %d screenshots</item>
+    </plurals>
+    <plurals name="deleted_items">
+        <item quantity="one">%d deleted item</item>
+        <item quantity="other">%d deleted items</item>
+    </plurals>
+    <plurals name="item_count">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+    <plurals name="save_count">
+        <item quantity="one">%d save</item>
+        <item quantity="other">%d saves</item>
+    </plurals>
+    <plurals name="folder_count">
+        <item quantity="one">%d folder</item>
+        <item quantity="other">%d folders</item>
+    </plurals>
+    <plurals name="comment_count">
+        <item quantity="one">%d comment</item>
+        <item quantity="other">%d comments</item>
+    </plurals>
+
+    <string name="smart_board_suffix"> • Smart Board</string>
+    <string name="saves_and_folders" translatable="false">%1$s · %2$s</string>
+    <string name="checklist_progress">%1$d of %2$d</string>
+    <string name="threaded_discussion">💬 Threaded Discussion (%1$d)</string>
+    <string name="search_in_collection">Search in %1$s…</string>
+    <string name="remove_filter">Remove %1$s filter</string>
+    <string name="reclaim_bytes">Reclaim %1$s</string>
+    <string name="saved_at">Saved %1$s</string>
+
+    <!-- Bottom navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_inbox">Inbox</string>
+    <string name="nav_collections">Collections</string>
+    <string name="nav_search">Search</string>
+
+    <!-- Home sections -->
+    <string name="home_recently_tucked">Recently Tucked</string>
+    <string name="home_collections">Collections</string>
+    <string name="home_voice">Voice</string>
+    <string name="home_record">Record</string>
+    <string name="home_stop">Stop</string>
+    <string name="home_recording">Recording</string>
+    <string name="home_voice_saved">Voice note saved</string>
+    <string name="home_voice_too_short">Too short to save</string>
+    <string name="home_voice_failed">Could not start recording</string>
+    <string name="home_voice_needs_mic">Microphone access is needed for voice notes</string>
+    <string name="home_scan_multi_page">Scan · %1$d pages</string>
+
+    <!-- Relative time, so dates read naturally in every language -->
+    <string name="time_just_now">Just now</string>
+    <string name="time_minutes_ago">%1$dm ago</string>
+    <string name="time_hours_ago">%1$dh ago</string>
+    <string name="time_yesterday">Yesterday</string>
+    <string name="time_days_ago">%1$dd ago</string>
+
+    <string name="resurfaced_you_saved_this">You saved this %1$s: \"%2$s\"</string>
+
+    <!-- Content badges -->
+    <string name="badge_screenshot">Screenshot</string>
+    <string name="badge_pdf" translatable="false">PDF</string>
+    <string name="badge_note">Note</string>
+    <string name="badge_contact">Contact</string>
+    <string name="badge_location">Location</string>
+    <string name="badge_video">Video</string>
+    <string name="badge_voice">Voice</string>
+
+    <!-- Empty states -->
+    <string name="empty_nothing_here_yet">Nothing here yet.</string>
+    <string name="empty_no_custom_collections">No custom collections</string>
+    <string name="empty_no_collections_found">No collections found</string>
+    <string name="empty_create_first_collection">Create your first custom collection with (+)</string>
+    <string name="empty_collections_appear">Collections will appear automatically as you save items.</string>
+    <string name="empty_no_favorites">No favorites yet.</string>
+    <string name="empty_star_any_item">Star any saved item to keep it pinned to this personal shelf.</string>
+    <string name="empty_trash_title">Trash is empty</string>
+    <string name="empty_trash_body">Deleted items will appear here and can be restored anytime.</string>
+    <string name="empty_no_search_match">Nothing tucked matches that.</string>
+    <string name="empty_drawer">Your drawer is empty.</string>
+    <string name="empty_no_source_items">No %1$s items found</string>
+    <string name="empty_inbox_zero">Inbox Zero</string>
+    <string name="empty_all_caught_up">All caught up</string>
+
+    <!-- Actions and toggles -->
+    <string name="action_switch_to_list">Switch to List View</string>
+    <string name="action_switch_to_grid">Switch to Grid View</string>
+    <string name="action_unfavorite">Unfavorite</string>
+    <string name="action_view_all">View all</string>
+    <string name="action_quick_save">Quick Save (+)</string>
+    <string name="action_mark_done">Mark done</string>
+    <string name="action_mark_not_done">Mark not done</string>
+    <string name="action_not_done">Not done</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_share_via">Share via</string>
+    <string name="action_show_top_only">Show Top Only</string>
+    <string name="action_show_full_tree">Show Full Tree (%1$d)</string>
+    <string name="action_repair_everything">Repair everything</string>
+    <string name="action_repairing">Repairing…</string>
+    <string name="action_open_on">Open on %1$s</string>
+    <string name="action_watch_on">Watch on %1$s</string>
+    <string name="action_open_in_browser">Open in Browser</string>
+
+    <!-- Quick capture sheet -->
+    <string name="quick_take_a_note">Take a Quick Note</string>
+    <string name="quick_take_a_note_sub">Save a formatted thought or markdown note</string>
+    <string name="quick_scan">Scan Document / Screenshot</string>
+    <string name="quick_scan_sub">Local ML Kit OCR extracts all text instantly</string>
+    <string name="quick_pdf">Import PDF or Research Paper</string>
+    <string name="quick_pdf_sub">Extract text &amp; generate first-page thumbnail</string>
+    <string name="quick_paste">Paste from Clipboard</string>
+    <string name="quick_paste_sub">Save copied links, Reddit URLs, or text</string>
+    <string name="quick_voice">Record Audio Voice Memo</string>
+    <string name="quick_voice_sub">App-private local audio note</string>
+
+    <!-- Item detail -->
+    <string name="detail_ocr_text">On-Device OCR Text</string>
+    <string name="detail_extracted_content">Extracted Content</string>
+    <string name="detail_no_pdf_viewer">No PDF viewer app found</string>
+    <string name="detail_copied">Copied to clipboard</string>
+    <string name="detail_done">Done</string>
+    <string name="detail_no_matches">No matches in this item</string>
+    <string name="detail_block_content">Content</string>
+    <string name="detail_block_ocr">Recognised text</string>
+    <string name="detail_block_notes">Your notes</string>
+    <string name="detail_block_comments">Comments</string>
+    <string name="reminder_later_today">Later today</string>
+    <string name="reminder_tomorrow">Tomorrow</string>
+    <string name="reminder_this_weekend">This weekend</string>
+    <string name="reminder_next_week">Next week</string>
+
+    <!-- Inbox date groups -->
+    <string name="group_today">TODAY</string>
+    <string name="group_yesterday">YESTERDAY</string>
+    <string name="group_this_week">THIS WEEK</string>
+    <string name="group_earlier">EARLIER</string>
+
+    <!-- Search -->
+    <string name="sort_prefix">Sort: %1$s</string>
+    <string name="sort_opened">Opened</string>
+    <string name="sort_newest">Newest</string>
+    <string name="sort_oldest">Oldest</string>
+
+    <!-- Rules -->
+    <string name="rules_never_matched">Not matched anything yet</string>
+    <string name="rules_unknown_collection">Unknown collection</string>
+
+    <!-- Home filters and headers -->
+    <string name="home_all_tucked_items">All Tucked Items</string>
+    <string name="home_source_items">%1$s Items</string>
+    <string name="filter_all">All</string>
+    <string name="filter_screenshots">Screenshots</string>
+    <string name="filter_articles">Articles</string>
+    <string name="filter_education">Education</string>
+    <string name="filter_finance">Finance</string>
+    <string name="filter_programming">Programming</string>
+    <string name="filter_notes">Notes</string>
+    <string name="filter_pdfs">PDFs</string>
+
+    <!-- Appearance -->
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+
+    <!-- Settings -->
+    <string name="setting_ocr">On-Device OCR</string>
+    <string name="setting_ocr_sub">Recognize and index text inside screenshots &amp; images</string>
+    <string name="setting_auto_categorize">Auto-Categorize</string>
+    <string name="setting_auto_categorize_sub">Automatically organize content into smart folders</string>
+    <string name="setting_save_comments">Save Community Comments</string>
+    <string name="setting_rules_sub">Send matching saves straight to a collection</string>
+    <string name="setting_weekly_memory">Weekly Memory</string>
+    <string name="setting_weekly_memory_sub">Resurface one forgotten save each week. Off by default.</string>
+    <string name="setting_wifi_only">Wi-Fi Only for Previews</string>
+    <string name="setting_wifi_only_sub">Fetch rich link previews and metadata only on Wi-Fi</string>
+    <string name="setting_vault_health_sub">Check that every save is intact and searchable</string>
+    <string name="setting_export_archive">Export Full Vault Archive (.tuck)</string>
+    <string name="setting_export_archive_sub">Complete archive with photos, PDFs, and notes</string>
+    <string name="setting_export_json">Export Vault JSON</string>
+    <string name="setting_export_json_sub">Lightweight text and metadata backup</string>
+    <string name="setting_trash_recovery">Trash &amp; Recovery</string>
+    <string name="setting_notifications_blocked">Weekly Memory is on, but notifications are blocked for Tuck</string>
+    <string name="setting_nothing_to_reclaim">Nothing to reclaim</string>
+    <string name="setting_freed">Freed %1$s</string>
+    <string name="storage_images">Images</string>
+    <string name="storage_pdfs">PDFs</string>
+    <string name="storage_documents">Documents</string>
+    <string name="storage_previews">Previews</string>
+    <string name="storage_cache">Cache</string>
+    <string name="health_all_clear">Everything checks out. Your saves are complete and searchable.</string>
+
+    <!-- Biometric prompt -->
+    <string name="biometric_title">Unlock Collection</string>
+    <string name="biometric_subtitle">Verify your identity to access locked items</string>
+
+    <!-- Share sheet -->
+    <string name="share_unable_to_handle">Unable to handle shared content</string>
+    <string name="share_failed">Failed to save: %1$s</string>
+    <string name="share_unknown_error">Unknown error</string>
+
+    <!-- Default titles given to new saves, in the language the save was made in -->
+    <string name="title_saved_photo">Saved Photo</string>
+    <string name="title_quick_note">Quick Note</string>
+    <string name="title_imported_document">Imported Document</string>
+    <string name="title_voice_note">Voice note · %1$ds</string>
+    <string name="collection_empty">Empty</string>
 </resources>

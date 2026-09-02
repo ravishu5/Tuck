@@ -13,38 +13,40 @@ import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.StarBorder
+import androidx.annotation.StringRes
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.tuck.app.R
 
 sealed class BottomNavScreen(
     val route: String,
-    val title: String,
+    @StringRes val titleRes: Int,
     val selectedIcon: ImageVector,
     val unselectedIcon: ImageVector
 ) {
     data object Home : BottomNavScreen(
         route = "home",
-        title = "Home",
+        titleRes = R.string.nav_home,
         selectedIcon = Icons.Filled.Home,
         unselectedIcon = Icons.Outlined.Home
     )
 
     data object Inbox : BottomNavScreen(
         route = "inbox",
-        title = "Inbox",
+        titleRes = R.string.nav_inbox,
         selectedIcon = Icons.Filled.Inbox,
         unselectedIcon = Icons.Outlined.Inbox
     )
 
     data object Collections : BottomNavScreen(
         route = "collections",
-        title = "Collections",
+        titleRes = R.string.nav_collections,
         selectedIcon = Icons.Filled.Folder,
         unselectedIcon = Icons.Outlined.Folder
     )
 
     data object Search : BottomNavScreen(
         route = "search",
-        title = "Search",
+        titleRes = R.string.nav_search,
         selectedIcon = Icons.Filled.Search,
         unselectedIcon = Icons.Outlined.Search
     )

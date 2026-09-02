@@ -1,5 +1,8 @@
 package com.tuck.app.ui.favorites
 
+import androidx.compose.ui.res.stringResource
+import com.tuck.app.R
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -49,13 +52,13 @@ fun FavoritesScreen(
                 .padding(horizontal = 16.dp, vertical = 16.dp)
         ) {
             Text(
-                text = "Favorites",
+                text = stringResource(R.string.favorites_favorites),
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.ExtraBold,
                 color = tuckColors.textPrimary
             )
             Text(
-                text = "Things you definitely want to keep close.",
+                text = stringResource(R.string.favorites_things_you_definitely_want_to_keep),
                 style = MaterialTheme.typography.bodyMedium,
                 color = tuckColors.textSecondary
             )
@@ -63,8 +66,8 @@ fun FavoritesScreen(
 
         if (uiState.favoriteItems.isEmpty()) {
             TuckEmptyState(
-                title = "No favorites yet.",
-                description = "Star any saved item to keep it pinned to this personal shelf.",
+                title = stringResource(R.string.empty_no_favorites),
+                description = stringResource(R.string.empty_star_any_item),
                 icon = Icons.Filled.Star,
                 modifier = Modifier.padding(top = 40.dp)
             )

@@ -1,5 +1,8 @@
 package com.tuck.app.ui.rules
 
+import androidx.compose.ui.res.stringResource
+import com.tuck.app.R
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -66,10 +69,10 @@ fun FilingRulesScreen(
         containerColor = tuckColors.background,
         topBar = {
             TopAppBar(
-                title = { Text("Auto-filing rules") },
+                title = { Text(stringResource(R.string.rules_auto_filing_rules)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Filled.ArrowBack, contentDescription = stringResource(R.string.collections_back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = tuckColors.background)
@@ -83,7 +86,7 @@ fun FilingRulesScreen(
         ) {
             item {
                 Text(
-                    text = "Anything you save that matches a rule is filed automatically. " +
+                    text = stringResource(R.string.rules_anything_you_save_that_matches_a) +
                         "Rules use the same syntax as search, for example  source:reddit  or  type:pdf tag:work",
                     style = MaterialTheme.typography.bodyMedium,
                     color = tuckColors.textSecondary
@@ -93,26 +96,26 @@ fun FilingRulesScreen(
             item {
                 Card(colors = CardDefaults.cardColors(containerColor = tuckColors.surfaceCard)) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("NEW RULE", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.ExtraBold, color = tuckColors.textMuted)
+                        Text(stringResource(R.string.rules_new_rule), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.ExtraBold, color = tuckColors.textMuted)
                         Spacer(Modifier.height(10.dp))
 
                         OutlinedTextField(
                             value = draftQuery,
                             onValueChange = { draftQuery = it },
-                            label = { Text("When a save matches") },
-                            placeholder = { Text("source:reddit") },
+                            label = { Text(stringResource(R.string.rules_when_a_save_matches)) },
+                            placeholder = { Text(stringResource(R.string.rules_source_reddit)) },
                             singleLine = true,
                             isError = draftQuery.isNotBlank() && !isValid,
                             supportingText = {
                                 if (draftQuery.isNotBlank() && !isValid) {
-                                    Text("This would match everything. Add a condition such as source: or type:")
+                                    Text(stringResource(R.string.rules_this_would_match_everything_add_a))
                                 }
                             },
                             modifier = Modifier.fillMaxWidth()
                         )
 
                         Spacer(Modifier.height(12.dp))
-                        Text("FILE IT INTO", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.ExtraBold, color = tuckColors.textMuted)
+                        Text(stringResource(R.string.rules_file_it_into), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.ExtraBold, color = tuckColors.textMuted)
                         Spacer(Modifier.height(8.dp))
 
                         androidx.compose.foundation.lazy.LazyRow(
@@ -135,7 +138,7 @@ fun FilingRulesScreen(
                                 draftQuery = ""
                                 draftCollectionId = 0L
                             }
-                        ) { Text("Add rule") }
+                        ) { Text(stringResource(R.string.rules_add_rule)) }
                     }
                 }
             }
@@ -143,7 +146,7 @@ fun FilingRulesScreen(
             if (uiState.rules.isEmpty()) {
                 item {
                     Text(
-                        "No rules yet. Everything you save goes to your Inbox until you file it.",
+                        stringResource(R.string.rules_no_rules_yet_everything_you_save),
                         style = MaterialTheme.typography.bodyMedium,
                         color = tuckColors.textMuted
                     )
@@ -164,7 +167,7 @@ fun FilingRulesScreen(
                                 color = tuckColors.textSecondary
                             )
                             Text(
-                                if (rule.matchCount == 0) "Not matched anything yet"
+                                if (rule.matchCount == 0) stringResource(R.string.rules_never_matched)
                                 else "Filed ${rule.matchCount} ${if (rule.matchCount == 1) "item" else "items"}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = tuckColors.textMuted
@@ -176,7 +179,7 @@ fun FilingRulesScreen(
                         )
                         Spacer(Modifier.width(4.dp))
                         IconButton(onClick = { viewModel.delete(rule) }) {
-                            Icon(Icons.Filled.Delete, contentDescription = "Delete rule")
+                            Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.rules_delete_rule))
                         }
                     }
                 }
