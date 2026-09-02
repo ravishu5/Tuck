@@ -104,6 +104,9 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.CheckCircle
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -328,6 +331,14 @@ fun ItemDetailScreen(
                     onCopyText = { copyToClipboard(context, "Note", item.originalText ?: item.extractedText.orEmpty()) }
                 )
             }
+
+            Spacer(modifier = Modifier.height(20.dp))
+            ChecklistSection(
+                entries = uiState.checklist,
+                onAdd = { viewModel.addChecklistItem(it) },
+                onToggle = { entry -> viewModel.setChecklistItemDone(entry.id, !entry.isDone) },
+                onDelete = { viewModel.deleteChecklistItem(it) }
+            )
 
             Spacer(modifier = Modifier.height(20.dp))
             FollowUpSection(
@@ -1392,3 +1403,118 @@ private const val BLOCK_CONTENT = "content"
 private const val BLOCK_OCR = "ocr"
 private const val BLOCK_NOTES = "notes"
 private const val BLOCK_COMMENTS = "comments"
+
+
+/**
+ * Steps inside one save.
+ *
+ * Collapsed to a single "Add a step" affordance until used, because most saves are not
+ * tasks and a permanently empty checklist on every item would be clutter.
+ */
+@Composable
+private fun ChecklistSection(
+    entries: List<com.tuck.app.data.local.db.entity.ChecklistItemEntity>,
+    onAdd: (String) -> Unit,
+    onToggle: (com.tuck.app.data.local.db.entity.ChecklistItemEntity) -> Unit,
+    onDelete: (com.tuck.app.data.local.db.entity.ChecklistItemEntity) -> Unit
+) {
+    val tuckColors = TuckTheme.colors
+    var draft by remember { mutableStateOf("") }
+    var isAdding by remember { mutableStateOf(false) }
+
+    if (entries.isEmpty() && !isAdding) {
+        TextButton(onClick = { isAdding = true }, contentPadding = PaddingValues(0.dp)) {
+            Icon(
+                imageVector = Icons.Filled.Add,
+                contentDescription = null,
+                tint = tuckColors.textSecondary,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(Modifier.width(6.dp))
+            Text("Add a step", style = MaterialTheme.typography.labelLarge, color = tuckColors.textSecondary)
+        }
+        return
+    }
+
+    val done = entries.count { it.isDone }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "CHECKLIST",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 1.2.sp,
+                color = tuckColors.textMuted
+            )
+            if (entries.isNotEmpty()) {
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "$done of ${entries.size}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = tuckColors.textMuted
+                )
+            }
+        }
+
+        Spacer(Modifier.height(6.dp))
+
+        entries.forEach { entry ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onToggle(entry) }
+                    .padding(vertical = 5.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = if (entry.isDone) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
+                    contentDescription = if (entry.isDone) "Done" else "Not done",
+                    tint = if (entry.isDone) tuckColors.success else tuckColors.textMuted,
+                    modifier = Modifier.size(19.dp)
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = entry.text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (entry.isDone) tuckColors.textMuted else tuckColors.textPrimary,
+                    textDecoration = if (entry.isDone) TextDecoration.LineThrough else null,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = { onDelete(entry) }, modifier = Modifier.size(30.dp)) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "Remove step",
+                        tint = tuckColors.textMuted,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
+        }
+
+        if (isAdding) {
+            OutlinedTextField(
+                value = draft,
+                onValueChange = { draft = it },
+                placeholder = { Text("What needs doing?") },
+                singleLine = true,
+                trailingIcon = {
+                    IconButton(
+                        onClick = {
+                            onAdd(draft)
+                            draft = ""
+                        },
+                        enabled = draft.isNotBlank()
+                    ) {
+                        Icon(Icons.Filled.Add, contentDescription = "Add step")
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
+            )
+        } else {
+            TextButton(onClick = { isAdding = true }, contentPadding = PaddingValues(0.dp)) {
+                Text("Add a step", style = MaterialTheme.typography.labelLarge, color = tuckColors.accent)
+            }
+        }
+    }
+}

@@ -31,10 +31,19 @@ data class AppSettings(
 data class StorageUsage(
     val imagesSizeBytes: Long,
     val pdfsSizeBytes: Long,
+    val documentsSizeBytes: Long = 0L,
     val thumbnailsSizeBytes: Long,
     val cacheSizeBytes: Long,
     val totalSizeBytes: Long
-)
+) {
+    /**
+     * What can be freed without losing a save.
+     *
+     * Thumbnails and cache are both regenerable from the originals; images, PDFs and
+     * documents are the saves themselves and are never counted here.
+     */
+    val reclaimableBytes: Long get() = thumbnailsSizeBytes + cacheSizeBytes
+}
 
 interface SettingsRepository {
     fun getSettings(): Flow<AppSettings>
@@ -47,4 +56,6 @@ interface SettingsRepository {
     suspend fun setMemoryResurfacingEnabled(enabled: Boolean)
     suspend fun getStorageUsage(): StorageUsage
     suspend fun clearCache(): Boolean
+    /** Frees regenerable data only; returns the bytes actually recovered. */
+    suspend fun reclaimSpace(): Long
 }

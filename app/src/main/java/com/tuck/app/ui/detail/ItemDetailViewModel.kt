@@ -22,6 +22,8 @@ import kotlinx.coroutines.launch
 import com.tuck.app.processing.ReminderPreset
 import com.tuck.app.processing.ReminderScheduler
 import javax.inject.Inject
+import com.tuck.app.data.local.db.dao.ChecklistDao
+import com.tuck.app.data.local.db.entity.ChecklistItemEntity
 
 data class DetailUiState(
     val item: SavedItem? = null,
@@ -32,7 +34,8 @@ data class DetailUiState(
     val isEditingTitle: Boolean = false,
     val editedTitle: String = "",
     val isLoading: Boolean = true,
-    val isDeleted: Boolean = false
+    val isDeleted: Boolean = false,
+    val checklist: List<ChecklistItemEntity> = emptyList()
 )
 
 private data class TitleEditState(
@@ -49,6 +52,7 @@ private data class SourceContentState(
 class ItemDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val savedItemRepository: SavedItemRepository,
+    private val checklistDao: ChecklistDao,
     private val collectionRepository: CollectionRepository,
     private val sourceContentDao: SourceContentDao,
     private val relatedItemsEngine: RelatedItemsEngine
@@ -77,7 +81,9 @@ class ItemDetailViewModel @Inject constructor(
         SourceContentState(post = post, comments = comments)
     }
 
-    val uiState: StateFlow<DetailUiState> = combine(
+    // combine() is typed only up to five flows, so the checklist is layered on top
+    // rather than pushed into the vararg overload, which would lose the types.
+    private val baseState = combine(
         savedItemRepository.getItemByIdFlow(itemId),
         sourceContentFlow,
         collectionRepository.getAllCollections(),
@@ -95,6 +101,13 @@ class ItemDetailViewModel @Inject constructor(
             isLoading = false,
             isDeleted = _isDeleted.value
         )
+    }
+
+    val uiState: StateFlow<DetailUiState> = combine(
+        baseState,
+        checklistDao.getForItem(itemId)
+    ) { base, checklist ->
+        base.copy(checklist = checklist)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -132,6 +145,28 @@ class ItemDetailViewModel @Inject constructor(
         viewModelScope.launch {
             savedItemRepository.updateItem(currentItem.copy(userNote = note.trim().ifBlank { null }))
         }
+    }
+
+    fun addChecklistItem(text: String) {
+        val currentItem = uiState.value.item ?: return
+        if (text.isBlank()) return
+        viewModelScope.launch {
+            checklistDao.insert(
+                ChecklistItemEntity(
+                    itemId = currentItem.id,
+                    text = text.trim(),
+                    ordinal = uiState.value.checklist.size
+                )
+            )
+        }
+    }
+
+    fun setChecklistItemDone(id: Long, isDone: Boolean) {
+        viewModelScope.launch { checklistDao.setDone(id, isDone) }
+    }
+
+    fun deleteChecklistItem(entry: ChecklistItemEntity) {
+        viewModelScope.launch { checklistDao.delete(entry) }
     }
 
     fun setReminder(preset: ReminderPreset) {

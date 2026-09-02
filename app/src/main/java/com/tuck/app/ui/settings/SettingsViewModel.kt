@@ -21,7 +21,7 @@ import javax.inject.Inject
 
 data class SettingsUiState(
     val settings: AppSettings = AppSettings(),
-    val storageUsage: StorageUsage = StorageUsage(0, 0, 0, 0, 0),
+    val storageUsage: StorageUsage = StorageUsage(0, 0, 0, 0, 0, 0),
     val trashedCount: Int = 0
 )
 
@@ -33,7 +33,7 @@ class SettingsViewModel @Inject constructor(
     private val memoryNotificationScheduler: MemoryNotificationScheduler
 ) : ViewModel() {
 
-    private val _storageUsage = MutableStateFlow(StorageUsage(0, 0, 0, 0, 0))
+    private val _storageUsage = MutableStateFlow(StorageUsage(0, 0, 0, 0, 0, 0))
 
     init {
         refreshStorageUsage()
@@ -82,6 +82,15 @@ class SettingsViewModel @Inject constructor(
     fun setSaveCommentsEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setSaveCommentsEnabled(enabled)
+        }
+    }
+
+    /** Frees thumbnails and cache, then reports the bytes recovered. */
+    fun reclaimSpace(onDone: (Long) -> Unit) {
+        viewModelScope.launch {
+            val freed = settingsRepository.reclaimSpace()
+            refreshStorageUsage()
+            onDone(freed)
         }
     }
 

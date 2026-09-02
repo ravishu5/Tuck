@@ -67,7 +67,8 @@ object DatabaseModule {
             TuckDatabase.MIGRATION_3_4,
             TuckDatabase.MIGRATION_4_5,
             TuckDatabase.MIGRATION_5_6,
-            TuckDatabase.MIGRATION_6_7
+            TuckDatabase.MIGRATION_6_7,
+            TuckDatabase.MIGRATION_7_8
         )
             .build()
     }
@@ -77,6 +78,9 @@ object DatabaseModule {
 
     @Provides
     fun provideFilingRuleDao(database: TuckDatabase): com.tuck.app.data.local.db.dao.FilingRuleDao = database.filingRuleDao()
+
+    @Provides
+    fun provideChecklistDao(database: TuckDatabase): com.tuck.app.data.local.db.dao.ChecklistDao = database.checklistDao()
 
     @Provides
     fun provideSavedItemFtsDao(database: TuckDatabase): SavedItemFtsDao = SavedItemFtsDaoImpl(database)

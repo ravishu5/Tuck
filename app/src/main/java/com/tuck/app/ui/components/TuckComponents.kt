@@ -119,6 +119,14 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.FilterChip
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 
 // 1. Search Bar Component
 @Composable
@@ -1029,14 +1037,16 @@ fun TuckSectionHeader(
 }
 
 // 7. Platform-Aware Content Card
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun TuckContentCard(
     item: SavedItem,
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit,
     modifier: Modifier = Modifier,
-    highlightSnippet: String? = null
+    highlightSnippet: String? = null,
+    /** Long-press opens quick actions. Null leaves the card press-only. */
+    onLongPress: (() -> Unit)? = null
 ) {
     val tuckColors = TuckTheme.colors
     val tuckShapes = TuckTheme.shapes
@@ -1044,6 +1054,7 @@ fun TuckContentCard(
 
     val formattedDate = formatRelativeTime(item.createdAt)
     val interactionSource = remember { MutableInteractionSource() }
+    val haptics = LocalHapticFeedback.current
 
     Card(
         modifier = modifier
@@ -1056,10 +1067,16 @@ fun TuckContentCard(
                 spotColor = tuckColors.scrim.copy(alpha = 0.35f)
             )
             .clip(tuckShapes.medium)
-            .clickable(
+            .combinedClickable(
                 interactionSource = interactionSource,
                 indication = ripple(color = tuckColors.accent),
-                onClick = onClick
+                onClick = onClick,
+                onLongClick = onLongPress?.let { press ->
+                    {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        press()
+                    }
+                }
             ),
         shape = tuckShapes.medium,
         colors = CardDefaults.cardColors(containerColor = tuckColors.surface),
@@ -2013,5 +2030,107 @@ fun CollectionSectionHeader(
                 .height(1.dp)
                 .background(tuckColors.dividerHairline)
         )
+    }
+}
+
+/**
+ * Quick actions for one save, opened by long-pressing its card.
+ *
+ * Everything here was previously only reachable by opening the item first, which is three
+ * taps to file something that took two to save.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ItemQuickActionsSheet(
+    item: SavedItem,
+    collections: List<com.tuck.app.domain.model.Collection>,
+    onDismiss: () -> Unit,
+    onMoveTo: (Long) -> Unit,
+    onToggleDone: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val tuckColors = TuckTheme.colors
+    val isDone = item.completedAt != null
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = tuckColors.surface
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 28.dp)) {
+            Text(
+                text = item.displayTitle,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = tuckColors.textPrimary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "MOVE TO",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 1.2.sp,
+                color = tuckColors.textMuted
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Fullest first, matching every other collection surface.
+            val ordered = remember(collections) {
+                collections.sortedWith(
+                    compareByDescending<com.tuck.app.domain.model.Collection> { it.itemCount }
+                        .thenBy { it.name.lowercase() }
+                )
+            }
+            val alreadyIn = remember(item) { item.collections.map { it.id }.toSet() }
+
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ordered.forEach { collection ->
+                    val entry = resolveCollectionColor(collection.color, collection.name, collection.id)
+                    FilterChip(
+                        selected = alreadyIn.contains(collection.id),
+                        onClick = { onMoveTo(collection.id) },
+                        label = { Text(collection.name) },
+                        leadingIcon = {
+                            Box(
+                                modifier = Modifier
+                                    .size(9.dp)
+                                    .clip(CircleShape)
+                                    .background(entry.background)
+                            )
+                        }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AssistChip(
+                    onClick = { onToggleDone(); onDismiss() },
+                    label = { Text(if (isDone) "Mark not done" else "Mark done") },
+                    leadingIcon = {
+                        Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                    }
+                )
+                AssistChip(
+                    onClick = { onDelete(); onDismiss() },
+                    label = { Text("Delete") },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Filled.Delete,
+                            contentDescription = null,
+                            tint = tuckColors.destructive,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                )
+            }
+        }
     }
 }

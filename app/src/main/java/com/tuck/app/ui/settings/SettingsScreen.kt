@@ -69,6 +69,11 @@ import com.tuck.app.ui.components.TuckCategoryChip
 import com.tuck.app.ui.components.TuckSectionHeader
 import com.tuck.app.ui.components.TuckThemePreviewCard
 import com.tuck.app.ui.theme.TuckTheme
+import androidx.compose.foundation.layout.fillMaxHeight
+import com.tuck.app.ui.theme.color.PaletteSlot
+import com.tuck.app.domain.repository.StorageUsage
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.TextButton
 
 @Composable
 fun SettingsScreen(
@@ -402,13 +407,16 @@ fun SettingsScreen(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    SettingsActionRow(
-                        icon = Icons.Filled.Storage,
-                        title = "Clear Image Cache",
-                        subtitle = "Free temporary cached preview thumbnails",
-                        onClick = {
-                            viewModel.clearCache()
-                            Toast.makeText(context, "Cache cleared", Toast.LENGTH_SHORT).show()
+                    StorageBreakdown(
+                        usage = uiState.storageUsage,
+                        onReclaim = {
+                            viewModel.reclaimSpace { freed ->
+                                Toast.makeText(
+                                    context,
+                                    if (freed > 0) "Freed ${formatBytes(freed)}" else "Nothing to reclaim",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
                         }
                     )
 
@@ -588,4 +596,122 @@ private fun SettingsActionRow(
             modifier = Modifier.size(18.dp)
         )
     }
+}
+
+
+/**
+ * Where the space actually went, and what can be freed.
+ *
+ * A competitor's user watched a folder quietly fill their disk and called it money lost.
+ * A single total does not answer "what is taking the room" - a breakdown does, and it
+ * makes clear that only the regenerable half is ever offered for deletion.
+ */
+@Composable
+private fun StorageBreakdown(
+    usage: StorageUsage,
+    onReclaim: () -> Unit
+) {
+    val tuckColors = TuckTheme.colors
+    val palette = tuckColors.palette
+
+    val segments = listOf(
+        Triple("Images", usage.imagesSizeBytes, palette[PaletteSlot.PRIMARY_CORE].fill),
+        Triple("PDFs", usage.pdfsSizeBytes, palette[PaletteSlot.SECONDARY_CORE].fill),
+        Triple("Documents", usage.documentsSizeBytes, palette[PaletteSlot.TERTIARY_CORE].fill),
+        Triple("Previews", usage.thumbnailsSizeBytes, palette[PaletteSlot.PRIMARY_SOFT].fill),
+        Triple("Cache", usage.cacheSizeBytes, palette[PaletteSlot.SECONDARY_SOFT].fill)
+    ).filter { it.second > 0 }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = formatBytes(usage.totalSizeBytes),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.ExtraBold,
+            color = tuckColors.textPrimary
+        )
+        Text(
+            text = "used on this device",
+            style = MaterialTheme.typography.bodySmall,
+            color = tuckColors.textMuted
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        if (segments.isEmpty()) {
+            Text(
+                text = "Nothing stored yet.",
+                style = MaterialTheme.typography.bodySmall,
+                color = tuckColors.textMuted
+            )
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(10.dp)
+                    .clip(RoundedCornerShape(5.dp))
+                    .background(tuckColors.surfaceVariant)
+            ) {
+                segments.forEach { (_, bytes, color) ->
+                    Box(
+                        modifier = Modifier
+                            .weight(bytes.toFloat())
+                            .fillMaxHeight()
+                            .background(color)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            segments.forEach { (label, bytes, color) ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(9.dp)
+                            .clip(CircleShape)
+                            .background(color)
+                    )
+                    Spacer(modifier = Modifier.width(9.dp))
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = tuckColors.textSecondary,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = formatBytes(bytes),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = tuckColors.textPrimary
+                    )
+                }
+            }
+        }
+
+        if (usage.reclaimableBytes > 0) {
+            Spacer(modifier = Modifier.height(12.dp))
+            TextButton(onClick = onReclaim, contentPadding = PaddingValues(0.dp)) {
+                Text(
+                    text = "Reclaim ${formatBytes(usage.reclaimableBytes)}",
+                    fontWeight = FontWeight.Bold,
+                    color = tuckColors.accent
+                )
+            }
+            Text(
+                text = "Removes previews and cache only. Your saves are untouched.",
+                style = MaterialTheme.typography.labelSmall,
+                color = tuckColors.textMuted
+            )
+        }
+    }
+}
+
+private fun formatBytes(bytes: Long): String = when {
+    bytes >= 1_073_741_824 -> "%.2f GB".format(bytes / 1_073_741_824.0)
+    bytes >= 1_048_576 -> "%.1f MB".format(bytes / 1_048_576.0)
+    bytes >= 1024 -> "%.0f KB".format(bytes / 1024.0)
+    else -> "$bytes B"
 }

@@ -101,6 +101,7 @@ import androidx.compose.material3.ripple
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.tuck.app.ui.components.CollectionTile
+import com.tuck.app.ui.components.ItemQuickActionsSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -112,6 +113,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var quickActionsFor by remember { mutableStateOf<com.tuck.app.domain.model.SavedItem?>(null) }
     val appSettings by viewModel.appSettings.collectAsStateWithLifecycle()
     val tuckColors = TuckTheme.colors
     val tuckShapes = TuckTheme.shapes
@@ -286,6 +288,7 @@ fun HomeScreen(
                     Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
                         TuckContentCard(
                             item = item,
+                            onLongPress = { quickActionsFor = item },
                             onClick = { onNavigateToDetail(item.id) },
                             onToggleFavorite = {
                                 viewModel.toggleFavorite(item.id, item.isFavorite)
@@ -304,6 +307,20 @@ fun HomeScreen(
                         .align(Alignment.BottomEnd)
                         .padding(end = 16.dp, bottom = 16.dp)
                 )
+    }
+
+    quickActionsFor?.let { target ->
+        ItemQuickActionsSheet(
+            item = target,
+            collections = uiState.collections,
+            onDismiss = { quickActionsFor = null },
+            onMoveTo = { collectionId ->
+                viewModel.addToCollection(target.id, collectionId)
+                quickActionsFor = null
+            },
+            onToggleDone = { viewModel.toggleCompleted(target.id, target.completedAt != null) },
+            onDelete = { viewModel.moveToTrash(target.id) }
+        )
     }
 
     // Quick Capture Speed Dial Bottom Sheet

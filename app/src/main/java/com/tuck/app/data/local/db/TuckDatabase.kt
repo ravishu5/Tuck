@@ -11,6 +11,7 @@ import com.tuck.app.data.local.db.dao.EntityDao
 import com.tuck.app.data.local.db.dao.ItemRawPayloadDao
 import com.tuck.app.data.local.db.dao.MediaAssetDao
 import com.tuck.app.data.local.db.dao.SavedItemDao
+import com.tuck.app.data.local.db.dao.ChecklistDao
 import com.tuck.app.data.local.db.dao.FilingRuleDao
 import com.tuck.app.data.local.db.dao.SearchHistoryDao
 import com.tuck.app.data.local.db.dao.SourceContentDao
@@ -25,6 +26,7 @@ import com.tuck.app.data.local.db.entity.OcrBlockEntity
 import com.tuck.app.data.local.db.entity.SavedItemCollectionCrossRef
 import com.tuck.app.data.local.db.entity.SavedItemEntity
 import com.tuck.app.data.local.db.entity.SavedItemTagCrossRef
+import com.tuck.app.data.local.db.entity.ChecklistItemEntity
 import com.tuck.app.data.local.db.entity.FilingRuleEntity
 import com.tuck.app.data.local.db.entity.SearchHistoryEntity
 import com.tuck.app.data.local.db.entity.SourceCommentEntity
@@ -44,6 +46,7 @@ import kotlinx.serialization.json.JsonObject
         SavedItemCollectionCrossRef::class,
         SearchHistoryEntity::class,
         FilingRuleEntity::class,
+        ChecklistItemEntity::class,
         ItemRawPayloadEntity::class,
         MediaAssetEntity::class,
         SourcePostEntity::class,
@@ -52,7 +55,7 @@ import kotlinx.serialization.json.JsonObject
         DerivedPointEntity::class,
         OcrBlockEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -63,6 +66,7 @@ abstract class TuckDatabase : RoomDatabase() {
     abstract fun collectionDao(): CollectionDao
     abstract fun searchHistoryDao(): SearchHistoryDao
     abstract fun filingRuleDao(): FilingRuleDao
+    abstract fun checklistDao(): ChecklistDao
     abstract fun mediaAssetDao(): MediaAssetDao
     abstract fun sourceContentDao(): SourceContentDao
     abstract fun derivedContentDao(): DerivedContentDao
@@ -367,6 +371,27 @@ abstract class TuckDatabase : RoomDatabase() {
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_filing_rules_collectionId` ON `filing_rules`(`collectionId`)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_filing_rules_isEnabled` ON `filing_rules`(`isEnabled`)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_filing_rules_sortOrdinal` ON `filing_rules`(`sortOrdinal`)")
+            }
+        }
+
+        /** Adds checklists: several steps inside one save. New table, so nothing to backfill. */
+        val MIGRATION_7_8 = object : androidx.room.migration.Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `checklist_items` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `itemId` INTEGER NOT NULL,
+                        `text` TEXT NOT NULL,
+                        `isDone` INTEGER NOT NULL,
+                        `ordinal` INTEGER NOT NULL,
+                        `createdAt` INTEGER NOT NULL,
+                        FOREIGN KEY(`itemId`) REFERENCES `saved_items`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_checklist_items_itemId` ON `checklist_items`(`itemId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_checklist_items_ordinal` ON `checklist_items`(`ordinal`)")
             }
         }
 

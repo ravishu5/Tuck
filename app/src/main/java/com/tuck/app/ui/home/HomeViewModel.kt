@@ -352,6 +352,19 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    /** Files an item into a collection from the quick-actions sheet. */
+    fun addToCollection(itemId: Long, collectionId: Long) {
+        viewModelScope.launch {
+            savedItemRepository.addItemToCollection(itemId, collectionId)
+        }
+    }
+
+    fun toggleCompleted(itemId: Long, isCurrentlyDone: Boolean) {
+        viewModelScope.launch {
+            savedItemRepository.setCompleted(itemId, !isCurrentlyDone)
+        }
+    }
+
     fun moveToTrash(itemId: Long) {
         viewModelScope.launch {
             savedItemRepository.moveToTrash(itemId)

@@ -320,6 +320,52 @@ class TuckMigrationTest {
     }
 
     @Test
+    fun migrate7To8_addsChecklistsThatCascadeWithTheirItem() {
+        helper.createDatabase(TEST_DB, 2).use { db ->
+            db.execSQL(
+                """
+                INSERT INTO saved_items
+                    (id, contentType, title, description, originalUrl, canonicalUrl, sourceDomain,
+                     sourceApp, mimeType, localFilePath, thumbnailPath, originalText, extractedText,
+                     ocrText, commentsJson, createdAt, updatedAt, lastOpenedAt, isFavorite,
+                     isArchived, isDeleted, processingStatus, textHash, imageSha256)
+                VALUES
+                    (1, 'NOTE', 'Pasta recipe', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                     NULL, NULL, NULL, NULL, 1700000000000, 1700000000000, NULL, 0, 0, 0,
+                     'READY', NULL, NULL)
+                """.trimIndent()
+            )
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB, 3, true, TuckDatabase.MIGRATION_2_3).close()
+        helper.runMigrationsAndValidate(TEST_DB, 4, false, TuckDatabase.MIGRATION_3_4).close()
+        helper.runMigrationsAndValidate(TEST_DB, 5, false, TuckDatabase.MIGRATION_4_5).close()
+        helper.runMigrationsAndValidate(TEST_DB, 6, false, TuckDatabase.MIGRATION_5_6).close()
+        helper.runMigrationsAndValidate(TEST_DB, 7, false, TuckDatabase.MIGRATION_6_7).close()
+        val db = helper.runMigrationsAndValidate(TEST_DB, 8, false, TuckDatabase.MIGRATION_7_8)
+
+        db.use {
+            it.execSQL("PRAGMA foreign_keys = ON")
+            it.execSQL(
+                "INSERT INTO checklist_items (itemId, text, isDone, ordinal, createdAt) " +
+                    "VALUES (1, 'Buy tomatoes', 0, 0, 1700000000000)"
+            )
+            it.query("SELECT text, isDone FROM checklist_items WHERE itemId = 1").use { c ->
+                assertTrue(c.moveToFirst())
+                assertEquals("Buy tomatoes", c.getString(0))
+                assertEquals(0, c.getInt(1))
+            }
+
+            // Steps belong to their save; deleting the save must take them with it.
+            it.execSQL("DELETE FROM saved_items WHERE id = 1")
+            it.query("SELECT COUNT(*) FROM checklist_items").use { c ->
+                c.moveToFirst()
+                assertEquals("checklist rows cascade with the item", 0, c.getInt(0))
+            }
+        }
+    }
+
+    @Test
     fun migrate2To3_parsesCommentsJsonIntoMaterializedPathTree() {
         helper.createDatabase(TEST_DB, 2).use { db ->
             db.execSQL(

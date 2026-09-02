@@ -432,16 +432,17 @@ class FileStorageService @Inject constructor(
     suspend fun getStorageUsage(): StorageUsage = withContext(Dispatchers.IO) {
         val imagesSize = getDirectorySize(imagesDir)
         val pdfsSize = getDirectorySize(pdfsDir)
+        val documentsSize = getDirectorySize(documentsDir)
         val thumbsSize = getDirectorySize(thumbnailsDir)
         val cacheSize = getDirectorySize(context.cacheDir)
-        val total = imagesSize + pdfsSize + thumbsSize + cacheSize
 
         StorageUsage(
             imagesSizeBytes = imagesSize,
             pdfsSizeBytes = pdfsSize,
+            documentsSizeBytes = documentsSize,
             thumbnailsSizeBytes = thumbsSize,
             cacheSizeBytes = cacheSize,
-            totalSizeBytes = total
+            totalSizeBytes = imagesSize + pdfsSize + documentsSize + thumbsSize + cacheSize
         )
     }
 
@@ -453,6 +454,25 @@ class FileStorageService @Inject constructor(
         } catch (e: Exception) {
             false
         }
+    }
+
+    /**
+     * Frees everything regenerable: cached previews and thumbnails.
+     *
+     * Never touches images, PDFs or documents - those are the saves. Thumbnails are
+     * rebuilt on next display, so the only cost is a moment of re-decoding.
+     */
+    suspend fun reclaimSpace(): Long = withContext(Dispatchers.IO) {
+        val before = getDirectorySize(thumbnailsDir) + getDirectorySize(context.cacheDir)
+        try {
+            thumbnailsDir.listFiles()?.forEach { it.delete() }
+            context.cacheDir.deleteRecursively()
+            context.cacheDir.mkdirs()
+        } catch (ignored: Exception) {
+            // Partial reclaim is still a reclaim; report what actually went.
+        }
+        val after = getDirectorySize(thumbnailsDir) + getDirectorySize(context.cacheDir)
+        (before - after).coerceAtLeast(0L)
     }
 
     private fun getDirectorySize(dir: File): Long {

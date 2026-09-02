@@ -115,6 +115,8 @@ class SettingsRepositoryImpl @Inject constructor(
         return fileStorageService.getStorageUsage()
     }
 
+    override suspend fun reclaimSpace(): Long = fileStorageService.reclaimSpace()
+
     override suspend fun clearCache(): Boolean {
         return fileStorageService.clearCache()
     }
