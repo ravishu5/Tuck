@@ -227,13 +227,8 @@
     <string name="home_scan_multi_page">Scanned document · %1$d pages</string>
 
     <!-- Relative time, so dates read naturally in every language -->
-    <string name="time_just_now">Just now</string>
-    <string name="time_minutes_ago">%1$dm ago</string>
-    <string name="time_hours_ago">%1$dh ago</string>
-    <string name="time_yesterday">Yesterday</string>
-    <string name="time_days_ago">%1$dd ago</string>
 
-    <string name="resurfaced_you_saved_this">You saved this %1$s: \"%2$s\"</string>
+    <string name="resurfaced_you_saved_this">Saved %1$s: \"%2$s\"</string>
 
     <!-- Content badges -->
     <string name="badge_screenshot">Screenshot</string>

@@ -218,12 +218,7 @@
     <string name="home_voice_needs_mic">L\'accès au micro est nécessaire pour les notes vocales</string>
     <string name="title_scan">Document scanné</string>
     <string name="home_scan_multi_page">Document scanné · %1$d pages</string>
-    <string name="time_just_now">À l\'instant</string>
-    <string name="time_minutes_ago">il y a %1$d min</string>
-    <string name="time_hours_ago">il y a %1$d h</string>
-    <string name="time_yesterday">Hier</string>
-    <string name="time_days_ago">il y a %1$d j</string>
-    <string name="resurfaced_you_saved_this">Vous avez gardé ceci %1$s : \"%2$s\"</string>
+    <string name="resurfaced_you_saved_this">Gardé %1$s : \"%2$s\"</string>
     <string name="badge_screenshot">Capture</string>
     <string name="badge_note">Note</string>
     <string name="badge_contact">Contact</string>

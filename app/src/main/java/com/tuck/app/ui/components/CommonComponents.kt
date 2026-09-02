@@ -1,5 +1,6 @@
 package com.tuck.app.ui.components
 
+import android.text.format.DateUtils
 import androidx.compose.ui.res.stringResource
 import com.tuck.app.R
 
@@ -425,24 +426,18 @@ fun EmptyState(
     }
 }
 
-@Composable
-fun formatRelativeTime(timestamp: Long): String {
-    val now = System.currentTimeMillis()
-    val diff = now - timestamp
-    val seconds = TimeUnit.MILLISECONDS.toSeconds(diff)
-    val minutes = TimeUnit.MILLISECONDS.toMinutes(diff)
-    val hours = TimeUnit.MILLISECONDS.toHours(diff)
-    val days = TimeUnit.MILLISECONDS.toDays(diff)
-
-    return when {
-        seconds < 60 -> stringResource(R.string.time_just_now)
-        minutes < 60 -> stringResource(R.string.time_minutes_ago, minutes)
-        hours < 24 -> stringResource(R.string.time_hours_ago, hours)
-        days == 1L -> stringResource(R.string.time_yesterday)
-        days < 7 -> stringResource(R.string.time_days_ago, days)
-        else -> SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(timestamp))
-    }
-}
+/**
+ * "5 min ago", "yesterday", "26 August" - whatever the platform says in the user's
+ * language. Rolling our own meant an English "Aug 26" leaking into a translated
+ * sentence, and a hand-built "MMM d" that reads as nonsense in most languages.
+ */
+fun formatRelativeTime(timestamp: Long): String =
+    DateUtils.getRelativeTimeSpanString(
+        timestamp,
+        System.currentTimeMillis(),
+        DateUtils.MINUTE_IN_MILLIS,
+        DateUtils.FORMAT_ABBREV_RELATIVE
+    ).toString()
 
 fun Context.startActivitySafe(intent: Intent) {
     try {
