@@ -21,6 +21,10 @@ data class Collection(
     val color: String? = null,
     val isLocked: Boolean = false,
     val itemCount: Int = 0,
+    /** Items still outstanding, i.e. not marked done. */
+    val openCount: Int = 0,
+    /** Newest preview images, for the tile composition. Empty means show the colour tile. */
+    val previewPaths: List<String> = emptyList(),
     val createdAt: Long = System.currentTimeMillis()
 )
 

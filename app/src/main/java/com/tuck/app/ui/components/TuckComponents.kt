@@ -118,6 +118,7 @@ import androidx.compose.material3.ripple
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.foundation.layout.fillMaxHeight
 
 // 1. Search Bar Component
 @Composable
@@ -598,6 +599,212 @@ fun CollectionTile(
     collectionId: Long = 0,
     isSelected: Boolean = false,
     isLocked: Boolean = false,
+    openCount: Int = 0,
+    previewPaths: List<String> = emptyList(),
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // A collection with content is identified by that content; an empty one has nothing to
+    // show, so it falls back to its colour. The grid quietens as the library fills.
+    if (previewPaths.isNotEmpty() && !isLocked) {
+        CollectionPreviewTile(
+            name = name,
+            count = count,
+            openCount = openCount,
+            previewPaths = previewPaths,
+            colorId = colorId,
+            collectionId = collectionId,
+            isSelected = isSelected,
+            onClick = onClick,
+            modifier = modifier
+        )
+    } else {
+        CollectionColorTile(
+            name = name,
+            count = count,
+            openCount = openCount,
+            colorId = colorId,
+            iconHint = iconHint,
+            collectionId = collectionId,
+            isSelected = isSelected,
+            isLocked = isLocked,
+            onClick = onClick,
+            modifier = modifier
+        )
+    }
+}
+
+/**
+ * A populated collection: one lead image with two stacked beneath it.
+ *
+ * Deliberately not three equal squares - an even row reads as a contact sheet and gives
+ * the eye nowhere to land. A lead plus two supporting images reads as a composition, and
+ * it stays balanced whether there are two previews or three.
+ */
+@Composable
+private fun CollectionPreviewTile(
+    name: String,
+    count: Int,
+    openCount: Int,
+    previewPaths: List<String>,
+    colorId: String?,
+    collectionId: Long,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val tuckColors = TuckTheme.colors
+    val accentEntry = resolveCollectionColor(colorId, name, collectionId)
+    val interactionSource = remember { MutableInteractionSource() }
+    val context = LocalContext.current
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .pressScale(interactionSource)
+            .shadow(
+                elevation = 6.dp,
+                shape = RoundedCornerShape(22.dp),
+                ambientColor = tuckColors.scrim.copy(alpha = 0.35f),
+                spotColor = tuckColors.scrim.copy(alpha = 0.35f)
+            )
+            .clip(RoundedCornerShape(22.dp))
+            .background(tuckColors.surface)
+            .border(1.dp, tuckColors.borderSubtle, RoundedCornerShape(22.dp))
+            .clickable(
+                interactionSource = interactionSource,
+                indication = ripple(color = accentEntry.background),
+                onClick = onClick
+            )
+            .padding(9.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().height(72.dp),
+            horizontalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            PreviewImage(
+                path = previewPaths[0],
+                context = context,
+                fallback = accentEntry.background,
+                modifier = Modifier.weight(1.9f).fillMaxHeight()
+            )
+
+            if (previewPaths.size > 1) {
+                Column(
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    PreviewImage(
+                        path = previewPaths[1],
+                        context = context,
+                        fallback = accentEntry.background,
+                        modifier = Modifier.fillMaxWidth().weight(1f)
+                    )
+                    if (previewPaths.size > 2) {
+                        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                            PreviewImage(
+                                path = previewPaths[2],
+                                context = context,
+                                fallback = accentEntry.background,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                            // "+N" counts what the preview is not showing, so the tile
+                            // says how much more is in there.
+                            val hidden = count - previewPaths.size
+                            if (hidden > 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(RoundedCornerShape(7.dp))
+                                        .background(tuckColors.scrim.copy(alpha = 0.55f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "+$hidden",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = tuckColors.onScrim
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(9.dp))
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(7.dp)
+                    .clip(CircleShape)
+                    .background(accentEntry.background)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = name,
+                style = TuckTheme.typography.tileTitle,
+                color = tuckColors.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (isSelected) {
+                Spacer(modifier = Modifier.weight(1f))
+                Icon(
+                    imageVector = Icons.Filled.Check,
+                    contentDescription = "Selected",
+                    tint = accentEntry.background,
+                    modifier = Modifier.size(15.dp)
+                )
+            }
+        }
+
+        Text(
+            text = collectionSubtitle(count, openCount),
+            style = TuckTheme.typography.numericCount,
+            color = tuckColors.textMuted
+        )
+    }
+}
+
+@Composable
+private fun PreviewImage(
+    path: String,
+    context: android.content.Context,
+    fallback: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier
+) {
+    val request = remember(path) {
+        val model: Any = when {
+            path.startsWith("content://") -> Uri.parse(path)
+            path.startsWith("/") || path.startsWith("file://") -> File(path.removePrefix("file://"))
+            else -> path
+        }
+        ImageRequest.Builder(context).data(model).crossfade(true).build()
+    }
+    AsyncImage(
+        model = request,
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        modifier = modifier
+            .clip(RoundedCornerShape(7.dp))
+            .background(fallback.copy(alpha = 0.35f))
+    )
+}
+
+/** An empty or locked collection, identified by its colour rather than its contents. */
+@Composable
+private fun CollectionColorTile(
+    name: String,
+    count: Int,
+    openCount: Int,
+    colorId: String?,
+    iconHint: String?,
+    collectionId: Long,
+    isSelected: Boolean,
+    isLocked: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -617,8 +824,6 @@ fun CollectionTile(
                 spotColor = colorEntry.background.copy(alpha = 0.5f)
             )
             .clip(RoundedCornerShape(22.dp))
-            // Two layers: the tile's own gradient, then a sheen along the top edge.
-            // Together they read as a lit surface rather than a flat rectangle.
             .background(TuckGradients.tile(colorEntry.background, tuckColors.isDark))
             .background(TuckGradients.sheen(colorEntry.foreground))
             .clickable(
@@ -649,9 +854,7 @@ fun CollectionTile(
                 imageVector = Icons.Filled.Lock,
                 contentDescription = "Locked",
                 tint = colorEntry.foreground.copy(alpha = 0.75f),
-                modifier = Modifier
-                    .size(15.dp)
-                    .align(Alignment.TopEnd)
+                modifier = Modifier.size(15.dp).align(Alignment.TopEnd)
             )
         }
 
@@ -661,11 +864,7 @@ fun CollectionTile(
                     .size(40.dp)
                     .clip(CircleShape)
                     .background(colorEntry.foreground.copy(alpha = 0.20f))
-                    .border(
-                        width = 1.dp,
-                        color = colorEntry.foreground.copy(alpha = 0.18f),
-                        shape = CircleShape
-                    ),
+                    .border(1.dp, colorEntry.foreground.copy(alpha = 0.18f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -689,12 +888,25 @@ fun CollectionTile(
             Spacer(modifier = Modifier.height(2.dp))
 
             Text(
-                text = if (count == 1) "1 item" else "$count items",
+                text = collectionSubtitle(count, openCount),
                 style = TuckTheme.typography.numericCount,
                 color = colorEntry.foreground.copy(alpha = 0.72f)
             )
         }
     }
+}
+
+/**
+ * "18 items · 12 to read" rather than a bare number.
+ *
+ * The outstanding count is the whole point of the lifecycle work: it tells the user what
+ * a collection still wants from them, which a total never does.
+ */
+private fun collectionSubtitle(count: Int, openCount: Int): String = when {
+    count == 0 -> "Empty"
+    openCount == 0 -> "$count ${if (count == 1) "item" else "items"} · all done"
+    openCount == count -> "$count ${if (count == 1) "item" else "items"}"
+    else -> "$count items · $openCount to go"
 }
 
 @Composable
@@ -1644,6 +1856,151 @@ fun TuckFab(
             contentDescription = contentDescription,
             tint = tuckColors.textOnAccent,
             modifier = Modifier.size(26.dp)
+        )
+    }
+}
+
+/**
+ * A collection as a row, with how much of it is still outstanding.
+ *
+ * The bar is the lifecycle work made visible: done items over total. A filing cabinet
+ * tells you how much you have; this tells you how much you still owe yourself. No
+ * competitor in this category can draw it, because none of them track a done state.
+ */
+@Composable
+fun CollectionProgressRow(
+    name: String,
+    count: Int,
+    openCount: Int,
+    colorId: String? = null,
+    iconHint: String? = null,
+    collectionId: Long = 0,
+    isLocked: Boolean = false,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val tuckColors = TuckTheme.colors
+    val entry = resolveCollectionColor(colorId, name, collectionId)
+    val visual = getCollectionVisual(name, iconHint, colorId, collectionId)
+    val interactionSource = remember { MutableInteractionSource() }
+
+    val done = (count - openCount).coerceAtLeast(0)
+    val fraction = if (count == 0) 0f else done.toFloat() / count.toFloat()
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .pressScale(interactionSource, pressedScale = 0.99f)
+            .clip(RoundedCornerShape(16.dp))
+            .background(tuckColors.surface)
+            .border(1.dp, tuckColors.borderSubtle, RoundedCornerShape(16.dp))
+            .clickable(
+                interactionSource = interactionSource,
+                indication = ripple(color = entry.background),
+                onClick = onClick
+            )
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(TuckGradients.tile(entry.background, tuckColors.isDark)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = if (isLocked) Icons.Filled.Lock else visual.icon,
+                contentDescription = null,
+                tint = entry.foreground,
+                modifier = Modifier.size(19.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(13.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = name,
+                style = TuckTheme.typography.tileTitle,
+                color = tuckColors.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = when {
+                    count == 0 -> "Empty"
+                    openCount == 0 -> "$count ${if (count == 1) "item" else "items"} · all done"
+                    else -> "$count items · $done done"
+                },
+                style = TuckTheme.typography.numericCount,
+                color = tuckColors.textMuted
+            )
+
+            if (count > 0) {
+                Spacer(modifier = Modifier.height(7.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(tuckColors.surfaceVariant)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(fraction)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(entry.background)
+                    )
+                }
+            }
+        }
+
+        if (count > 0) {
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = "${(fraction * 100).toInt()}%",
+                style = TuckTheme.typography.numericCount,
+                fontWeight = FontWeight.ExtraBold,
+                color = tuckColors.textSecondary
+            )
+        }
+    }
+}
+
+/** Small section heading used to group a collection's contents by whether they are done. */
+@Composable
+fun CollectionSectionHeader(
+    label: String,
+    count: Int,
+    modifier: Modifier = Modifier
+) {
+    val tuckColors = TuckTheme.colors
+    Row(
+        modifier = modifier.fillMaxWidth().padding(top = 6.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label.uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = 1.2.sp,
+            color = tuckColors.textMuted
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "$count",
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = tuckColors.textMuted
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(1.dp)
+                .background(tuckColors.dividerHairline)
         )
     }
 }

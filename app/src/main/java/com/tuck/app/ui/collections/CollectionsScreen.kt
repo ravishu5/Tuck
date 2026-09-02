@@ -72,6 +72,8 @@ import com.tuck.app.ui.components.TuckSearchBar
 import com.tuck.app.ui.components.TuckSectionHeader
 import com.tuck.app.ui.theme.TuckTheme
 import com.tuck.app.ui.components.TuckFab
+import com.tuck.app.ui.components.CollectionProgressRow
+import com.tuck.app.ui.components.CollectionSectionHeader
 
 @Composable
 fun CollectionsScreen(
@@ -170,12 +172,28 @@ fun CollectionsScreen(
                             modifier = Modifier.padding(top = 40.dp)
                         )
                     } else {
+                        // Organised rather than dumped: what still needs the user comes
+                        // first, then what is finished, each under its own heading. A flat
+                        // reverse-chronological list buries the outstanding work under
+                        // whatever happened to be saved most recently.
+                        val outstanding = filteredItems.filter { it.completedAt == null }
+                        val finished = filteredItems.filter { it.completedAt != null }
+
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            items(filteredItems, key = { it.id }) { item ->
+                            if (outstanding.isNotEmpty() && finished.isNotEmpty()) {
+                                item(key = "hdr_open") {
+                                    CollectionSectionHeader(
+                                        label = "Still to go",
+                                        count = outstanding.size
+                                    )
+                                }
+                            }
+
+                            items(outstanding, key = { it.id }) { item ->
                                 TuckContentCard(
                                     item = item,
                                     onClick = { onNavigateToDetail(item.id) },
@@ -183,6 +201,24 @@ fun CollectionsScreen(
                                         viewModel.toggleFavorite(item.id, item.isFavorite)
                                     }
                                 )
+                            }
+
+                            if (finished.isNotEmpty()) {
+                                item(key = "hdr_done") {
+                                    CollectionSectionHeader(
+                                        label = "Done",
+                                        count = finished.size
+                                    )
+                                }
+                                items(finished, key = { it.id }) { item ->
+                                    TuckContentCard(
+                                        item = item,
+                                        onClick = { onNavigateToDetail(item.id) },
+                                        onToggleFavorite = {
+                                            viewModel.toggleFavorite(item.id, item.isFavorite)
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -199,7 +235,9 @@ fun CollectionsScreen(
                 }
 
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(if (isGridView) 3 else 1),
+                    // Preview tiles carry three images and a two-line caption; three across is too
+                    // cramped for that, so the grid is two.
+                    columns = GridCells.Fixed(if (isGridView) 2 else 1),
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 88.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -297,6 +335,8 @@ fun CollectionsScreen(
                                 CollectionTile(
                                     name = col.name,
                                     count = col.itemCount,
+                                    openCount = col.openCount,
+                                    previewPaths = col.previewPaths,
                                     colorId = col.color,
                                     iconHint = col.icon,
                                     collectionId = col.id,
@@ -318,14 +358,14 @@ fun CollectionsScreen(
                                     }
                                 )
                             } else {
-                                TuckCategoryCard(
+                                CollectionProgressRow(
                                     name = col.name,
                                     count = col.itemCount,
-                                    icon = col.icon,
-                                    isAutoGenerated = col.isAutoGenerated,
-                                    isLocked = col.isLocked,
-                                    color = col.color,
+                                    openCount = col.openCount,
+                                    colorId = col.color,
+                                    iconHint = col.icon,
                                     collectionId = col.id,
+                                    isLocked = col.isLocked,
                                     onClick = {
                                         if (col.isLocked && fragmentActivity != null) {
                                             val authManager = com.tuck.app.ui.security.BiometricAuthManager(context)
