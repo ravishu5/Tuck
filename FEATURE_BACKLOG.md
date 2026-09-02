@@ -508,6 +508,8 @@ D6 entities · D8 comment-tree reading · D9 actionable entities · D7 source/de
 R22 richer social extraction
 
 ### Phase 6 — reach and capture breadth
+*J3–J8 moved to `FUTURE_WORK.md`.*
+
 R2 browser extension (7 requests, second only to Android) · **J7 localisation** (Spanish, French,
 Italian across both apps' threads) · R14 regional pricing · **J3 voice notes** ·
 **J4 real document scanner** · **J5 checklists** · R19 system search integration ·
