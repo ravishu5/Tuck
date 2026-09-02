@@ -94,6 +94,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.rememberModalBottomSheetState
 import com.tuck.app.ui.theme.color.PaletteSlot
+import com.tuck.app.ui.components.TuckFab
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -269,21 +270,13 @@ fun HomeScreen(
         }
 
         // Floating Action Button anchored to bottom-end
-        FloatingActionButton(
-            onClick = { showQuickAddSheet = true },
-            containerColor = tuckColors.accent,
-            contentColor = tuckColors.textOnAccent,
-            shape = CircleShape,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 16.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Add,
-                contentDescription = "Quick Save",
-                modifier = Modifier.size(26.dp)
-            )
-        }
+        TuckFab(
+                    onClick = { showQuickAddSheet = true },
+                    contentDescription = "Quick Save",
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 16.dp, bottom = 16.dp)
+                )
     }
 
     // Quick Capture Speed Dial Bottom Sheet

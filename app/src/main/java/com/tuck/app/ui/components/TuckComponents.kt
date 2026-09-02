@@ -110,6 +110,14 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import com.tuck.app.ui.theme.color.PaletteSlot
+import com.tuck.app.ui.theme.pressScale
+import com.tuck.app.ui.theme.TuckGradients
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.ui.draw.shadow
+import androidx.compose.material3.ripple
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 
 // 1. Search Bar Component
 @Composable
@@ -593,83 +601,98 @@ fun CollectionTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val tuckColors = TuckTheme.colors
     val colorEntry = resolveCollectionColor(colorId, name, collectionId)
     val visual = getCollectionVisual(name, iconHint, colorId, collectionId)
+    val interactionSource = remember { MutableInteractionSource() }
 
-    Card(
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = colorEntry.background),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .pressScale(interactionSource)
+            .shadow(
+                elevation = 10.dp,
+                shape = RoundedCornerShape(22.dp),
+                ambientColor = colorEntry.background.copy(alpha = 0.5f),
+                spotColor = colorEntry.background.copy(alpha = 0.5f)
+            )
+            .clip(RoundedCornerShape(22.dp))
+            // Two layers: the tile's own gradient, then a sheen along the top edge.
+            // Together they read as a lit surface rather than a flat rectangle.
+            .background(TuckGradients.tile(colorEntry.background, tuckColors.isDark))
+            .background(TuckGradients.sheen(colorEntry.foreground))
+            .clickable(
+                interactionSource = interactionSource,
+                indication = ripple(color = colorEntry.foreground),
+                onClick = onClick
+            )
+            .padding(15.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp)
-        ) {
-            if (isSelected) {
-                Box(
-                    modifier = Modifier
-                        .size(22.dp)
-                        .clip(CircleShape)
-                        .background(colorEntry.foreground)
-                        .align(Alignment.TopEnd),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Check,
-                        contentDescription = "Selected",
-                        tint = colorEntry.background,
-                        modifier = Modifier.size(14.dp)
-                    )
-                }
-            } else if (isLocked) {
-                Text(
-                    text = "🔒",
-                    fontSize = 12.sp,
-                    modifier = Modifier.align(Alignment.TopEnd)
-                )
-            }
-
-            Column(
+        if (isSelected) {
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = if (isSelected || isLocked) 4.dp else 0.dp),
-                verticalArrangement = Arrangement.SpaceBetween
+                    .size(22.dp)
+                    .clip(CircleShape)
+                    .background(colorEntry.foreground)
+                    .align(Alignment.TopEnd),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(colorEntry.foreground.copy(alpha = 0.18f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = visual.icon,
-                        contentDescription = name,
-                        tint = colorEntry.foreground,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = name,
-                    style = TuckTheme.typography.tileTitle,
-                    color = colorEntry.foreground,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Text(
-                    text = "$count",
-                    style = TuckTheme.typography.numericCount,
-                    color = colorEntry.foreground.copy(alpha = 0.8f)
+                Icon(
+                    imageVector = Icons.Filled.Check,
+                    contentDescription = "Selected",
+                    tint = colorEntry.background,
+                    modifier = Modifier.size(14.dp)
                 )
             }
+        } else if (isLocked) {
+            Icon(
+                imageVector = Icons.Filled.Lock,
+                contentDescription = "Locked",
+                tint = colorEntry.foreground.copy(alpha = 0.75f),
+                modifier = Modifier
+                    .size(15.dp)
+                    .align(Alignment.TopEnd)
+            )
+        }
+
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(colorEntry.foreground.copy(alpha = 0.20f))
+                    .border(
+                        width = 1.dp,
+                        color = colorEntry.foreground.copy(alpha = 0.18f),
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = visual.icon,
+                    contentDescription = name,
+                    tint = colorEntry.foreground,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Text(
+                text = name,
+                style = TuckTheme.typography.tileTitle,
+                color = colorEntry.foreground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            Text(
+                text = if (count == 1) "1 item" else "$count items",
+                style = TuckTheme.typography.numericCount,
+                color = colorEntry.foreground.copy(alpha = 0.72f)
+            )
         }
     }
 }
@@ -797,15 +820,27 @@ fun TuckContentCard(
     val domain = (item.sourceDomain ?: "").lowercase()
 
     val formattedDate = formatRelativeTime(item.createdAt)
+    val interactionSource = remember { MutableInteractionSource() }
 
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .pressScale(interactionSource, pressedScale = 0.985f)
+            .shadow(
+                elevation = 3.dp,
+                shape = tuckShapes.medium,
+                ambientColor = tuckColors.scrim.copy(alpha = 0.35f),
+                spotColor = tuckColors.scrim.copy(alpha = 0.35f)
+            )
             .clip(tuckShapes.medium)
-            .clickable(onClick = onClick),
+            .clickable(
+                interactionSource = interactionSource,
+                indication = ripple(color = tuckColors.accent),
+                onClick = onClick
+            ),
         shape = tuckShapes.medium,
         colors = CardDefaults.cardColors(containerColor = tuckColors.surface),
-        border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.border)
+        border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.borderSubtle)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // Media Preview (YouTube / Reel / Screenshot / Image)
@@ -835,6 +870,15 @@ fun TuckContentCard(
                         contentDescription = item.title,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
+                    )
+
+                    // Graded scrim along the bottom edge. A flat overlay dims the whole
+                    // image; a gradient keeps the picture bright where nothing sits on
+                    // top of it and only darkens under the badges.
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .background(TuckGradients.mediaScrim(tuckColors.scrim))
                     )
 
                     // Video Play Icon Overlay
@@ -1554,3 +1598,52 @@ private fun QuickCaptureOption(
     }
 }
 
+
+/**
+ * The primary action button.
+ *
+ * A gradient fill and a coloured shadow, so it reads as the one lifted thing on the
+ * screen rather than a flat circle, plus a haptic tick on press - the cheapest way to
+ * make a tap feel like it registered.
+ */
+@Composable
+fun TuckFab(
+    onClick: () -> Unit,
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+    icon: androidx.compose.ui.graphics.vector.ImageVector = Icons.Filled.Add
+) {
+    val tuckColors = TuckTheme.colors
+    val haptics = LocalHapticFeedback.current
+    val interactionSource = remember { MutableInteractionSource() }
+
+    Box(
+        modifier = modifier
+            .size(58.dp)
+            .pressScale(interactionSource, pressedScale = 0.92f)
+            .shadow(
+                elevation = 14.dp,
+                shape = CircleShape,
+                ambientColor = tuckColors.accent.copy(alpha = 0.6f),
+                spotColor = tuckColors.accent.copy(alpha = 0.6f)
+            )
+            .clip(CircleShape)
+            .background(TuckGradients.accent(tuckColors.accent, tuckColors.isDark))
+            .clickable(
+                interactionSource = interactionSource,
+                indication = ripple(color = tuckColors.textOnAccent),
+                onClick = {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onClick()
+                }
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = tuckColors.textOnAccent,
+            modifier = Modifier.size(26.dp)
+        )
+    }
+}

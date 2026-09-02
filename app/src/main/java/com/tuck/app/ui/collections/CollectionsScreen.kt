@@ -71,6 +71,7 @@ import com.tuck.app.ui.components.TuckEmptyState
 import com.tuck.app.ui.components.TuckSearchBar
 import com.tuck.app.ui.components.TuckSectionHeader
 import com.tuck.app.ui.theme.TuckTheme
+import com.tuck.app.ui.components.TuckFab
 
 @Composable
 fun CollectionsScreen(
@@ -348,21 +349,13 @@ fun CollectionsScreen(
             }
 
             if (uiState.selectedCollection == null) {
-                FloatingActionButton(
+                TuckFab(
                     onClick = { showCreateDialog = true },
-                    containerColor = tuckColors.accent,
-                    contentColor = tuckColors.textOnAccent,
-                    shape = CircleShape,
+                    contentDescription = "New Collection",
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(end = 16.dp, bottom = 16.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Add,
-                        contentDescription = "New Collection",
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
+                )
             }
         }
 
