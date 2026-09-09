@@ -20,6 +20,7 @@ import com.tuck.app.ui.theme.TuckTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -52,6 +53,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.tuck.app.R
 import com.tuck.app.domain.model.SavedItem
+import com.tuck.app.processing.extractors.GoogleMapsSourceExtractor
+import com.tuck.app.ui.map.MapPin
+import com.tuck.app.ui.map.TuckMap
 
 /**
  * The media at the top of an item, with its actions floating over it.
@@ -116,6 +120,30 @@ fun DetailMediaHeader(
         return
     }
 
+    // A saved location is a place, not a page.
+    //
+    // It used to be a Maps embed in a WebView: a consent prompt, an "open in the app" nag, and
+    // a map the reader could not really use. Tuck already parses the coordinates out of the URL
+    // at save time and already draws places on a map for the travel history, so a saved pin is
+    // shown the same way — the same map, offline-capable tiles, no third-party page.
+    val savedPlace = rememberSavedPlace(item)
+    if (savedPlace != null) {
+        Box(modifier = modifier.fillMaxWidth().height(MAP_HEIGHT)) {
+            TuckMap(
+                pins = listOf(savedPlace),
+                singlePinZoom = PLACE_ZOOM,
+                modifier = Modifier.fillMaxSize()
+            )
+            OverlayAction(
+                icon = Icons.Rounded.OpenInFull,
+                labelRes = R.string.detail_open_fullscreen,
+                onClick = onExpand,
+                modifier = Modifier.align(Alignment.BottomEnd).zIndex(1f).padding(14.dp)
+            )
+        }
+        return
+    }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -152,6 +180,39 @@ fun DetailMediaHeader(
         )
     }
 }
+
+/**
+ * The coordinates of a saved location, or null when this item is not one.
+ *
+ * Parsed from the URL rather than fetched: Maps encodes the pin in the path, so a saved place
+ * can be drawn with no network at all. A Maps link whose coordinates could not be recovered —
+ * a short link never opened, say — returns null and falls back to the embed, because a map
+ * centred on nowhere is worse than a web page.
+ */
+@Composable
+private fun rememberSavedPlace(item: SavedItem): MapPin? {
+    val url = item.canonicalUrl ?: item.originalUrl ?: return null
+    return remember(item.id, url) {
+        if (!GoogleMapsSourceExtractor.canHandleUrl(url)) return@remember null
+        val place = GoogleMapsSourceExtractor.parse(url)
+        val (lat, lon) = place.coordinates ?: return@remember null
+        val latitude = lat.toDoubleOrNull() ?: return@remember null
+        val longitude = lon.toDoubleOrNull() ?: return@remember null
+        MapPin(
+            id = item.id,
+            latitude = latitude,
+            longitude = longitude,
+            title = place.name ?: item.title,
+            subtitle = "$lat, $lon"
+        )
+    }
+}
+
+/** A saved place is one pin, so it is framed rather than filling the screen. */
+private val MAP_HEIGHT = 260.dp
+
+/** Street-ish: close enough to recognise the place, wide enough to place it. */
+private const val PLACE_ZOOM = 15.0
 
 /**
  * The item's actions, at the top of the page.
