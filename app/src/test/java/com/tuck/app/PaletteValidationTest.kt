@@ -5,6 +5,8 @@ import com.tuck.app.ui.theme.CobaltDark
 import com.tuck.app.ui.theme.CobaltLight
 import com.tuck.app.ui.theme.ForestDark
 import com.tuck.app.ui.theme.ForestLight
+import com.tuck.app.ui.theme.HarborDark
+import com.tuck.app.ui.theme.HarborLight
 import com.tuck.app.ui.theme.LinenDark
 import com.tuck.app.ui.theme.LinenLight
 import com.tuck.app.ui.theme.NoirDark
@@ -15,6 +17,8 @@ import com.tuck.app.ui.theme.color.CobaltDarkPalette
 import com.tuck.app.ui.theme.color.CobaltLightPalette
 import com.tuck.app.ui.theme.color.ForestDarkPalette
 import com.tuck.app.ui.theme.color.ForestLightPalette
+import com.tuck.app.ui.theme.color.HarborDarkPalette
+import com.tuck.app.ui.theme.color.HarborLightPalette
 import com.tuck.app.ui.theme.color.LinenDarkPalette
 import com.tuck.app.ui.theme.color.LinenLightPalette
 import com.tuck.app.ui.theme.color.NoirDarkPalette
@@ -45,7 +49,9 @@ class PaletteValidationTest {
         "Cobalt Light" to (CobaltLightPalette to CobaltLight.canvas),
         "Cobalt Dark" to (CobaltDarkPalette to CobaltDark.canvas),
         "Plum Light" to (PlumLightPalette to PlumLight.canvas),
-        "Plum Dark" to (PlumDarkPalette to PlumDark.canvas)
+        "Plum Dark" to (PlumDarkPalette to PlumDark.canvas),
+        "Harbor Light" to (HarborLightPalette to HarborLight.canvas),
+        "Harbor Dark" to (HarborDarkPalette to HarborDark.canvas)
     )
 
     // Viénot 1999 Color Vision Deficiency Simulation Matrices in Linear sRGB

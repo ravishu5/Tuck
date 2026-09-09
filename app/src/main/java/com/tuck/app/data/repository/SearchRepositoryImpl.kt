@@ -10,6 +10,7 @@ import com.tuck.app.data.local.db.entity.SavedItemEntity
 import com.tuck.app.data.local.db.entity.SearchHistoryEntity
 import com.tuck.app.domain.model.Collection
 import com.tuck.app.domain.model.ExtractedEntity
+import com.tuck.app.domain.model.MatchField
 import com.tuck.app.domain.model.SavedItem
 import com.tuck.app.domain.model.SearchFilter
 import com.tuck.app.domain.model.SearchResult
@@ -42,6 +43,7 @@ class KeywordSearchEngine @Inject constructor(
         if (query.isBlank()) return@withContext emptyList()
 
         val matchingSnippets = mutableMapOf<Long, String?>()
+        val matchedFields = mutableMapOf<Long, List<MatchField>>()
         val itemIdsOrdered = mutableListOf<Long>()
 
         // 1. Primary: FTS4 match, ordered by weighted matchinfo relevance
@@ -60,6 +62,7 @@ class KeywordSearchEngine @Inject constructor(
                     if (!itemIdsOrdered.contains(res.rowid)) {
                         itemIdsOrdered.add(res.rowid)
                         matchingSnippets[res.rowid] = res.snippet
+                        matchedFields[res.rowid] = res.matchedColumns.toMatchFields()
                     }
                 }
             } catch (e: Exception) {
@@ -73,6 +76,8 @@ class KeywordSearchEngine @Inject constructor(
             for (item in likeResults) {
                 if (!itemIdsOrdered.contains(item.id)) {
                     itemIdsOrdered.add(item.id)
+                    // No matchinfo on this path, so the reason is worked out directly.
+                    matchedFields[item.id] = item.matchFieldsFor(query)
                 }
             }
         } catch (e: Exception) {
@@ -132,7 +137,8 @@ class KeywordSearchEngine @Inject constructor(
             SearchResult(
                 item = domainItem,
                 matchSnippet = matchingSnippets[entity.id]?.cleanSnippet(),
-                score = score
+                score = score,
+                matchFields = matchedFields[entity.id].orEmpty()
             )
         }
     }
@@ -152,9 +158,27 @@ class KeywordSearchEngine @Inject constructor(
         return tokens.joinToString(" ") { "$it*" }
     }
 
-    private fun String.cleanSnippet(): String {
-        return this.replace("<b>", "").replace("</b>", "").trim()
-    }
+    /**
+     * `snippet()` is asked for `<b>`/`</b>` markers around the matched terms and the app
+     * used to strip them straight back off, throwing away the only thing that tells the
+     * reader which words matched. They are kept now and rendered as a highlight by the UI.
+     */
+    private fun String.cleanSnippet(): String = this.trim()
+
+    private fun Set<Int>.toMatchFields(): List<MatchField> = toMatchFieldList()
+
+    private fun SavedItemEntity.matchFieldsFor(query: String): List<MatchField> =
+        matchFieldsIn(
+            query = query,
+            title = title,
+            description = description,
+            originalText = originalText,
+            extractedText = extractedText,
+            commentsJson = commentsJson,
+            ocrText = ocrText,
+            originalUrl = originalUrl,
+            sourceDomain = sourceDomain
+        )
 
     private suspend fun loadDomainItem(entity: SavedItemEntity): SavedItem {
         val entities = entityDao.getEntitiesForItem(entity.id).map {
@@ -206,6 +230,59 @@ class KeywordSearchEngine @Inject constructor(
         )
     }
 }
+
+/**
+ * Maps FTS column indices to the fields the UI names.
+ *
+ * The order must track `SavedItemFtsDaoImpl.CREATE_TABLE`:
+ * title, description, originalUrl, sourceDomain, originalText, extractedText,
+ * ocrText, tags, entities.
+ */
+internal fun Set<Int>.toMatchFieldList(): List<MatchField> = mapNotNull { column ->
+        when (column) {
+            0 -> MatchField.TITLE
+            1 -> MatchField.DESCRIPTION
+            2 -> MatchField.URL
+            3 -> MatchField.DOMAIN
+            4, 5 -> MatchField.TEXT
+            6 -> MatchField.OCR
+            7 -> MatchField.TAG
+            8 -> MatchField.ENTITY
+            else -> null
+        }
+    }.distinct().sortedBy { it.ordinal }
+
+/**
+ * The fallback path matches with SQL `LIKE` over `saved_items`, which reports nothing
+ * about where it hit. Re-checking the same columns here keeps a fallback result as
+ * explainable as an indexed one, and the column list mirrors `searchItemsLike` exactly.
+ */
+internal fun matchFieldsIn(
+    query: String,
+    title: String?,
+    description: String?,
+    originalText: String?,
+    extractedText: String?,
+    commentsJson: String?,
+    ocrText: String?,
+    originalUrl: String?,
+    sourceDomain: String?
+): List<MatchField> {
+    val needle = query.trim()
+    if (needle.isEmpty()) return emptyList()
+    fun String?.hit() = this?.contains(needle, ignoreCase = true) == true
+
+    return buildList {
+        if (title.hit()) add(MatchField.TITLE)
+        if (description.hit()) add(MatchField.DESCRIPTION)
+        if (originalText.hit() || extractedText.hit()) add(MatchField.TEXT)
+        if (commentsJson.hit()) add(MatchField.COMMENT)
+        if (ocrText.hit()) add(MatchField.OCR)
+        if (originalUrl.hit()) add(MatchField.URL)
+        if (sourceDomain.hit()) add(MatchField.DOMAIN)
+    }.sortedBy { it.ordinal }
+}
+
 
 @Singleton
 class SearchRepositoryImpl @Inject constructor(

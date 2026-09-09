@@ -10,6 +10,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.tuck.app.data.local.storage.FileStorageService
 import com.tuck.app.domain.repository.AppSettings
 import com.tuck.app.domain.repository.AppTheme
+import com.tuck.app.domain.repository.FeedViewMode
 import com.tuck.app.domain.repository.SettingsRepository
 import com.tuck.app.domain.repository.StorageUsage
 import com.tuck.app.domain.repository.TuckThemeFlavor
@@ -36,7 +37,9 @@ class SettingsRepositoryImpl @Inject constructor(
         val WIFI_ONLY_METADATA = booleanPreferencesKey("wifi_only_metadata")
         val DEEP_CAPTURE_ENABLED = booleanPreferencesKey("deep_capture_enabled")
         val TRANSCRIBE_VOICE_NOTES = booleanPreferencesKey("transcribe_voice_notes")
+        val ARCHIVE_PAGES = booleanPreferencesKey("archive_pages")
         val MEMORY_RESURFACING_ENABLED = booleanPreferencesKey("memory_resurfacing_enabled")
+        val FEED_VIEW_MODE = stringPreferencesKey("feed_view_mode")
     }
 
     override fun getSettings(): Flow<AppSettings> {
@@ -59,7 +62,15 @@ class SettingsRepositoryImpl @Inject constructor(
             val wifiOnly = preferences[PreferencesKeys.WIFI_ONLY_METADATA] ?: false
             val deepCapture = preferences[PreferencesKeys.DEEP_CAPTURE_ENABLED] ?: false
             val transcribe = preferences[PreferencesKeys.TRANSCRIBE_VOICE_NOTES] ?: true
+            val archive = preferences[PreferencesKeys.ARCHIVE_PAGES] ?: false
             val memoryResurfacing = preferences[PreferencesKeys.MEMORY_RESURFACING_ENABLED] ?: false
+            val feedViewMode = try {
+                FeedViewMode.valueOf(
+                    preferences[PreferencesKeys.FEED_VIEW_MODE] ?: FeedViewMode.LIST.name
+                )
+            } catch (e: Exception) {
+                FeedViewMode.LIST
+            }
 
             AppSettings(
                 theme = theme,
@@ -70,8 +81,16 @@ class SettingsRepositoryImpl @Inject constructor(
                 wifiOnlyMetadata = wifiOnly,
                 deepCaptureEnabled = deepCapture,
                 transcribeVoiceNotes = transcribe,
-                memoryResurfacingEnabled = memoryResurfacing
+                archivePages = archive,
+                memoryResurfacingEnabled = memoryResurfacing,
+                feedViewMode = feedViewMode
             )
+        }
+    }
+
+    override suspend fun setFeedViewMode(mode: FeedViewMode) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.FEED_VIEW_MODE] = mode.name
         }
     }
 
@@ -114,6 +133,12 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setDeepCaptureEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.DEEP_CAPTURE_ENABLED] = enabled
+        }
+    }
+
+    override suspend fun setArchivePages(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.ARCHIVE_PAGES] = enabled
         }
     }
 

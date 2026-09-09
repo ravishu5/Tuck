@@ -22,6 +22,7 @@ import com.tuck.app.processing.ReminderPreset
 import com.tuck.app.processing.ReminderScheduler
 import javax.inject.Inject
 import com.tuck.app.data.local.db.dao.ChecklistDao
+import com.tuck.app.data.local.db.dao.MediaAssetDao
 import com.tuck.app.data.local.db.entity.ChecklistItemEntity
 
 data class DetailUiState(
@@ -33,7 +34,9 @@ data class DetailUiState(
     val editedTitle: String = "",
     val isLoading: Boolean = true,
     val isDeleted: Boolean = false,
-    val checklist: List<ChecklistItemEntity> = emptyList()
+    val checklist: List<ChecklistItemEntity> = emptyList(),
+    /** Path to the archived copy of the page, when one was kept. */
+    val snapshotPath: String? = null
 )
 
 private data class TitleEditState(
@@ -51,6 +54,7 @@ class ItemDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val savedItemRepository: SavedItemRepository,
     private val checklistDao: ChecklistDao,
+    private val mediaAssetDao: MediaAssetDao,
     private val collectionRepository: CollectionRepository,
     private val sourceContentDao: SourceContentDao,
 ) : ViewModel() {
@@ -98,9 +102,13 @@ class ItemDetailViewModel @Inject constructor(
 
     val uiState: StateFlow<DetailUiState> = combine(
         baseState,
-        checklistDao.getForItem(itemId)
-    ) { base, checklist ->
-        base.copy(checklist = checklist)
+        checklistDao.getForItem(itemId),
+        mediaAssetDao.getAssetsForItem(itemId)
+    ) { base, checklist, assets ->
+        base.copy(
+            checklist = checklist,
+            snapshotPath = assets.firstOrNull { it.role == "SNAPSHOT" }?.localPath
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),

@@ -8,6 +8,12 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <!--
+        Reading a photo's coordinates needs its own grant on Android 10 and up: without it
+        MediaStore hands back the file with the location stripped, and the travel scan sees a
+        library where no picture was taken anywhere. Only ever read on device.
+    -->
+    <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
 
     <application
         android:name=".TuckApplication"

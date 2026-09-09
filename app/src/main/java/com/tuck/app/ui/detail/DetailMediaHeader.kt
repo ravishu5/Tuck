@@ -1,5 +1,9 @@
 package com.tuck.app.ui.detail
 
+import android.graphics.BitmapFactory
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.ColumnScope
@@ -33,6 +37,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -63,8 +68,35 @@ fun DetailMediaHeader(
     onCopyUrl: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
-    val height = mediaHeightFor(item.originalUrl, screenHeight)
+    val configuration = LocalConfiguration.current
+    val screenHeight = configuration.screenHeightDp.dp
+    val screenWidth = configuration.screenWidthDp.dp
+    val fallbackHeight = mediaHeightFor(
+        url = item.originalUrl,
+        screenHeight = screenHeight,
+        screenWidth = screenWidth
+    )
+
+    // How tall the media frame should be.
+    //
+    // A reel is filmed 9:16, but Instagram's embed does not serve the clip at that shape — it
+    // serves a 4:5 cover crop — so reserving 16/9 of the width for it left a band of black
+    // about a third of the frame tall under every reel. The shape is the platform's to decide
+    // and ours to discover, in this order:
+    //
+    //  1. The poster Tuck already saved. It is the actual frame, on disk, readable without a
+    //     network round trip, and it is what the reader sees whenever the embed does not load.
+    //  2. What the embed reports once it has drawn, for items saved without a poster.
+    //  3. A 4:5 placeholder, until one of the above answers.
+    val posterAspect = rememberMediaAspectRatio(item.thumbnailPath ?: item.localFilePath)
+    var embedAspect by remember(item.id) { mutableStateOf<Float?>(null) }
+    val aspect = posterAspect ?: embedAspect
+
+    val height = when {
+        !fitsMeasuredMedia(item.originalUrl) -> fallbackHeight
+        aspect != null -> (screenWidth / aspect).coerceIn(180.dp, screenHeight * 0.92f)
+        else -> fallbackHeight
+    }
 
     // A file Tuck holds is always preferable: the app can play, seek and time it, and it
     // survives the CDN link expiring. The embed is the fallback for everything else.
@@ -99,6 +131,13 @@ fun DetailMediaHeader(
             // Vertical formats are media only, so the page scrolls through them; YouTube keeps
             // its own scrolling because its comment thread lives inside the embed.
             scrollable = !isVerticalMedia(item.originalUrl),
+            // Only for media-only embeds with no poster to read instead — a YouTube watch page
+            // has no single piece of media whose shape the frame should take.
+            onContentAspectRatio = if (fitsMeasuredMedia(item.originalUrl) && posterAspect == null) {
+                { reported -> embedAspect = reported }
+            } else {
+                null
+            },
             onCopyUrl = onCopyUrl
         )
 
@@ -177,21 +216,63 @@ private fun BarAction(
  * Vertical formats get most of the screen because that is the shape they were filmed in; a
  * landscape video in the same box would be a thin strip in a sea of black.
  */
+/**
+ * The width-over-height ratio of a saved poster, or null when there isn't one to read.
+ *
+ * Decoded bounds-only, so nothing larger than the image header is ever allocated, and off the
+ * main thread because it touches the disk. Remote posters are skipped: only a file Tuck holds
+ * can be measured without a request, and a frame that resizes after a network round trip is
+ * worse than one that never moves.
+ */
+@Composable
+private fun rememberMediaAspectRatio(path: String?): Float? {
+    val local = path?.takeIf {
+        it.isNotBlank() && !it.startsWith("http://") && !it.startsWith("https://")
+    }
+    val ratio by produceState<Float?>(initialValue = null, key1 = local) {
+        val file = local?.let { File(it) }?.takeIf { it.exists() } ?: return@produceState
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeFile(file.absolutePath, options)
+                val w = options.outWidth
+                val h = options.outHeight
+                if (w > 0 && h > 0) w.toFloat() / h.toFloat() else null
+            }.getOrNull()
+        }
+    }
+    return ratio
+}
+
 /** Formats the platform publishes portrait: the page scrolls through these rather than in them. */
 private fun isVerticalMedia(url: String?): Boolean {
     val lower = url?.lowercase().orEmpty()
-    return listOf("instagram.com", "instagr.am", "ig.me", "tiktok.com", "/shorts/")
-        .any { lower.contains(it) }
+    return VERTICAL_HOSTS.any { lower.contains(it) }
 }
 
-private fun mediaHeightFor(url: String?, screenHeight: Dp): Dp {
+/**
+ * Whether the frame should be resized to whatever the embed actually rendered.
+ *
+ * True for the media-only embeds, where the tallest thing on the page *is* the media. False
+ * for anything that ships a page around its player — YouTube's watch view measures as the
+ * player plus its comment thread, so honouring that would make the header the whole screen.
+ */
+private fun fitsMeasuredMedia(url: String?): Boolean = isVerticalMedia(url)
+
+private val VERTICAL_HOSTS =
+    listOf("instagram.com", "instagr.am", "ig.me", "tiktok.com", "/shorts/")
+
+private fun mediaHeightFor(url: String?, screenHeight: Dp, screenWidth: Dp): Dp {
     val lower = url?.lowercase().orEmpty()
-    val isVertical = listOf("instagram.com", "instagr.am", "ig.me", "tiktok.com", "/shorts/")
-        .any { lower.contains(it) }
+    val isVertical = VERTICAL_HOSTS.any { lower.contains(it) }
     val isYouTube = listOf("youtube.com", "youtu.be").any { lower.contains(it) }
 
     return when {
-        isVertical -> screenHeight * 0.62f
+        // The placeholder a portrait clip occupies until the embed reports its real shape.
+        // 4:5 rather than 9:16 because that is what these embeds serve far more often, so the
+        // frame settles with the smaller correction and the page does not visibly jump.
+        // Capped so a tall phone still shows something below the media.
+        isVertical -> minOf(screenWidth * (5f / 4f), screenHeight * 0.72f)
         // The player and its comment thread, which the reader scrolls inside the embed.
         isYouTube -> screenHeight * 0.60f
         else -> 300.dp

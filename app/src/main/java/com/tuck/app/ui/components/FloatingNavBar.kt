@@ -17,12 +17,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
+import androidx.compose.material3.ripple
+import androidx.compose.ui.graphics.Color
+import com.tuck.app.ui.theme.TuckGradients
+import com.tuck.app.ui.theme.pressScale
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -136,7 +141,12 @@ fun FloatingNavBar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(BarHeight)
-                    .shadow(12.dp, CircleShape, clip = false)
+                    .shadow(
+                        elevation = 16.dp,
+                        shape = CircleShape,
+                        ambientColor = colors.scrim.copy(alpha = 0.35f),
+                        spotColor = colors.scrim.copy(alpha = 0.35f)
+                    )
                     .background(colors.surfaceElevated, CircleShape)
                     .border(1.dp, colors.borderSubtle, CircleShape)
                     .padding(horizontal = 8.dp),
@@ -166,15 +176,25 @@ private fun NavIcon(
     onClick: () -> Unit
 ) {
     val colors = TuckTheme.colors
+    val interactionSource = remember { MutableInteractionSource() }
     // The selected pill grows in rather than appearing, which reads as the same object moving.
     val pillWidth by animateDpAsState(if (selected) 52.dp else 44.dp, tween(180), label = "navPill")
 
     Box(
         modifier = Modifier
             .size(width = pillWidth, height = 40.dp)
+            .pressScale(interactionSource, pressedScale = 0.94f)
             .clip(RoundedCornerShape(percent = 50))
-            .background(if (selected) colors.accentContainer else colors.surfaceElevated)
-            .clickable(onClick = onClick),
+            .background(if (selected) colors.accentContainer else Color.Transparent)
+            .then(
+                if (selected) Modifier.border(1.dp, colors.accent.copy(alpha = 0.35f), RoundedCornerShape(percent = 50))
+                else Modifier
+            )
+            .clickable(
+                interactionSource = interactionSource,
+                indication = ripple(color = colors.accent),
+                onClick = onClick
+            ),
         contentAlignment = Alignment.Center
     ) {
         Icon(
@@ -189,6 +209,7 @@ private fun NavIcon(
 @Composable
 private fun CaptureButton(onClick: () -> Unit) {
     val colors = TuckTheme.colors
+    val interactionSource = remember { MutableInteractionSource() }
 
     // Sized to sit inside the capsule with even clearance top and bottom, rather than
     // overflowing it: a button that breaks the outline reads as a rendering fault.
@@ -196,22 +217,39 @@ private fun CaptureButton(onClick: () -> Unit) {
         modifier = Modifier.size(CaptureSize),
         contentAlignment = Alignment.Center
     ) {
-        Surface(
-            color = colors.accent,
-            shape = CircleShape,
-            shadowElevation = 8.dp,
+        Box(
             modifier = Modifier
                 .size(CaptureSize)
-                .clickable(onClick = onClick)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = Icons.Rounded.Add,
-                    contentDescription = stringResource(R.string.nav_capture),
-                    tint = colors.textOnAccent,
-                    modifier = Modifier.size(28.dp)
+                .pressScale(interactionSource, pressedScale = 0.92f)
+                .shadow(
+                    elevation = 10.dp,
+                    shape = CircleShape,
+                    ambientColor = colors.accent.copy(alpha = 0.45f),
+                    spotColor = colors.accent.copy(alpha = 0.45f)
                 )
-            }
+                .clip(CircleShape)
+                .background(TuckGradients.accent(colors.accent, colors.isDark))
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = ripple(color = colors.textOnAccent),
+                    onClick = onClick
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            // Subtle top sheen highlight suggesting a lit tactile gem
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(CaptureSize / 2)
+                    .align(Alignment.TopCenter)
+                    .background(TuckGradients.sheen(colors.textOnAccent))
+            )
+            Icon(
+                imageVector = Icons.Rounded.Add,
+                contentDescription = stringResource(R.string.nav_capture),
+                tint = colors.textOnAccent,
+                modifier = Modifier.size(28.dp)
+            )
         }
     }
 }

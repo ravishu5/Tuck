@@ -51,11 +51,34 @@ class CaptureEngine @Inject constructor(
         /** Grace period after load for late XHR content, when no selector is declared. */
         const val SETTLE_GRACE_MS = 1_200L
         const val MAX_HTML_CHARS = 4_000_000
+        /** Inlining fetches every stylesheet and image, so it needs longer than a plain render. */
+        const val ARCHIVE_TIMEOUT_MS = 90_000L
+        /** Read back in slices: one bridge call carrying megabytes is where this falls over. */
+        const val BRIDGE_CHUNK = 512 * 1024
         const val USER_AGENT =
             "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36"
     }
 
     private val mutex = Mutex()
+
+    /**
+     * Renders [url] and returns a self-contained copy of the page.
+     *
+     * The archiver script is Tuck's own rather than SingleFile, which is AGPL-3.0 and would have
+     * relicensed the app. Fidelity is lower — no shadow DOM, no iframes — but articles, which is
+     * what archiving is mostly for, come through with their layout and pictures intact.
+     *
+     * Returns null rather than a broken page when the render fails.
+     */
+    suspend fun archive(url: String, readySelector: String? = null): PageSnapshot? = mutex.withLock {
+        try {
+            withTimeoutOrNull(ARCHIVE_TIMEOUT_MS) {
+                withContext(Dispatchers.Main) { renderAndArchive(url, readySelector) }
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
 
     /**
      * Loads [url] and returns the rendered HTML, or null if it could not be captured in time.
@@ -84,64 +107,9 @@ class CaptureEngine @Inject constructor(
         // function runs on Dispatchers.Main.
         val webView = WebView(context)
         try {
-            webView.settings.apply {
-                javaScriptEnabled = true
-                domStorageEnabled = true
-                loadsImagesAutomatically = false // Nothing here is ever displayed.
-                blockNetworkImage = true
-                mediaPlaybackRequiresUserGesture = true
-                userAgentString = USER_AGENT
-                // A capture WebView holds the reader's session cookies and renders pages Tuck
-                // did not write. It has no business reaching the filesystem.
-                allowFileAccess = false
-                allowContentAccess = false
-                @Suppress("DEPRECATION")
-                allowFileAccessFromFileURLs = false
-                @Suppress("DEPRECATION")
-                allowUniversalAccessFromFileURLs = false
-            }
+            configure(webView)
 
-            CookieManager.getInstance().apply {
-                setAcceptCookie(true)
-                setAcceptThirdPartyCookies(webView, true)
-            }
-
-            val loaded = suspendCancellableCoroutine { continuation ->
-                webView.webViewClient = object : WebViewClient() {
-                    private var settled = false
-
-                    override fun onPageFinished(view: WebView?, finishedUrl: String?) {
-                        if (settled) return
-                        settled = true
-                        if (continuation.isActive) continuation.resume(true)
-                    }
-
-                    override fun onReceivedError(
-                        view: WebView?,
-                        request: WebResourceRequest?,
-                        error: android.webkit.WebResourceError?
-                    ) {
-                        // Only the main document failing is fatal; a blocked subresource is not.
-                        if (request?.isForMainFrame != true || settled) return
-                        settled = true
-                        if (continuation.isActive) continuation.resume(false)
-                    }
-
-                    override fun shouldInterceptRequest(
-                        view: WebView?,
-                        request: WebResourceRequest?
-                    ): WebResourceResponse? =
-                        if (AdHosts.blocks(request?.url?.host)) {
-                            WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(ByteArray(0)))
-                        } else {
-                            null
-                        }
-                }
-
-                continuation.invokeOnCancellation { webView.stopLoading() }
-                webView.loadUrl(url)
-            }
-
+            val loaded = awaitLoad(webView, url)
             if (!loaded) return null
 
             awaitContent(webView, readySelector)
@@ -194,4 +162,167 @@ class CaptureEngine @Inject constructor(
     /** JSON-quotes a string for safe interpolation into a script. */
     private fun quote(value: String): String =
         org.json.JSONObject.quote(value)
+
+    /** The same hardened browser for every job: sessions in, filesystem and trackers out. */
+    @SuppressLint("SetJavaScriptEnabled")
+    private fun configure(webView: WebView) {
+        webView.settings.apply {
+            javaScriptEnabled = true
+            domStorageEnabled = true
+            loadsImagesAutomatically = false // Nothing here is ever displayed.
+            blockNetworkImage = true
+            mediaPlaybackRequiresUserGesture = true
+            userAgentString = USER_AGENT
+            // A capture WebView holds the reader's session cookies and renders pages Tuck
+            // did not write. It has no business reaching the filesystem.
+            allowFileAccess = false
+            allowContentAccess = false
+            @Suppress("DEPRECATION")
+            allowFileAccessFromFileURLs = false
+            @Suppress("DEPRECATION")
+            allowUniversalAccessFromFileURLs = false
+        }
+
+        CookieManager.getInstance().apply {
+            setAcceptCookie(true)
+            setAcceptThirdPartyCookies(webView, true)
+        }
+    }
+
+    private suspend fun awaitLoad(webView: WebView, url: String): Boolean =
+        suspendCancellableCoroutine { continuation ->
+            webView.webViewClient = object : WebViewClient() {
+                private var settled = false
+
+                override fun onPageFinished(view: WebView?, finishedUrl: String?) {
+                    if (settled) return
+                    settled = true
+                    if (continuation.isActive) continuation.resume(true)
+                }
+
+                override fun onReceivedError(
+                    view: WebView?,
+                    request: WebResourceRequest?,
+                    error: android.webkit.WebResourceError?
+                ) {
+                    // Only the main document failing is fatal; a blocked subresource is not.
+                    if (request?.isForMainFrame != true || settled) return
+                    settled = true
+                    if (continuation.isActive) continuation.resume(false)
+                }
+
+                override fun shouldInterceptRequest(
+                    view: WebView?,
+                    request: WebResourceRequest?
+                ): WebResourceResponse? =
+                    if (AdHosts.blocks(request?.url?.host)) {
+                        WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(ByteArray(0)))
+                    } else {
+                        null
+                    }
+            }
+
+            continuation.invokeOnCancellation { webView.stopLoading() }
+            webView.loadUrl(url)
+        }
+
+    private suspend fun renderAndArchive(url: String, readySelector: String?): PageSnapshot? {
+        val script = try {
+            context.assets.open("page_archiver.js").bufferedReader().use { it.readText() }
+        } catch (e: Exception) {
+            return null
+        }
+
+        val webView = WebView(context)
+        try {
+            configure(webView)
+            // Images are the point of an archive, so unlike a plain capture they must load.
+            webView.settings.loadsImagesAutomatically = true
+            webView.settings.blockNetworkImage = false
+
+            val loaded = awaitLoad(webView, url)
+            if (!loaded) return null
+            awaitContent(webView, readySelector)
+
+            // The script resolves a promise, which evaluateJavascript cannot await — it would
+            // serialise the promise itself. It parks the result on the window instead, and this
+            // polls for it.
+            // The asset defines window.__tuckArchiveRun rather than running itself, so the
+            // promise it returns can be chained here.
+            evaluate(webView, script)
+            evaluate(
+                webView,
+                "window.__tuckArchive = null;" +
+                    "window.__tuckArchiveRun().then(function (r) { window.__tuckArchive = r; });" +
+                    "0;"
+            )
+
+            val payload = awaitPayload(webView) ?: return null
+            return parseSnapshot(payload)
+        } finally {
+            webView.stopLoading()
+            webView.webViewClient = WebViewClient()
+            webView.destroy()
+        }
+    }
+
+    private suspend fun awaitPayload(webView: WebView): String? {
+        while (true) {
+            val length = evaluate(webView, "window.__tuckArchive ? window.__tuckArchive.length : -1")
+                ?.trim('"')?.toIntOrNull() ?: -1
+            if (length > 0) return readInChunks(webView, length)
+            delay(SETTLE_POLL_MS)
+        }
+    }
+
+    private suspend fun readInChunks(webView: WebView, length: Int): String {
+        val builder = StringBuilder(length)
+        var offset = 0
+        while (offset < length) {
+            val slice = evaluate(
+                webView,
+                "window.__tuckArchive.substr($offset, $BRIDGE_CHUNK)"
+            ) ?: break
+            val decoded = try {
+                JSONTokener(slice).nextValue() as? String
+            } catch (e: Exception) {
+                null
+            } ?: break
+            builder.append(decoded)
+            offset += BRIDGE_CHUNK
+        }
+        return builder.toString()
+    }
+
+    private fun parseSnapshot(payload: String): PageSnapshot? = try {
+        val json = org.json.JSONObject(payload)
+        val html = json.optString("html").takeIf { it.isNotBlank() }
+        if (html == null) {
+            null
+        } else {
+            PageSnapshot(
+                html = html,
+                title = json.optString("title"),
+                inlinedImages = json.optInt("images"),
+                inlinedStyles = json.optInt("styles"),
+                unreachable = json.optInt("failed") + json.optInt("skipped")
+            )
+        }
+    } catch (e: Exception) {
+        null
+    }
 }
+
+/**
+ * A page as it stood when it was saved, plus what could not be reached.
+ *
+ * The counts are kept because a snapshot that silently lost every image is worse than one that
+ * says so — the reader can re-archive while the page is still up.
+ */
+data class PageSnapshot(
+    val html: String,
+    val title: String,
+    val inlinedImages: Int,
+    val inlinedStyles: Int,
+    val unreachable: Int
+)

@@ -37,6 +37,10 @@ class ItemDetailViewModelTest {
         // source - so without this the whole detail state would never produce a value.
         every { getForItem(any()) } returns flowOf(emptyList())
     }
+    private val mediaAssetDao: com.tuck.app.data.local.db.dao.MediaAssetDao = mockk(relaxed = true) {
+        // Same reason as above: a source that never emits stalls the combined state.
+        every { getAssetsForItem(any()) } returns flowOf(emptyList())
+    }
     private val savedItemRepository = mockk<SavedItemRepository>(relaxed = true)
     private val collectionRepository = mockk<CollectionRepository>(relaxed = true)
     private val sourceContentDao = mockk<SourceContentDao>(relaxed = true)
@@ -91,6 +95,7 @@ class ItemDetailViewModelTest {
             savedStateHandle = savedStateHandle,
             savedItemRepository = savedItemRepository,
             checklistDao = checklistDao,
+            mediaAssetDao = mediaAssetDao,
             collectionRepository = collectionRepository,
             sourceContentDao = sourceContentDao
         )

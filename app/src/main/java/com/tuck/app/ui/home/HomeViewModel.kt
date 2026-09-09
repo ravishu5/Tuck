@@ -80,6 +80,12 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun setFeedViewMode(mode: com.tuck.app.domain.repository.FeedViewMode) {
+        viewModelScope.launch {
+            settingsRepository.setFeedViewMode(mode)
+        }
+    }
+
     fun setThemeFlavor(flavor: com.tuck.app.domain.repository.TuckThemeFlavor) {
         viewModelScope.launch {
             settingsRepository.updateThemeFlavor(flavor)

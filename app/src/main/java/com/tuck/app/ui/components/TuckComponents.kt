@@ -18,9 +18,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -35,6 +37,7 @@ import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.ArrowOutward
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Call
@@ -52,6 +55,8 @@ import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Message
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notes
 import androidx.compose.material.icons.filled.Person
@@ -94,10 +99,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -105,6 +117,8 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.tuck.app.domain.model.ContentType
+import com.tuck.app.domain.model.MatchField
+import com.tuck.app.domain.repository.FeedViewMode
 import com.tuck.app.domain.model.SavedItem
 import com.tuck.app.domain.repository.TuckThemeFlavor
 import com.tuck.app.ui.theme.*
@@ -545,16 +559,34 @@ fun CountStat(
     modifier: Modifier = Modifier
 ) {
     val tuckColors = TuckTheme.colors
-    Text(
-        text = stringResource(
-            R.string.saves_and_folders,
-            pluralStringResource(R.plurals.save_count, savesCount, savesCount),
-            pluralStringResource(R.plurals.folder_count, foldersCount, foldersCount)
-        ),
-        style = TuckTheme.typography.numericCount,
-        color = tuckColors.textSecondary,
+    Surface(
+        shape = TuckTheme.shapes.pill,
+        color = tuckColors.surfaceCard,
+        border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.borderSubtle),
         modifier = modifier
-    )
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .clip(CircleShape)
+                    .background(tuckColors.accent)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = stringResource(
+                    R.string.saves_and_folders,
+                    pluralStringResource(R.plurals.save_count, savesCount, savesCount),
+                    pluralStringResource(R.plurals.folder_count, foldersCount, foldersCount)
+                ),
+                style = TuckTheme.typography.numericCount,
+                color = tuckColors.textSecondary
+            )
+        }
+    }
 }
 
 @Composable
@@ -848,14 +880,18 @@ private fun CollectionColorTile(
             .pressScale(interactionSource)
             // Matches the preview tile's elevation, so a mixed grid sits on one plane.
             .shadow(
-                elevation = 6.dp,
+                elevation = if (isSelected) 8.dp else 6.dp,
                 shape = RoundedCornerShape(22.dp),
-                ambientColor = tuckColors.scrim.copy(alpha = 0.35f),
-                spotColor = tuckColors.scrim.copy(alpha = 0.35f)
+                ambientColor = if (isSelected) colorEntry.background.copy(alpha = 0.35f) else tuckColors.scrim.copy(alpha = 0.35f),
+                spotColor = if (isSelected) colorEntry.background.copy(alpha = 0.35f) else tuckColors.scrim.copy(alpha = 0.35f)
             )
             .clip(RoundedCornerShape(22.dp))
             .background(surface)
-            .border(1.dp, edge, RoundedCornerShape(22.dp))
+            .border(
+                width = if (isSelected) 2.dp else 1.dp,
+                color = if (isSelected) colorEntry.background else edge,
+                shape = RoundedCornerShape(22.dp)
+            )
             .clickable(
                 interactionSource = interactionSource,
                 indication = ripple(color = colorEntry.background),
@@ -863,6 +899,15 @@ private fun CollectionColorTile(
             )
             .padding(15.dp)
     ) {
+        // Subtle top edge sheen for lit tactile surface
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(32.dp)
+                .align(Alignment.TopCenter)
+                .background(TuckGradients.sheen(colorEntry.foreground))
+        )
+
         if (isSelected) {
             Box(
                 modifier = Modifier
@@ -942,26 +987,88 @@ private fun collectionSubtitle(count: Int, openCount: Int): String {
     }
 }
 
+/**
+ * The human name for a field a search result matched on.
+ *
+ * "Recognised text" rather than "OCR": the label has to mean something to someone who
+ * has never heard the acronym, and it is the phrase the detail screen already uses.
+ */
+@Composable
+fun matchFieldLabel(field: MatchField): String = stringResource(
+    when (field) {
+        MatchField.TITLE -> R.string.match_title
+        MatchField.TAG -> R.string.match_tag
+        MatchField.ENTITY -> R.string.match_entity
+        MatchField.DESCRIPTION -> R.string.match_description
+        MatchField.TEXT -> R.string.match_text
+        MatchField.COMMENT -> R.string.match_comment
+        MatchField.OCR -> R.string.match_ocr
+        MatchField.URL -> R.string.match_url
+        MatchField.DOMAIN -> R.string.match_domain
+    }
+)
+
+/**
+ * A quiet label, not a filled chip.
+ *
+ * The highlight colour is spent on the matched words in the snippet, where it is
+ * carrying information. Three solid chips above that read louder than the result they
+ * annotate, and look tappable when they are not.
+ */
 @Composable
 fun MatchReasonChip(
-    reason: String,
+    field: MatchField,
     modifier: Modifier = Modifier
 ) {
     val tuckColors = TuckTheme.colors
     Surface(
-        color = tuckColors.highlight,
+        color = tuckColors.surfaceCard,
         shape = RoundedCornerShape(6.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.borderSubtle),
         modifier = modifier
     ) {
         Text(
-            text = reason,
+            text = matchFieldLabel(field),
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
-            color = tuckColors.highlightText,
+            color = tuckColors.textSecondary,
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
         )
     }
 }
+
+/**
+ * Renders an FTS `snippet()` string, turning its `<b>` markers into a highlight.
+ *
+ * The markers are the index's own account of which words matched, so they are shown
+ * rather than stripped. A stray unmatched marker degrades to plain text instead of
+ * swallowing the rest of the snippet.
+ */
+@Composable
+private fun highlightedSnippet(raw: String, highlight: Color, onHighlight: Color): AnnotatedString =
+    buildAnnotatedString {
+        var cursor = 0
+        while (cursor < raw.length) {
+            val open = raw.indexOf(OPEN_MARK, cursor)
+            if (open < 0) {
+                append(raw.substring(cursor))
+                break
+            }
+            val close = raw.indexOf(CLOSE_MARK, open + OPEN_MARK.length)
+            if (close < 0) {
+                append(raw.substring(cursor).replace(OPEN_MARK, ""))
+                break
+            }
+            append(raw.substring(cursor, open))
+            withStyle(SpanStyle(background = highlight, color = onHighlight, fontWeight = FontWeight.Bold)) {
+                append(raw.substring(open + OPEN_MARK.length, close))
+            }
+            cursor = close + CLOSE_MARK.length
+        }
+    }
+
+private const val OPEN_MARK = "<b>"
+private const val CLOSE_MARK = "</b>"
 
 @Composable
 fun SkeletonCard(
@@ -1020,7 +1127,9 @@ fun TuckSectionHeader(
     title: String,
     modifier: Modifier = Modifier,
     actionText: String? = null,
-    onAction: (() -> Unit)? = null
+    onAction: (() -> Unit)? = null,
+    /** Controls that belong to the section, shown at the trailing edge. */
+    trailing: (@Composable () -> Unit)? = null
 ) {
     val tuckColors = TuckTheme.colors
 
@@ -1038,7 +1147,9 @@ fun TuckSectionHeader(
             color = tuckColors.textPrimary
         )
 
-        if (!actionText.isNullOrBlank() && onAction != null) {
+        if (trailing != null) {
+            trailing()
+        } else if (!actionText.isNullOrBlank() && onAction != null) {
             Text(
                 text = actionText,
                 style = MaterialTheme.typography.labelMedium,
@@ -1047,6 +1158,75 @@ fun TuckSectionHeader(
                 modifier = Modifier.clickable(onClick = onAction)
             )
         }
+    }
+}
+
+/**
+ * List/grid switch for the feed.
+ *
+ * Two 48dp targets rather than one toggling button: a single button would have to
+ * show either the current state or the destination, and every such control is
+ * ambiguous. Here the selected mode is visibly held down and announced as selected.
+ */
+@Composable
+fun FeedViewModeToggle(
+    mode: FeedViewMode,
+    onSelect: (FeedViewMode) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val tuckColors = TuckTheme.colors
+    val shapes = TuckTheme.shapes
+
+    Row(
+        modifier = modifier
+            .clip(shapes.small)
+            .background(tuckColors.surfaceCard)
+            .padding(2.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        FeedViewModeButton(
+            icon = Icons.AutoMirrored.Filled.ViewList,
+            label = stringResource(R.string.feed_view_list),
+            selected = mode == FeedViewMode.LIST,
+            onClick = { onSelect(FeedViewMode.LIST) }
+        )
+        FeedViewModeButton(
+            icon = Icons.Filled.GridView,
+            label = stringResource(R.string.feed_view_grid),
+            selected = mode == FeedViewMode.GRID,
+            onClick = { onSelect(FeedViewMode.GRID) }
+        )
+    }
+}
+
+@Composable
+private fun FeedViewModeButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val tuckColors = TuckTheme.colors
+    val shapes = TuckTheme.shapes
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(shapes.small)
+            .background(if (selected) tuckColors.surface else Color.Transparent)
+            .selectable(
+                selected = selected,
+                role = Role.RadioButton,
+                onClick = onClick
+            )
+            .semantics { contentDescription = label },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (selected) tuckColors.accent else tuckColors.textMuted,
+            modifier = Modifier.size(20.dp)
+        )
     }
 }
 
@@ -1059,6 +1239,8 @@ fun TuckContentCard(
     onToggleFavorite: () -> Unit,
     modifier: Modifier = Modifier,
     highlightSnippet: String? = null,
+    /** Fields this item matched on, shown as chips so a result can justify itself. */
+    matchFields: List<MatchField> = emptyList(),
     /** Long-press opens quick actions. Null leaves the card press-only. */
     onLongPress: (() -> Unit)? = null
 ) {
@@ -1227,18 +1409,47 @@ fun TuckContentCard(
                     overflow = TextOverflow.Ellipsis
                 )
 
+                // Why this result matched — the chips, then the matching words themselves.
+                if (matchFields.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    // TalkBack reads one phrase for the row; the chips themselves would
+                    // otherwise be announced as a run of disconnected words.
+                    val shownFields = matchFields.take(3)
+                    // Resolved outside the join: `matchFieldLabel` is @Composable and a
+                    // joinToString lambda is not a composable context.
+                    val labels = shownFields.map { matchFieldLabel(it) }
+                    val spoken = stringResource(R.string.match_matched_in, labels.joinToString(", "))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.semantics(mergeDescendants = true) {
+                            contentDescription = spoken
+                        }
+                    ) {
+                        // Three is as much as a card can carry before the chips outweigh
+                        // the result they are annotating.
+                        shownFields.forEach { field ->
+                            MatchReasonChip(field = field)
+                        }
+                    }
+                }
+
                 // Highlighted Search Snippet OR Description
                 if (!highlightSnippet.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(6.dp))
                     Surface(
-                        color = tuckColors.accentContainer.copy(alpha = 0.5f),
+                        color = tuckColors.surfaceCard,
                         shape = tuckShapes.small,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = highlightSnippet,
+                            text = highlightedSnippet(
+                                raw = highlightSnippet,
+                                highlight = tuckColors.highlight,
+                                onHighlight = tuckColors.highlightText
+                            ),
                             style = MaterialTheme.typography.bodySmall,
-                            color = tuckColors.accent,
+                            color = tuckColors.textSecondary,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(8.dp)
@@ -1330,167 +1541,212 @@ fun TuckThemePreviewCard(
     flavor: TuckThemeFlavor,
     isSelected: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isDark: Boolean = TuckTheme.colors.isDark
 ) {
-    val previewColors = getTuckColors(flavor, isDark = false)
+    val previewColors = getTuckColors(flavor, isDark)
     val shapes = TuckTheme.shapes
+    val interactionSource = remember { MutableInteractionSource() }
 
     Card(
         shape = shapes.large,
-        colors = CardDefaults.cardColors(containerColor = previewColors.background),
+        colors = CardDefaults.cardColors(containerColor = previewColors.surface),
         border = androidx.compose.foundation.BorderStroke(
-            width = if (isSelected) 2.5.dp else 1.dp,
-            color = if (isSelected) TuckTheme.colors.accent else previewColors.border
+            width = if (isSelected) 2.dp else 1.dp,
+            color = if (isSelected) TuckTheme.colors.accent else previewColors.borderSubtle
         ),
         modifier = modifier
             .fillMaxWidth()
+            .pressScale(interactionSource, pressedScale = 0.985f)
+            .shadow(
+                elevation = if (isSelected) 6.dp else 2.dp,
+                shape = shapes.large,
+                ambientColor = previewColors.accent.copy(alpha = if (isSelected) 0.25f else 0.08f),
+                spotColor = previewColors.accent.copy(alpha = if (isSelected) 0.25f else 0.08f)
+            )
             .clip(shapes.large)
-            .clickable(onClick = onClick)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = ripple(color = previewColors.accent),
+                onClick = onClick
+            )
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            // Theme Title + Selected Indicator
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = flavor.displayName.uppercase(),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = previewColors.textPrimary
-                    )
-                    Text(
-                        text = flavor.tagline,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = previewColors.textSecondary
-                    )
-                }
-
-                if (isSelected) {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .background(TuckTheme.colors.accent),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Star,
-                            contentDescription = stringResource(R.string.collections_selected),
-                            tint = TuckTheme.colors.textOnAccent,
-                            modifier = Modifier.size(14.dp)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Miniature Search Bar
-            Surface(
-                shape = shapes.small,
-                color = previewColors.surfaceCard,
-                border = androidx.compose.foundation.BorderStroke(1.dp, previewColors.border),
+        Box(modifier = Modifier.fillMaxWidth()) {
+            // Subtle top sheen highlight
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(36.dp)
+                    .align(Alignment.TopCenter)
+                    .background(TuckGradients.sheen(previewColors.accent))
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
             ) {
+                // Theme Title + Selected Indicator
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 10.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Search,
-                        contentDescription = null,
-                        tint = previewColors.accent,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = stringResource(R.string.components_search_anything),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = previewColors.textMuted
-                    )
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .clip(CircleShape)
+                                    .background(previewColors.accent)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = flavor.displayName.uppercase(),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = previewColors.textPrimary
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = flavor.tagline,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = previewColors.textSecondary
+                        )
+                    }
+
+                    if (isSelected) {
+                        Surface(
+                            shape = shapes.pill,
+                            color = TuckTheme.colors.accent,
+                            modifier = Modifier.height(26.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Star,
+                                    contentDescription = stringResource(R.string.collections_selected),
+                                    tint = TuckTheme.colors.textOnAccent,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "ACTIVE",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = TuckTheme.colors.textOnAccent
+                                )
+                            }
+                        }
+                    }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-            // Miniature Content Card + Button
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+                // Miniature Search Bar
                 Surface(
-                    shape = shapes.small,
-                    color = previewColors.surface,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, previewColors.border),
+                    shape = shapes.pill,
+                    color = previewColors.surfaceCard,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, previewColors.borderSubtle),
                     modifier = Modifier
-                        .weight(1f)
+                        .fillMaxWidth()
                         .height(36.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 8.dp)
+                        modifier = Modifier.padding(horizontal = 12.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(previewColors.accent)
+                        Icon(
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = null,
+                            tint = previewColors.accent,
+                            modifier = Modifier.size(14.dp)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = stringResource(R.string.components_recently_tucked),
+                            text = stringResource(R.string.components_search_anything),
                             style = MaterialTheme.typography.labelSmall,
-                            color = previewColors.textPrimary,
-                            fontWeight = FontWeight.Bold
+                            color = previewColors.textMuted
                         )
                     }
                 }
 
-                Surface(
-                    shape = shapes.small,
-                    color = previewColors.accent,
-                    modifier = Modifier.height(36.dp)
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Miniature Content Card + Button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    Surface(
+                        shape = shapes.small,
+                        color = previewColors.surfaceCard,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, previewColors.borderSubtle),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(36.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 10.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(previewColors.accent)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = stringResource(R.string.components_recently_tucked),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = previewColors.textPrimary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
                     Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.padding(horizontal = 12.dp)
+                        modifier = Modifier
+                            .height(36.dp)
+                            .clip(shapes.small)
+                            .background(TuckGradients.accent(previewColors.accent, isDark)),
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = stringResource(R.string.app_name),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = previewColors.textOnAccent
+                            color = previewColors.textOnAccent,
+                            modifier = Modifier.padding(horizontal = 14.dp)
                         )
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-            // 8-Hue Multi-Hue Palette Swatch Strip
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(12.dp)
-                    .clip(shapes.small),
-                horizontalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                previewColors.palette.entries.forEach { entry ->
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(12.dp)
-                            .background(entry.fill)
-                    )
+                // 8-Hue Multi-Hue Palette Swatch Strip with connected rounded capsules
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(16.dp)
+                        .clip(shapes.pill)
+                        .background(previewColors.surfaceCard)
+                        .padding(2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    previewColors.palette.entries.forEach { entry ->
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(entry.fill)
+                        )
+                    }
                 }
             }
         }
@@ -2166,6 +2422,141 @@ fun ItemQuickActionsSheet(
                             modifier = Modifier.size(16.dp)
                         )
                     }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The compact card used by the grid layout of the feed.
+ *
+ * Deliberately not a narrower [TuckContentCard]: in a grid the picture is the identifier,
+ * so the image is given its own aspect ratio rather than a fixed crop height, and the
+ * text below it is trimmed to what still reads at half width. Items with no picture get a
+ * tinted block carrying their type icon, so a grid of mixed content stays scannable
+ * instead of collapsing into a row of blank rectangles.
+ *
+ * Colour is never the only carrier of meaning here — every tile also states its type.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun TuckGridCard(
+    item: SavedItem,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    onLongPress: (() -> Unit)? = null
+) {
+    val tuckColors = TuckTheme.colors
+    val tuckShapes = TuckTheme.shapes
+    val interactionSource = remember { MutableInteractionSource() }
+    val haptics = LocalHapticFeedback.current
+    val context = LocalContext.current
+
+    val fileIsVisual = item.contentType == ContentType.IMAGE ||
+            item.contentType == ContentType.MULTI_IMAGE
+    val previewImage = item.thumbnailPath ?: item.localFilePath.takeIf { fileIsVisual }
+    val typeLabel = stringResource(item.contentType.labelRes)
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .pressScale(interactionSource, pressedScale = 0.97f)
+            .clip(tuckShapes.medium)
+            .combinedClickable(
+                interactionSource = interactionSource,
+                indication = ripple(color = tuckColors.accent),
+                onClick = onClick,
+                onClickLabel = item.title,
+                onLongClick = onLongPress?.let { press ->
+                    {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        press()
+                    }
+                }
+            ),
+        shape = tuckShapes.medium,
+        colors = CardDefaults.cardColors(containerColor = tuckColors.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.borderSubtle)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            if (!previewImage.isNullOrBlank()) {
+                val imageRequest = remember(previewImage) {
+                    val imageModel: Any = when {
+                        previewImage.startsWith("content://") -> Uri.parse(previewImage)
+                        previewImage.startsWith("/") || previewImage.startsWith("file://") ->
+                            File(previewImage.removePrefix("file://"))
+                        else -> previewImage
+                    }
+                    ImageRequest.Builder(context).data(imageModel).crossfade(true).build()
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        // Bounded so one very tall screenshot cannot own the whole column.
+                        .heightIn(min = 100.dp, max = 260.dp)
+                        .background(tuckColors.surfaceCard)
+                ) {
+                    AsyncImage(
+                        model = imageRequest,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (item.isFavorite) {
+                        Icon(
+                            imageVector = Icons.Filled.Star,
+                            contentDescription = null,
+                            tint = tuckColors.favorite,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(6.dp)
+                                .size(16.dp)
+                        )
+                    }
+                }
+            } else {
+                // No picture: a tinted plate with the type icon, so the tile still says
+                // what it is at a glance.
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(84.dp)
+                        .background(tuckColors.surfaceCard),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = when (item.contentType) {
+                            ContentType.URL -> Icons.Filled.Link
+                            ContentType.TEXT -> Icons.Filled.Notes
+                            ContentType.PDF, ContentType.DOCUMENT -> Icons.Filled.PictureAsPdf
+                            ContentType.VIDEO -> Icons.Filled.PlayArrow
+                            ContentType.AUDIO -> Icons.Filled.Mic
+                            else -> Icons.Filled.Bookmark
+                        },
+                        contentDescription = null,
+                        tint = tuckColors.textMuted,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+            }
+
+            Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+                Text(
+                    text = item.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = tuckColors.textPrimary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "$typeLabel · ${formatRelativeTime(item.createdAt)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = tuckColors.textMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }

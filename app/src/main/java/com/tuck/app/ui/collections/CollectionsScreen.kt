@@ -52,9 +52,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,6 +77,7 @@ import com.tuck.app.ui.components.TuckEmptyState
 import com.tuck.app.ui.components.TuckSearchBar
 import com.tuck.app.ui.components.TuckSectionHeader
 import com.tuck.app.ui.theme.TuckTheme
+import com.tuck.app.ui.theme.TuckGradients
 import com.tuck.app.ui.components.TuckFab
 import com.tuck.app.ui.components.CollectionProgressRow
 import com.tuck.app.ui.components.CollectionSectionHeader
@@ -82,6 +85,12 @@ import com.tuck.app.ui.components.CollectionSectionHeader
 @Composable
 fun CollectionsScreen(
     onNavigateToDetail: (Long) -> Unit,
+    /**
+     * Opened straight onto this collection when the caller named one — tapping a
+     * collection elsewhere in the app should land on that collection, not on the
+     * grid of all of them.
+     */
+    initialCollectionId: Long? = null,
     viewModel: CollectionsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -97,11 +106,33 @@ fun CollectionsScreen(
     var isGridView by remember { mutableStateOf(true) }
     var filterTab by remember { mutableStateOf(0) } // 0: All, 1: Curated, 2: Smart, 3: Locked
 
+    // Honour a requested collection once, after the lists have loaded. A locked one is
+    // deliberately *not* opened this way: its biometric gate lives on the tile below, and
+    // a deep link must not be a way around it.
+    var honouredInitial by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(initialCollectionId, uiState.customCollections, uiState.autoCollections) {
+        if (honouredInitial || initialCollectionId == null) return@LaunchedEffect
+        val target = (uiState.customCollections + uiState.autoCollections)
+            .firstOrNull { it.id == initialCollectionId } ?: return@LaunchedEffect
+        honouredInitial = true
+        if (!target.isLocked) viewModel.selectCollection(target)
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(tuckColors.background)
     ) {
+        if (uiState.selectedCollection == null) {
+            // Atmospheric brand wash diffusing from top
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(160.dp)
+                    .background(TuckGradients.canvasWash(tuckColors.accent, tuckColors.background))
+            )
+        }
+
         if (uiState.selectedCollection != null) {
                 // Category Detail View
                 val currentSelected = uiState.selectedCollection!!

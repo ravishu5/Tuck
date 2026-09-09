@@ -100,11 +100,13 @@ class SavedItemFtsDaoImpl @Inject constructor(
             val results = mutableListOf<FtsSearchResult>()
             database.query(SimpleSQLiteQuery(sql, arrayOf<Any?>(ftsQuery))).use { cursor ->
                 while (cursor.moveToNext()) {
+                    val scored = scoreFromMatchInfo(cursor.getBlob(2))
                     results.add(
                         FtsSearchResult(
                             rowid = cursor.getLong(0),
                             snippet = if (cursor.isNull(1)) null else cursor.getString(1),
-                            rank = scoreFromMatchInfo(cursor.getBlob(2))
+                            rank = scored.score,
+                            matchedColumns = scored.columns
                         )
                     )
                 }
@@ -126,19 +128,20 @@ class SavedItemFtsDaoImpl @Inject constructor(
      * Each hit contributes its column's weight, damped by how long that column is,
      * so a match in a short title beats one buried in a page of OCR text.
      */
-    private fun scoreFromMatchInfo(blob: ByteArray?): Double {
-        if (blob == null || blob.size < 12) return 0.0
+    private fun scoreFromMatchInfo(blob: ByteArray?): ScoredMatch {
+        if (blob == null || blob.size < 12) return ScoredMatch.EMPTY
         val ints = ByteBuffer.wrap(blob).order(ByteOrder.nativeOrder()).asIntBuffer()
 
         val phraseCount = ints.get(0)
         val columnCount = ints.get(1)
-        if (phraseCount <= 0 || columnCount <= 0) return 0.0
+        if (phraseCount <= 0 || columnCount <= 0) return ScoredMatch.EMPTY
 
         val avgOffset = 3
         val lenOffset = avgOffset + columnCount
         val hitsOffset = lenOffset + columnCount
 
         var score = 0.0
+        val matchedColumns = mutableSetOf<Int>()
         for (phrase in 0 until phraseCount) {
             for (column in 0 until columnCount) {
                 val index = hitsOffset + 3 * (phrase * columnCount + column)
@@ -146,6 +149,8 @@ class SavedItemFtsDaoImpl @Inject constructor(
 
                 val hitsInThisRow = ints.get(index)
                 if (hitsInThisRow == 0) continue
+
+                matchedColumns.add(column)
 
                 val avgLength = ints.get(avgOffset + column).coerceAtLeast(1)
                 val thisLength = ints.get(lenOffset + column).coerceAtLeast(1)
@@ -155,7 +160,14 @@ class SavedItemFtsDaoImpl @Inject constructor(
                 score += weight * hitsInThisRow * lengthDamping
             }
         }
-        return score
+        return ScoredMatch(score, matchedColumns)
+    }
+
+    /** A row's relevance and the columns that earned it. */
+    private data class ScoredMatch(val score: Double, val columns: Set<Int>) {
+        companion object {
+            val EMPTY = ScoredMatch(0.0, emptySet())
+        }
     }
 
     override suspend fun searchFtsRowIds(ftsQuery: String): List<Long> =

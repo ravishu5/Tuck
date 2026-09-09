@@ -94,6 +94,7 @@ class ItemProcessingWorker @AssistedInject constructor(
             val wifiOnlyMetadata = settings?.wifiOnlyMetadata ?: false
             val deepCaptureEnabled = settings?.deepCaptureEnabled ?: false
             val transcribeVoiceNotes = settings?.transcribeVoiceNotes ?: true
+            val archivePages = settings?.archivePages ?: false
 
             var finalTitle = itemEntity.title
             var finalDescription = itemEntity.description
@@ -189,6 +190,27 @@ class ItemProcessingWorker @AssistedInject constructor(
                                             downloadState = "COMPLETE"
                                         )
                                     )
+                                }
+                            }
+
+                            // Keep a copy of the page itself. Metadata and extracted text
+                            // describe a page; they do not survive it. Archiving is what makes
+                            // the save outlast the link, which is the point of an archive.
+                            if (archivePages && extractor.platformName == "WEB") {
+                                val snapshot = captureEngine.archive(cleanedUrl)
+                                if (snapshot != null) {
+                                    val path = fileStorageService.saveSnapshot(snapshot.html)
+                                    if (path != null) {
+                                        mediaAssetDao.insert(
+                                            MediaAssetEntity(
+                                                itemId = itemId,
+                                                role = "SNAPSHOT",
+                                                localPath = path,
+                                                mimeType = "text/html",
+                                                downloadState = "COMPLETE"
+                                            )
+                                        )
+                                    }
                                 }
                             }
 

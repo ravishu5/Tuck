@@ -1,5 +1,6 @@
 package com.tuck.app.ui.search
 
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.tuck.app.R
 
@@ -146,7 +147,7 @@ fun SearchScreen(
             if (uiState.results.isEmpty()) {
                 TuckEmptyState(
                     title = stringResource(R.string.empty_no_search_match),
-                    description = "Try searching:\n\"React\"\n\"Travel\"\n\"things I saved last week\"",
+                    description = stringResource(R.string.search_no_match_body),
                     icon = Icons.Filled.Search,
                     modifier = Modifier.padding(top = 40.dp)
                 )
@@ -156,10 +157,25 @@ fun SearchScreen(
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 80.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    // A count tells the reader whether to keep scrolling or narrow the query.
+                    item(key = "result-count") {
+                        Text(
+                            text = pluralStringResource(
+                                R.plurals.search_result_count,
+                                uiState.results.size,
+                                uiState.results.size
+                            ),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = tuckColors.textMuted,
+                            modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
+                        )
+                    }
                     items(uiState.results, key = { it.item.id }) { result ->
                         TuckContentCard(
                             item = result.item,
                             highlightSnippet = result.matchSnippet,
+                            matchFields = result.matchFields,
                             onClick = { onNavigateToDetail(result.item.id) },
                             onToggleFavorite = {
                                 viewModel.toggleFavorite(result.item.id, result.item.isFavorite)

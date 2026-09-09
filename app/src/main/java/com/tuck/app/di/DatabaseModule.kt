@@ -16,6 +16,7 @@ import com.tuck.app.data.local.db.dao.SavedItemFtsDaoImpl
 import com.tuck.app.data.local.db.dao.SearchHistoryDao
 import com.tuck.app.data.local.db.dao.SourceContentDao
 import com.tuck.app.data.local.db.dao.TagDao
+import com.tuck.app.data.local.db.dao.TravelDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -69,10 +70,14 @@ object DatabaseModule {
             TuckDatabase.MIGRATION_5_6,
             TuckDatabase.MIGRATION_6_7,
             TuckDatabase.MIGRATION_7_8,
-            TuckDatabase.MIGRATION_8_9
+            TuckDatabase.MIGRATION_8_9,
+            TuckDatabase.MIGRATION_9_10
         )
             .build()
     }
+
+    @Provides
+    fun provideTravelDao(database: TuckDatabase): TravelDao = database.travelDao()
 
     @Provides
     fun provideSavedItemDao(database: TuckDatabase): SavedItemDao = database.savedItemDao()

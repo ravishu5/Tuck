@@ -101,6 +101,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setArchivePages(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setArchivePages(enabled)
+        }
+    }
+
     fun setTranscribeVoiceNotes(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setTranscribeVoiceNotes(enabled)

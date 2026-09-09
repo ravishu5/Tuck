@@ -18,8 +18,32 @@ data class SearchFilter(
     val sortOrder: SortOrder = SortOrder.RELEVANCE
 )
 
+/**
+ * Which indexed field a result matched on.
+ *
+ * The FTS index already scores per column — see `SavedItemFtsDaoImpl.COLUMN_WEIGHTS` —
+ * so the app knows *why* a row came back and simply used to throw that away. Showing it
+ * is the difference between "trust the ranking" and "here is the evidence": a hit in a
+ * screenshot's recognised text is a very different claim from a hit in a title.
+ *
+ * The order of the constants is the order the chips are shown in, strongest first.
+ */
+enum class MatchField {
+    TITLE,
+    TAG,
+    ENTITY,
+    DESCRIPTION,
+    TEXT,
+    COMMENT,
+    OCR,
+    URL,
+    DOMAIN
+}
+
 data class SearchResult(
     val item: SavedItem,
     val matchSnippet: String? = null,
-    val score: Double = 0.0
+    val score: Double = 0.0,
+    /** The fields this result matched on, strongest first. Empty when unknown. */
+    val matchFields: List<MatchField> = emptyList()
 )

@@ -73,6 +73,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -81,6 +82,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -339,6 +341,21 @@ fun ItemDetailScreen(
                 )
             }
 
+            uiState.snapshotPath?.let { snapshot ->
+                Spacer(modifier = Modifier.height(16.dp))
+                DetailSection(title = stringResource(R.string.detail_archived_copy)) {
+                    TextButton(onClick = { openSnapshot(context, snapshot) }) {
+                        Icon(
+                            imageVector = Icons.Filled.OpenInBrowser,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(stringResource(R.string.detail_open_archived_copy))
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(20.dp))
             ChecklistSection(
                 entries = uiState.checklist,
@@ -445,6 +462,7 @@ fun ItemDetailScreen(
 
             // Extracted OCR / Text Content Section
             val allExtracted = item.ocrText ?: item.extractedText
+            var isExtractedExpanded by rememberSaveable(item.id) { mutableStateOf(false) }
             if (!allExtracted.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(24.dp))
                 Row(
@@ -481,12 +499,38 @@ fun ItemDetailScreen(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
                     )
                 ) {
-                    Text(
-                        text = allExtracted,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(14.dp)
-                    )
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        // The text a screenshot or PDF gave up is the reason many of these
+                        // items were saved, and copy-all was the only way to reach it. A
+                        // selection container makes the phone number in the middle of it
+                        // reachable on its own.
+                        SelectionContainer {
+                            Text(
+                                text = allExtracted,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = if (isExtractedExpanded) Int.MAX_VALUE else COLLAPSED_TEXT_LINES,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        // A scanned PDF can run to thousands of words; unbounded, it buried
+                        // the notes and actions below it.
+                        if (allExtracted.length > COLLAPSE_TEXT_THRESHOLD) {
+                            TextButton(
+                                onClick = { isExtractedExpanded = !isExtractedExpanded },
+                                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(
+                                        if (isExtractedExpanded) R.string.detail_show_less
+                                        else R.string.detail_show_more
+                                    ),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
@@ -932,6 +976,27 @@ fun openPdfFile(context: Context, filePath: String?) {
     } catch (e: Exception) {
         Toast.makeText(context, R.string.detail_no_pdf_viewer, Toast.LENGTH_SHORT).show()
     }
+}
+
+/**
+ * Opens the archived copy through a FileProvider.
+ *
+ * The snapshot is a normal HTML file, so any browser can read it — and because everything it
+ * needs is inlined, it renders with no network at all.
+ */
+fun openSnapshot(context: Context, path: String) {
+    val file = java.io.File(path)
+    if (!file.exists()) return
+    val uri = androidx.core.content.FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.fileprovider",
+        file
+    )
+    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+        setDataAndType(uri, "text/html")
+        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    context.startActivitySafe(intent)
 }
 
 fun openBrowserUrl(context: Context, url: String?) {
@@ -1607,3 +1672,9 @@ internal fun formatClock(ms: Int): String {
     val totalSeconds = ms / 1000
     return "%d:%02d".format(totalSeconds / 60, totalSeconds % 60)
 }
+
+/** Lines of recognised text shown before the reader has to ask for the rest. */
+private const val COLLAPSED_TEXT_LINES = 12
+
+/** Above this many characters the text is worth collapsing at all. */
+private const val COLLAPSE_TEXT_THRESHOLD = 600

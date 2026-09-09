@@ -33,7 +33,7 @@ import com.tuck.app.ui.collections.CollectionsScreen
 import com.tuck.app.ui.detail.ItemDetailScreen
 import com.tuck.app.ui.favorites.FavoritesScreen
 import com.tuck.app.ui.home.HomeScreen
-import com.tuck.app.ui.inbox.InboxScreen
+import com.tuck.app.ui.travel.TravelScreen
 import com.tuck.app.ui.navigation.BottomNavScreen
 import com.tuck.app.ui.navigation.NavRoutes
 import com.tuck.app.ui.search.SearchScreen
@@ -64,7 +64,7 @@ fun TuckApp(
     val bottomNavScreens = listOf(
         BottomNavScreen.Home,
         BottomNavScreen.Collections,
-        BottomNavScreen.Inbox,
+        BottomNavScreen.Travel,
         BottomNavScreen.Search
     )
 
@@ -102,8 +102,11 @@ fun TuckApp(
                 composable(NavRoutes.HOME) {
                     HomeScreen(
                         captureSignal = captureSignal,
-                        onNavigateToCollections = {
-                            navController.navigate(NavRoutes.COLLECTIONS) {
+                        onNavigateToCollections = { collectionId ->
+                            val route = collectionId
+                                ?.let { NavRoutes.collection(it) }
+                                ?: NavRoutes.COLLECTIONS
+                            navController.navigate(route) {
                                 popUpTo(NavRoutes.HOME)
                                 launchSingleTop = true
                             }
@@ -126,16 +129,24 @@ fun TuckApp(
                     )
                 }
 
-                composable(NavRoutes.INBOX) {
-                    InboxScreen(
-                        onNavigateToDetail = { itemId ->
-                            navController.navigate(NavRoutes.detail(itemId))
-                        }
-                    )
+                composable(NavRoutes.TRAVEL) {
+                    TravelScreen()
                 }
 
-                composable(NavRoutes.COLLECTIONS) {
+                composable(
+                    route = NavRoutes.COLLECTIONS_WITH_ARG,
+                    arguments = listOf(
+                        navArgument(NavRoutes.ARG_COLLECTION_ID) {
+                            type = NavType.LongType
+                            defaultValue = NavRoutes.NO_COLLECTION
+                        }
+                    )
+                ) { backStackEntry ->
+                    val requested = backStackEntry.arguments
+                        ?.getLong(NavRoutes.ARG_COLLECTION_ID)
+                        ?.takeIf { it != NavRoutes.NO_COLLECTION }
                     CollectionsScreen(
+                        initialCollectionId = requested,
                         onNavigateToDetail = { itemId ->
                             navController.navigate(NavRoutes.detail(itemId))
                         }

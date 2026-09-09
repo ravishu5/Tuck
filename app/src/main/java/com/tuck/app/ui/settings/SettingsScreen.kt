@@ -11,6 +11,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,10 +38,18 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.HealthAndSafety
 import androidx.compose.material.icons.filled.Rule
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.SettingsBrightness
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material3.ripple
+import androidx.compose.ui.graphics.Color
+import com.tuck.app.ui.theme.TuckGradients
+import com.tuck.app.ui.theme.pressScale
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -115,13 +124,23 @@ fun SettingsScreen(
         return
     }
 
-    LazyColumn(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(tuckColors.background),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 100.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .background(tuckColors.background)
     ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(180.dp)
+                .background(TuckGradients.canvasWash(tuckColors.accent, tuckColors.background))
+        )
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 100.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
         // Header
         item {
             Column {
@@ -190,7 +209,7 @@ fun SettingsScreen(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // 5 Theme Preview Cards
+                    // Theme Preview Cards (6 Curated Families)
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         TuckThemeFlavor.values().forEach { flavor ->
                             TuckThemePreviewCard(
@@ -213,25 +232,64 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(tuckShapes.pill)
+                            .background(tuckColors.surfaceCard)
+                            .border(1.dp, tuckColors.borderSubtle, tuckShapes.pill)
+                            .padding(3.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         listOf(
-                            stringResource(R.string.theme_system) to AppTheme.SYSTEM,
-                            stringResource(R.string.theme_light) to AppTheme.LIGHT,
-                            stringResource(R.string.theme_dark) to AppTheme.DARK
-                        ).forEach { (label, theme) ->
-                            TuckCategoryChip(
-                                label = label,
-                                isSelected = uiState.settings.theme == theme,
-                                onClick = { viewModel.setTheme(theme) },
-                                modifier = Modifier.weight(1f)
-                            )
+                            Triple(stringResource(R.string.theme_system), AppTheme.SYSTEM, Icons.Filled.SettingsBrightness),
+                            Triple(stringResource(R.string.theme_light), AppTheme.LIGHT, Icons.Filled.LightMode),
+                            Triple(stringResource(R.string.theme_dark), AppTheme.DARK, Icons.Filled.DarkMode)
+                        ).forEach { (label, theme, icon) ->
+                            val isSelected = uiState.settings.theme == theme
+                            val chipSource = remember { MutableInteractionSource() }
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(38.dp)
+                                    .pressScale(chipSource, pressedScale = 0.95f)
+                                    .clip(tuckShapes.pill)
+                                    .background(if (isSelected) tuckColors.surface else Color.Transparent)
+                                    .then(
+                                        if (isSelected) Modifier.border(1.dp, tuckColors.border, tuckShapes.pill)
+                                        else Modifier
+                                    )
+                                    .clickable(
+                                        interactionSource = chipSource,
+                                        indication = ripple(color = tuckColors.accent),
+                                        onClick = { viewModel.setTheme(theme) }
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = null,
+                                        tint = if (isSelected) tuckColors.accent else tuckColors.textMuted,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) tuckColors.textPrimary else tuckColors.textSecondary
+                                    )
+                                }
+                            }
                         }
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
 
+                    val gallerySource = remember { MutableInteractionSource() }
                     // Theme Palette Gallery Launcher (Debug / Review)
                     Surface(
                         shape = tuckShapes.medium,
@@ -239,7 +297,12 @@ fun SettingsScreen(
                         border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.borderSubtle),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { showPaletteGallery = true }
+                            .pressScale(gallerySource)
+                            .clickable(
+                                interactionSource = gallerySource,
+                                indication = ripple(color = tuckColors.accent),
+                                onClick = { showPaletteGallery = true }
+                            )
                     ) {
                         Row(
                             modifier = Modifier
@@ -248,7 +311,11 @@ fun SettingsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column {
+                            // The description is the only part that may wrap. Without the
+                            // weight it claimed its full intrinsic width and squeezed the
+                            // action to one letter per line in every locale with longer
+                            // words than English.
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = stringResource(R.string.settings_inspect_color_palettes),
                                     style = MaterialTheme.typography.bodyMedium,
@@ -262,11 +329,13 @@ fun SettingsScreen(
                                     color = tuckColors.textSecondary
                                 )
                             }
+                            Spacer(modifier = Modifier.width(12.dp))
                             Text(
                                 text = stringResource(R.string.settings_view),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = tuckColors.accent
+                                color = tuckColors.accent,
+                                maxLines = 1
                             )
                         }
                     }
@@ -352,6 +421,15 @@ fun SettingsScreen(
                         subtitle = stringResource(R.string.setting_wifi_only_sub),
                         checked = uiState.settings.wifiOnlyMetadata,
                         onCheckedChange = { viewModel.setWifiOnlyMetadata(it) }
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    SettingsSwitchRow(
+                        title = stringResource(R.string.setting_archive),
+                        subtitle = stringResource(R.string.setting_archive_sub),
+                        checked = uiState.settings.archivePages,
+                        onCheckedChange = { viewModel.setArchivePages(it) }
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -514,6 +592,7 @@ fun SettingsScreen(
                 )
             }
         }
+    }
     }
 }
 

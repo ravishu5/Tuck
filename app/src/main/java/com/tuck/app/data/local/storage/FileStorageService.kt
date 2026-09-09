@@ -54,6 +54,10 @@ class FileStorageService @Inject constructor(
         File(context.filesDir, "saved/videos").apply { mkdirs() }
     }
 
+    private val snapshotsDir: File by lazy {
+        File(context.filesDir, "saved/snapshots").apply { mkdirs() }
+    }
+
     private val thumbnailsDir: File by lazy {
         File(context.filesDir, "thumbnails").apply { mkdirs() }
     }
@@ -460,6 +464,23 @@ class FileStorageService @Inject constructor(
     }
 
     /**
+     * Writes an archived page to disk.
+     *
+     * Self-contained HTML, so it opens in any browser and survives the original going away —
+     * which is the whole reason to keep it.
+     */
+    suspend fun saveSnapshot(html: String): String? = withContext(Dispatchers.IO) {
+        if (html.isBlank()) return@withContext null
+        try {
+            val file = File(snapshotsDir, "page_${UUID.randomUUID()}.html")
+            file.writeText(html)
+            file.absolutePath.takeIf { file.length() > 0 }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
      * Downloads a video so the item plays offline, and plays at all.
      *
      * A platform's own embed will not let Tuck drive it — no play, no seek, no timestamp — and
@@ -579,7 +600,7 @@ class FileStorageService @Inject constructor(
      * their source rather than referenced directly by an item.
      */
     suspend fun listStoredFiles(): List<File> = withContext(Dispatchers.IO) {
-        listOf(imagesDir, pdfsDir, documentsDir, videosDir)
+        listOf(imagesDir, pdfsDir, documentsDir, videosDir, snapshotsDir)
             .flatMap { it.listFiles()?.toList().orEmpty() }
             .filter { it.isFile }
     }

@@ -71,12 +71,12 @@ These come from the App Store version history. Ranked by my read of value to Tuc
 | B3 | **Search from the home screen**, no tab switch | 🟡 | Home has a search field that navigates to the Search tab; make it search inline |
 | B4 | **Pin favourite collections to top** | 🟡 | Item pinning exists; collection pinning does not |
 | B5 | **Bulk select in any stash**, not just triage | 🟡 | Extend beyond Inbox |
-| B6 | **Grid view for visual browsing** | ❌ | No `LazyVerticalGrid` anywhere. Covered by `REDESIGN_TASKS.md` R4 |
+| B6 | **Grid view for visual browsing** | ✅ | List/grid switch on the home feed, remembered in settings. Home is one `LazyVerticalStaggeredGrid` with full-line sections, so there is no nested scroller |
 | B7 | **Sub-stashes (nested collections)** | 🟡 | `parentId` column exists, no UI |
 | B8 | **Filter a stash by "Just here" / "Everything" / one sub-stash** | ❌ | Depends on B7 |
 | B9 | **Storage screen + one-tap "Reclaim Space"** | 🟡 | Settings shows usage and clears cache; no per-category breakdown or reclaim |
 | B10 | **Markdown export** | ❌ | Also the honest answer to "your data is yours" |
-| B11 | **Copy text out of images and PDFs; select text in full-screen photos** | ❌ | OCR text is captured but the user cannot *use* it. Cheap, very satisfying |
+| B11 | **Copy text out of images and PDFs; select text in full-screen photos** | 🟡 | Recognised text on the detail screen is now selectable and collapses past 12 lines. **Gap:** selecting text over a full-screen photo is not built |
 | B12 | **Change the preview image for a save** | ❌ | Small, high perceived polish |
 | B13 | **Richer item details** — dates, location, dimensions, file size, video length | 🟡 | Some captured, not surfaced |
 | B14 | **Bulk photo import (up to 50 at once)** | 🟡 | `importAllScreenshots()` exists but is called with `limit = 30` recent — see §D2 |
@@ -112,7 +112,7 @@ This is where Tuck can be better rather than equal.
 | **D1** | **Item lifecycle: status + reminders + snooze** | The structural gap. A saved item today has four booleans (`isPinned`, `isFavorite`, `isArchived`, `isDeleted`) and no notion of intent, state or completion. People save in order to *do* something — read it, buy it, cook it, apply to it. Add a status (`INBOX` / `TO_ACT` / `DONE`), a `remindAt`, and a snooze. `captureNote` already records *why* something was saved and nothing ever acts on it. WorkManager and notification plumbing already exist. **Highest leverage item in this document** |
 | **D2** | **Day-one bulk import of the existing screenshot library** | For the first ~2 weeks a save-anything app is *worse* than screenshots because there is nothing to retrieve — which is exactly when people churn. The user already owns thousands of screenshots. `importAllScreenshots()` is written and is being called with `limit = 30`. Turning it into a first-run "import your screenshot history" flow, OCR'd and searchable, hands the user a valuable archive on day one instead of day thirty. **Highest retention-per-line-of-code in the project** |
 | D3 | **Import from browser bookmarks / Pocket / Raindrop / Instapaper** | Same argument as D2. A category-wide complaint found in search was wanting to import from another service |
-| D4 | **Match-reason chips in search results** | Tuck knows *why* something matched — title vs OCR vs a comment. Stash shows one `OCR` badge. Showing this on every result is a visible advantage |
+| D4 | ✅ **Match-reason chips in search results** | Shipped. `matchinfo('pcnalx')` already computed per-column hits and the score threw them away; results now carry `matchFields` and the snippet keeps the `<b>` markers as a highlight instead of stripping them. The `LIKE` fallback derives the same fields itself |
 | D5 | **Reading progress / unread state for long articles** | `openCount` and `lastOpenedAt` already exist; unread is free |
 | D6 | **Entity chips and entity pages** | `TASKS.md` Phase A. See the sequencing note in §G |
 | D7 | **Source vs derived visual convention** | Nobody else distinguishes captured content from computed content. It is a trust feature |

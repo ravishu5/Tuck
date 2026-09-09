@@ -80,11 +80,15 @@ fun InPlaceMediaViewer(
      */
     scrollable: Boolean = true,
     /**
-     * Reports the height the embed actually rendered at, in dp. Platforms publish media at
-     * whatever aspect the poster was shot in, so a fixed pane either crops it or leaves a black
-     * band; measuring the page is the only way to fit it.
+     * Reports the width-over-height ratio of the media the embed rendered. Platforms publish
+     * media at whatever aspect it was shot in, so a fixed pane either crops it or leaves a
+     * black band; measuring the page is the only way to fit it.
+     *
+     * A ratio rather than a height because the WebView lays these pages out at a 980px wide
+     * viewport and scales the result down to the device — so a height read from the page is in
+     * that viewport's pixels, not in dp, and is wrong by the scale factor. A ratio survives it.
      */
-    onContentHeight: ((Dp) -> Unit)? = null,
+    onContentAspectRatio: ((Float) -> Unit)? = null,
     onCopyUrl: (String) -> Unit
 ) {
     val context = LocalContext.current
@@ -149,7 +153,10 @@ fun InPlaceMediaViewer(
                 AsyncImage(
                     model = imageModel,
                     contentDescription = item.title,
-                    contentScale = ContentScale.Crop,
+                    // The poster sits behind the embed and shows around it while that loads.
+                    // Cropping a portrait poster to fill the frame put a slice of the clip on
+                    // screen twice; fitting it shows the frame as it was shot, letterboxed.
+                    contentScale = if (isVerticalMedia) ContentScale.Fit else ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -161,6 +168,15 @@ fun InPlaceMediaViewer(
                             ViewGroup.LayoutParams.MATCH_PARENT,
                             ViewGroup.LayoutParams.MATCH_PARENT
                         )
+
+                        // Debug builds only: lets `chrome://inspect` attach to these embeds,
+                        // which is the only way to see what a platform's page actually renders
+                        // rather than guessing from a screenshot.
+                        val isDebuggable = (ctx.applicationInfo.flags and
+                            android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+                        if (isDebuggable) {
+                            WebView.setWebContentsDebuggingEnabled(true)
+                        }
 
                         settings.apply {
                             javaScriptEnabled = true
@@ -211,6 +227,7 @@ fun InPlaceMediaViewer(
 
                         webViewClient = object : WebViewClient() {
                             private val cleanupCss = (embedData as? EmbedData.Url)?.cleanupCss
+                            private val cleanupJs = (embedData as? EmbedData.Url)?.cleanupJs
 
                             // Injecting only at onPageFinished is too late: the section has
                             // already been fetched, laid out and painted, so the reader watches
@@ -218,8 +235,9 @@ fun InPlaceMediaViewer(
                             // before those elements exist, and the script is idempotent so
                             // running it at each stage costs nothing.
                             private fun applyCleanup(view: WebView?) {
-                                val css = cleanupCss ?: return
-                                view?.evaluateJavascript(injectStyleScript(css), null)
+                                val target = view ?: return
+                                cleanupCss?.let { target.evaluateJavascript(injectStyleScript(it), null) }
+                                cleanupJs?.let { target.evaluateJavascript(it, null) }
                             }
 
                             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
@@ -246,18 +264,22 @@ fun InPlaceMediaViewer(
                             }
 
                             /**
-                             * Reads the rendered height a few times rather than once: media loads
+                             * Reads the media's shape a few times rather than once: media loads
                              * after the document does, so the first measurement is usually of an
                              * empty box.
                              */
                             private fun measureContent(view: WebView?) {
-                                val report = onContentHeight ?: return
+                                val report = onContentAspectRatio ?: return
                                 val target = view ?: return
                                 listOf(150L, 600L, 1500L, 3000L).forEach { delayMs ->
                                     target.postDelayed({
-                                        target.evaluateJavascript(MEASURE_JS) { value ->
-                                            val px = value?.trim('"')?.toFloatOrNull() ?: return@evaluateJavascript
-                                            if (px > 40f) report(px.dp)
+                                        target.evaluateJavascript(MEASURE_ASPECT_JS) { value ->
+                                            val ratio = value?.trim('"')?.toFloatOrNull()
+                                                ?: return@evaluateJavascript
+                                            // Nothing is published thinner than a hair or wider
+                                            // than a panorama; anything outside that is a
+                                            // spinner, a spacer or a stray tracking pixel.
+                                            if (ratio in 0.3f..3.0f) report(ratio)
                                         }
                                     }, delayMs)
                                 }
@@ -429,14 +451,78 @@ private fun emptyResponse(): WebResourceResponse =
  * everything except the media is duplicated chrome.
  */
 private const val INSTAGRAM_CLEANUP_CSS = """
-    .Header, .HoverCard, .Feedback, .Caption, .Footer,
+    .Header, .HoverCard, .PrimaryCTA, .Feedback, .SocialProof, .Caption, .Footer,
     .CaptionComments, .CaptionCommentsExpand,
     .WatchOnInstagramContainer { display: none !important; }
     html, body { margin: 0 !important; padding: 0 !important; background: #000 !important;
                  overflow: hidden !important; }
-    .EmbedFrame, .Content, .EmbeddedMedia { margin: 0 !important; border: 0 !important;
-                 box-shadow: none !important; background: #000 !important; }
-    .EmbeddedMediaImage { width: 100% !important; height: auto !important; }
+    .Embed, .Content, .EmbedFrame, .EmbeddedMedia, .EmbedVideo {
+                 margin: 0 !important; border: 0 !important; box-shadow: none !important;
+                 background: #000 !important;
+                 width: 100% !important; max-width: none !important; }
+    /* Instagram serves a reel's cover at 9:16 and then paints it into a 4:5 box with
+       `object-fit: fill`, which both squashes the picture and leaves the rest of the frame
+       black. `contain` stops the squashing; INSTAGRAM_FIT_JS corrects the box it sits in. */
+    .EmbeddedMediaImage {
+                 width: 100% !important; height: 100% !important;
+                 object-fit: contain !important; }
+    /* The blurred copy of the cover that fills the letterbox. With the box set to the media's
+       own shape there is no letterbox left for it to fill. */
+    .EmbeddedMediaImageOverlay { display: none !important; }
+    /* The player keeps a 4:5 box of its own inside the frame, so even once the frame is 9:16
+       the clip is `contain`ed into 4:5 and ends up 70% of the width with black down both
+       sides. Pinning the player's own wrappers to the frame's edges is what actually makes
+       the reel fill it. Matched by relationship rather than by class, because the wrapper
+       names are build-hashed; `:has(> video)` reaches the video's parent without touching the
+       play button, which is a span under a sibling wrapper. */
+    .EmbedVideo > div, .EmbedVideo div:has(> video) {
+                 position: absolute !important; inset: 0 !important;
+                 width: auto !important; height: auto !important; }
+    .EmbedVideo video {
+                 position: absolute !important; inset: 0 !important;
+                 width: 100% !important; height: 100% !important;
+                 object-fit: contain !important; }
+"""
+
+/**
+ * Gives the media box the shape of the media inside it.
+ *
+ * Instagram sizes the box with an *inline* `padding-bottom` written by its own script — 125%
+ * for every reel, whatever shape the reel actually is — so a 9:16 clip is letterboxed into a
+ * 4:5 box and ends up about 70% of the frame's width with black down both sides.
+ *
+ * The correction is written as a stylesheet rule rather than back onto the element, because
+ * Instagram's script reruns and reassigns `style.paddingBottom`, and assigning a property
+ * drops whatever priority was on it — an `!important` set inline is simply overwritten. A
+ * non-important inline style loses to an `!important` rule in a stylesheet, so the rule holds
+ * however many times their script runs.
+ */
+private const val INSTAGRAM_FIT_JS = """
+    (function () {
+      if (window.__tuckFitting) return;
+      window.__tuckFitting = true;
+      var attempts = 0;
+      function fit() {
+        var img = document.querySelector('.EmbeddedMediaImage');
+        if (!img) return false;
+        var w = img.naturalWidth, h = img.naturalHeight;
+        if (!w || !h) return false;
+        var style = document.getElementById('tuck-fit');
+        if (!style) {
+          style = document.createElement('style');
+          style.id = 'tuck-fit';
+          (document.head || document.documentElement).appendChild(style);
+        }
+        style.textContent =
+          '.Content, .EmbedFrame, .Content.EmbedFrame {' +
+          'padding-bottom: ' + (h / w * 100) + '% !important; height: 0 !important; }';
+        return true;
+      }
+      if (fit()) return;
+      var timer = setInterval(function () {
+        if (fit() || ++attempts > 60) clearInterval(timer);
+      }, 150);
+    })();
 """
 
 /**
@@ -472,16 +558,35 @@ private const val YOUTUBE_CLEANUP_CSS = """
     body { padding-bottom: 0 !important; }
 """
 
-private val MEASURE_JS = """
+/**
+ * The width-over-height ratio of the media the page is really showing.
+ *
+ * Intrinsic sizes first — a poster's `naturalWidth` is the shape the thing was shot in, where a
+ * rendered box is only the shape the site's stylesheet chose to pour it into, and those two
+ * disagree exactly when this measurement matters. Laid-out boxes are the fallback, largest area
+ * first, so a spinner or a tracking pixel cannot win.
+ */
+private val MEASURE_ASPECT_JS = """
     (function () {
-      var best = 0;
-      var nodes = document.querySelectorAll('img, video, iframe, .EmbeddedMedia, .EmbedFrame');
-      for (var i = 0; i < nodes.length; i++) {
-        var h = nodes[i].getBoundingClientRect().height;
-        if (h > best) best = h;
+      var media = document.querySelector('.EmbeddedMediaImage') ||
+                  document.querySelector('video') ||
+                  document.querySelector('img');
+      if (media) {
+        var nw = media.naturalWidth || media.videoWidth || 0;
+        var nh = media.naturalHeight || media.videoHeight || 0;
+        if (nw > 0 && nh > 0) return String(nw / nh);
       }
-      if (!best && document.body) best = document.body.scrollHeight;
-      return String(Math.round(best));
+      var nodes = document.querySelectorAll('img, video, iframe');
+      var best = 0, bestArea = 0;
+      for (var i = 0; i < nodes.length; i++) {
+        var r = nodes[i].getBoundingClientRect();
+        var area = r.width * r.height;
+        if (r.width > 0 && r.height > 0 && area > bestArea) {
+          bestArea = area;
+          best = r.width / r.height;
+        }
+      }
+      return best ? String(best) : '';
     })();
 """.trimIndent()
 
@@ -551,11 +656,14 @@ private sealed interface EmbedData {
     data class Html(val htmlContent: String, val baseUrl: String) : EmbedData
     /**
      * [cleanupCss] is injected once the page settles, to strip chrome the reader did not ask
-     * for. [userAgent] overrides the default when a site behaves better as another client.
+     * for. [cleanupJs] runs alongside it, for the corrections a stylesheet cannot make — an
+     * inline style the site writes from its own script, say. [userAgent] overrides the default
+     * when a site behaves better as another client.
      */
     data class Url(
         val targetUrl: String,
         val cleanupCss: String? = null,
+        val cleanupJs: String? = null,
         val userAgent: String? = null,
         /** Extra request headers, for embeds that refuse a request without them. */
         val headers: Map<String, String> = emptyMap()
@@ -575,8 +683,9 @@ private fun resolveEmbedData(url: String, canonicalUrl: String?, isDark: Boolean
             // below can reach it. Inside an iframe it could not, which is why the embed used to
             // arrive with its own header, caption and footer attached.
             return EmbedData.Url(
-                "https://www.instagram.com/p/$shortcode/embed/captioned/",
-                INSTAGRAM_CLEANUP_CSS
+                targetUrl = "https://www.instagram.com/p/$shortcode/embed/captioned/",
+                cleanupCss = INSTAGRAM_CLEANUP_CSS,
+                cleanupJs = INSTAGRAM_FIT_JS
             )
         }
     }
