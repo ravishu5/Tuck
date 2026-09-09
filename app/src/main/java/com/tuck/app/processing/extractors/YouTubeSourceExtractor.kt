@@ -1,5 +1,6 @@
 package com.tuck.app.processing.extractors
 
+import com.tuck.app.domain.model.ContentType
 import org.jsoup.Jsoup
 import java.util.regex.Pattern
 import javax.inject.Inject
@@ -9,6 +10,10 @@ import javax.inject.Singleton
 class YouTubeSourceExtractor @Inject constructor() : SourceExtractor {
 
     override val platformName: String = "YOUTUBE"
+
+    private companion object {
+        const val FAVICON = "https://www.youtube.com/s/desktop/f1721590/img/favicon.ico"
+    }
 
     private val videoIdPattern = Pattern.compile(
         "(?:youtu\\.be/|youtube\\.com/(?:embed/|v/|watch\\?v=|watch\\?.+&v=))([\\w-]{11})"
@@ -42,7 +47,10 @@ class YouTubeSourceExtractor @Inject constructor() : SourceExtractor {
                     authorDisplay = author.ifBlank { null },
                     community = if (!author.isNullOrBlank()) "@${author.removePrefix("@")}" else null,
                     leadImageUrl = ogImage,
-                    mediaUrls = if (ogImage != null) listOf(ogImage) else emptyList()
+                    mediaUrls = if (ogImage != null) listOf(ogImage) else emptyList(),
+                    canonicalUrl = videoId?.let { "https://www.youtube.com/watch?v=$it" },
+                    faviconUrl = FAVICON,
+                    contentType = ContentType.VIDEO
                 )
             } catch (e: Exception) {
                 // Fall through to fallback
@@ -53,7 +61,10 @@ class YouTubeSourceExtractor @Inject constructor() : SourceExtractor {
             platform = platformName,
             title = "YouTube Video",
             leadImageUrl = defaultThumbnail,
-            mediaUrls = if (defaultThumbnail != null) listOf(defaultThumbnail) else emptyList()
+            mediaUrls = if (defaultThumbnail != null) listOf(defaultThumbnail) else emptyList(),
+            canonicalUrl = videoId?.let { "https://www.youtube.com/watch?v=$it" },
+            faviconUrl = FAVICON,
+            contentType = ContentType.VIDEO
         )
     }
 

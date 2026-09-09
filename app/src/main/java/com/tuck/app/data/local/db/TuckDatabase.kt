@@ -16,6 +16,7 @@ import com.tuck.app.data.local.db.dao.FilingRuleDao
 import com.tuck.app.data.local.db.dao.SearchHistoryDao
 import com.tuck.app.data.local.db.dao.SourceContentDao
 import com.tuck.app.data.local.db.dao.TagDao
+import com.tuck.app.data.local.db.dao.TravelDao
 import com.tuck.app.data.local.db.entity.CollectionEntity
 import com.tuck.app.data.local.db.entity.DerivedPointEntity
 import com.tuck.app.data.local.db.entity.DerivedSummaryEntity
@@ -32,6 +33,8 @@ import com.tuck.app.data.local.db.entity.SearchHistoryEntity
 import com.tuck.app.data.local.db.entity.SourceCommentEntity
 import com.tuck.app.data.local.db.entity.SourcePostEntity
 import com.tuck.app.data.local.db.entity.TagEntity
+import com.tuck.app.data.local.db.entity.TripEntity
+import com.tuck.app.data.local.db.entity.BucketListPlaceEntity
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -53,9 +56,11 @@ import kotlinx.serialization.json.JsonObject
         SourceCommentEntity::class,
         DerivedSummaryEntity::class,
         DerivedPointEntity::class,
-        OcrBlockEntity::class
+        OcrBlockEntity::class,
+        TripEntity::class,
+        BucketListPlaceEntity::class
     ],
-    version = 8,
+    version = 10,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -71,6 +76,7 @@ abstract class TuckDatabase : RoomDatabase() {
     abstract fun sourceContentDao(): SourceContentDao
     abstract fun derivedContentDao(): DerivedContentDao
     abstract fun itemRawPayloadDao(): ItemRawPayloadDao
+    abstract fun travelDao(): TravelDao
 
     companion object {
         const val DATABASE_NAME = "tuck_database.db"
@@ -392,6 +398,71 @@ abstract class TuckDatabase : RoomDatabase() {
                 )
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_checklist_items_itemId` ON `checklist_items`(`itemId`)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_checklist_items_ordinal` ON `checklist_items`(`ordinal`)")
+            }
+        }
+
+        /**
+         * Adds `remindNote`: the reason a reminder was set.
+         *
+         * Separate from `userNote`, which is what the reader thinks about the item itself. "Book
+         * this before Friday" belongs to the reminder and should disappear with it, not linger
+         * on the save afterwards.
+         */
+        val MIGRATION_8_9 = object : androidx.room.migration.Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE saved_items ADD COLUMN remindNote TEXT")
+            }
+        }
+
+        /** The travel history: trips and the places the traveller still means to reach. */
+        val MIGRATION_9_10 = object : androidx.room.migration.Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `trips` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `title` TEXT NOT NULL,
+                        `countryCode` TEXT NOT NULL,
+                        `countryName` TEXT NOT NULL,
+                        `city` TEXT,
+                        `region` TEXT,
+                        `latitude` REAL,
+                        `longitude` REAL,
+                        `startDate` INTEGER NOT NULL,
+                        `endDate` INTEGER NOT NULL,
+                        `notes` TEXT,
+                        `source` TEXT NOT NULL,
+                        `photoCount` INTEGER NOT NULL,
+                        `createdAt` INTEGER NOT NULL,
+                        `updatedAt` INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_trips_startDate` ON `trips` (`startDate`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_trips_countryCode` ON `trips` (`countryCode`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_trips_source` ON `trips` (`source`)")
+
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `bucket_list_places` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `place` TEXT NOT NULL,
+                        `countryCode` TEXT,
+                        `countryName` TEXT,
+                        `notes` TEXT,
+                        `achievedTripId` INTEGER,
+                        `createdAt` INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_bucket_list_places_countryCode` " +
+                        "ON `bucket_list_places` (`countryCode`)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_bucket_list_places_achievedTripId` " +
+                        "ON `bucket_list_places` (`achievedTripId`)"
+                )
             }
         }
 

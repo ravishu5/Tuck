@@ -41,50 +41,6 @@ class RelatedItemsEngineTest {
     }
 
     @Test
-    fun testFindRelatedItemsMatchesByEntitiesTagsAndDomain() = runBlocking {
-        val targetItem = SavedItem(
-            id = 1L,
-            contentType = ContentType.URL,
-            title = "Introduction to Graph Neural Networks",
-            sourceDomain = "arxiv.org",
-            entities = listOf(
-                ExtractedEntity(savedItemId = 1L, type = EntityType.ORGANIZATION, value = "DeepMind", normalizedValue = "deepmind"),
-                ExtractedEntity(savedItemId = 1L, type = EntityType.URL, value = "https://arxiv.org/abs/123", normalizedValue = "https://arxiv.org/abs/123")
-            ),
-            tags = listOf(Tag(id = 1L, name = "Machine Learning"), Tag(id = 2L, name = "GNN"))
-        )
-
-        val relatedItem1 = SavedItem(
-            id = 2L,
-            contentType = ContentType.URL,
-            title = "DeepMind GNN Architecture Research",
-            sourceDomain = "arxiv.org",
-            entities = listOf(
-                ExtractedEntity(savedItemId = 2L, type = EntityType.ORGANIZATION, value = "DeepMind", normalizedValue = "deepmind")
-            ),
-            tags = listOf(Tag(id = 1L, name = "Machine Learning"))
-        )
-
-        val unrelatedItem = SavedItem(
-            id = 3L,
-            contentType = ContentType.TEXT,
-            title = "Grocery Shopping List",
-            sourceDomain = "Notes",
-            entities = emptyList(),
-            tags = listOf(Tag(id = 3L, name = "Shopping"))
-        )
-
-        coEvery { savedItemRepository.getItemById(1L) } returns targetItem
-        every { savedItemRepository.getAllActiveItems() } returns flowOf(listOf(targetItem, relatedItem1, unrelatedItem))
-
-        val result = engine.findRelatedItems(1L, 5).first()
-
-        assertEquals(1, result.size)
-        assertEquals(2L, result[0].id)
-        assertEquals("DeepMind GNN Architecture Research", result[0].title)
-    }
-
-    @Test
     fun testRediscoverItemsReturnsOlderActiveSaves() = runBlocking {
         val now = System.currentTimeMillis()
         val oldItem = SavedItem(

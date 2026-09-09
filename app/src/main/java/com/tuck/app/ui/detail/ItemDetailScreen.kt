@@ -8,9 +8,15 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.media.MediaMetadataRetriever
 import android.media.MediaPlayer
 import android.widget.Toast
 import androidx.compose.foundation.background
+import android.text.format.DateUtils
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import com.tuck.app.domain.model.ContentType
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -67,6 +73,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -75,6 +82,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -90,7 +98,6 @@ import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import com.tuck.app.domain.model.ContentType
 import com.tuck.app.domain.model.ProcessingStatus
 import com.tuck.app.domain.model.SavedItem
 import com.tuck.app.ui.components.ContentTypeBadge
@@ -102,6 +109,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import com.tuck.app.processing.ReminderPreset
+import com.tuck.app.ui.components.ReminderDialog
 import com.tuck.app.ui.theme.TuckTheme
 import kotlinx.coroutines.launch
 import com.tuck.app.domain.model.SearchableBlock
@@ -128,6 +136,11 @@ fun ItemDetailScreen(
     val scrollState = rememberScrollState()
 
     var showCollectionDialog by remember { mutableStateOf(false) }
+    var noteExpanded by remember { mutableStateOf(false) }
+    var reminderDialogOpen by remember { mutableStateOf(false) }
+    // Where the follow-up card sits, so the header's alarm button can jump the reader to it.
+    var followUpOffset by remember { mutableIntStateOf(0) }
+    var scrollTopInRoot by remember { mutableIntStateOf(0) }
     var showFullImageViewer by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var findQuery by remember { mutableStateOf("") }
@@ -158,27 +171,66 @@ fun ItemDetailScreen(
         return
     }
 
+    // A live embed carries its own chrome over the media, so the screen goes edge to edge and
+    // drops the title bar entirely. Everything else keeps the standard bar.
+    val hasLiveEmbed = !item.originalUrl.isNullOrBlank() &&
+        (item.contentType == ContentType.URL || item.contentType == ContentType.VIDEO)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .statusBarsPadding()
     ) {
-        // Top Bar
-        DetailTopBar(
-            item = item,
-            onBack = onNavigateBack,
-            onToggleFavorite = { viewModel.toggleFavorite() },
-            onShare = { shareItem(context, item) },
-            onDelete = { showDeleteConfirmDialog = true }
-        )
+        if (hasLiveEmbed) {
+            DetailActionBar(
+                onBack = onNavigateBack,
+                onRemind = { reminderDialogOpen = true },
+                onAddToCollection = { showCollectionDialog = true },
+                onShare = { shareItem(context, item) }
+            )
+        } else {
+            DetailTopBar(
+                item = item,
+                onBack = onNavigateBack,
+                onToggleFavorite = { viewModel.toggleFavorite() },
+                onShare = { shareItem(context, item) },
+                onDelete = { showDeleteConfirmDialog = true }
+            )
+        }
 
         Column(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(scrollState)
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .onGloballyPositioned { scrollTopInRoot = it.positionInRoot().y.toInt() }
         ) {
+          if (hasLiveEmbed) {
+            DetailMediaHeader(
+                item = item,
+                onExpand = { openBrowserUrl(context, item.originalUrl) },
+                onCopyUrl = { copyToClipboard(context, "Link", it) }
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            DetailSourceBlock(
+                item = item,
+                authorHandle = uiState.sourcePost?.authorHandle
+                    ?: uiState.sourcePost?.authorDisplay,
+                community = uiState.sourcePost?.community,
+                savedLabel = DateUtils.getRelativeTimeSpanString(
+                    item.createdAt,
+                    System.currentTimeMillis(),
+                    DateUtils.MINUTE_IN_MILLIS
+                ).toString(),
+                onOpenSource = { openBrowserUrl(context, item.originalUrl) },
+                onCopyCaption = {
+                    copyToClipboard(context, "Caption", item.description ?: item.extractedText.orEmpty())
+                },
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+          }
+
+          Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
             FindWithinItem(
                 item = item,
                 commentsTree = uiState.commentsTree,
@@ -198,139 +250,87 @@ fun ItemDetailScreen(
                 }
             )
 
-            // Source & Date Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    ContentTypeBadge(contentType = item.contentType)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = item.sourceDomain ?: item.sourceApp ?: item.contentType.displayName,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-
-                Text(
-                    text = SimpleDateFormat("MMM d, yyyy · h:mm a", Locale.getDefault()).format(Date(item.createdAt)),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Editable Title
-            if (uiState.isEditingTitle) {
+            if (!hasLiveEmbed) {
+                // Source & Date Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = uiState.editedTitle,
-                        onValueChange = { viewModel.onTitleChange(it) },
-                        modifier = Modifier.weight(1f),
-                        label = { Text(stringResource(R.string.detail_title)) },
-                        singleLine = false,
-                        maxLines = 3
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    IconButton(onClick = { viewModel.saveTitle() }) {
-                        Icon(imageVector = Icons.Filled.Check, contentDescription = stringResource(R.string.detail_save), tint = MaterialTheme.colorScheme.primary)
-                    }
-                    IconButton(onClick = { viewModel.cancelEditTitle() }) {
-                        Icon(imageVector = Icons.Filled.Close, contentDescription = stringResource(R.string.collections_cancel), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.Top,
+                    verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        text = item.displayTitle,
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f)
-                    )
-                    IconButton(
-                        onClick = { viewModel.startEditTitle(item.title) },
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Edit,
-                            contentDescription = stringResource(R.string.detail_edit_title),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        ContentTypeBadge(contentType = item.contentType)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = item.sourceDomain ?: item.sourceApp ?: stringResource(item.contentType.labelRes),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
-                }
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Main Preview Section (Live Interactive Post/Video Viewer vs Archive Snapshot)
-            if (!item.originalUrl.isNullOrBlank()) {
-                var selectedTab by remember { mutableIntStateOf(0) }
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                        .padding(4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    val tabLabels = listOf("📱 Live Interactive Post", "📄 Archive Snapshot")
-                    tabLabels.forEachIndexed { index, label ->
-                        val isSelected = selectedTab == index
-                        Surface(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(9.dp))
-                                .clickable { selectedTab = index },
-                            color = if (isSelected) MaterialTheme.colorScheme.surface else Color.Transparent,
-                            shape = RoundedCornerShape(9.dp),
-                            shadowElevation = if (isSelected) 2.dp else 0.dp
-                        ) {
-                            Box(
-                                modifier = Modifier.padding(vertical = 8.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = label,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
+                    Text(
+                        text = SimpleDateFormat("MMM d, yyyy · h:mm a", Locale.getDefault()).format(Date(item.createdAt)),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                if (selectedTab == 0) {
-                    InPlaceMediaViewer(
-                        item = item,
-                        onCopyUrl = { copyToClipboard(context, "Link", it) }
-                    )
+                // Editable Title
+                if (uiState.isEditingTitle) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = uiState.editedTitle,
+                            onValueChange = { viewModel.onTitleChange(it) },
+                            modifier = Modifier.weight(1f),
+                            label = { Text(stringResource(R.string.detail_title)) },
+                            singleLine = false,
+                            maxLines = 3
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        IconButton(onClick = { viewModel.saveTitle() }) {
+                            Icon(imageVector = Icons.Filled.Check, contentDescription = stringResource(R.string.detail_save), tint = MaterialTheme.colorScheme.primary)
+                        }
+                        IconButton(onClick = { viewModel.cancelEditTitle() }) {
+                            Icon(imageVector = Icons.Filled.Close, contentDescription = stringResource(R.string.collections_cancel), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                 } else {
-                    ItemPreviewCard(
-                        item = item,
-                        onOpenImage = { showFullImageViewer = true },
-                        onOpenPdf = { openPdfFile(context, item.localFilePath) },
-                        onOpenUrl = { openBrowserUrl(context, item.originalUrl) },
-                        onCopyText = { copyToClipboard(context, "Note", item.originalText ?: item.extractedText.orEmpty()) }
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Top,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = item.displayTitle,
+                            style = com.tuck.app.ui.theme.TuckTheme.typography.displayMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(
+                            onClick = { viewModel.startEditTitle(item.title) },
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Edit,
+                                contentDescription = stringResource(R.string.detail_edit_title),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
                 }
-            } else {
+            }
+
+            // Items whose media is in the header need no preview card; everything else gets
+            // one. The old live/snapshot tab pair is gone: the live view is the header now, and
+            // for anything else only the snapshot ever had content.
+            if (!hasLiveEmbed) {
+                Spacer(modifier = Modifier.height(16.dp))
                 ItemPreviewCard(
                     item = item,
                     onOpenImage = { showFullImageViewer = true },
@@ -338,6 +338,21 @@ fun ItemDetailScreen(
                     onOpenUrl = { openBrowserUrl(context, item.originalUrl) },
                     onCopyText = { copyToClipboard(context, "Note", item.originalText ?: item.extractedText.orEmpty()) }
                 )
+            }
+
+            uiState.snapshotPath?.let { snapshot ->
+                Spacer(modifier = Modifier.height(16.dp))
+                DetailSection(title = stringResource(R.string.detail_archived_copy)) {
+                    TextButton(onClick = { openSnapshot(context, snapshot) }) {
+                        Icon(
+                            imageVector = Icons.Filled.OpenInBrowser,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(stringResource(R.string.detail_open_archived_copy))
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -348,14 +363,24 @@ fun ItemDetailScreen(
                 onDelete = { viewModel.deleteChecklistItem(it) }
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+            Box(
+                modifier = Modifier.onGloballyPositioned {
+                    // Root coordinates, because positionInParent is relative to whichever
+                    // Column happens to wrap this — which is not what is being scrolled.
+                    followUpOffset = it.positionInRoot().y.toInt()
+                }
+            ) {
+            DetailSection(title = stringResource(R.string.detail_follow_up)) {
             FollowUpSection(
                 remindAt = item.remindAt,
                 completedAt = item.completedAt,
-                onPickPreset = { viewModel.setReminder(it) },
+                onOpenReminder = { reminderDialogOpen = true },
                 onClearReminder = { viewModel.clearReminder() },
                 onToggleCompleted = { viewModel.toggleCompleted() }
             )
+            }
+            }
 
             // Materialized Threaded Comments & Discussion Section
             if (uiState.commentsTree.isNotEmpty() || item.comments.isNotEmpty()) {
@@ -390,24 +415,16 @@ fun ItemDetailScreen(
 
             // Collections & Tags Section
             Spacer(modifier = Modifier.height(20.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = stringResource(R.string.detail_collections_tags),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                TextButton(onClick = { showCollectionDialog = true }) {
-                    Icon(imageVector = Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringResource(R.string.detail_manage))
+            DetailSection(
+                title = stringResource(R.string.detail_collections_tags),
+                action = {
+                    TextButton(onClick = { showCollectionDialog = true }) {
+                        Icon(imageVector = Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(stringResource(R.string.detail_manage))
+                    }
                 }
-            }
-            Spacer(modifier = Modifier.height(6.dp))
+            ) {
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -440,9 +457,11 @@ fun ItemDetailScreen(
                     }
                 }
             }
+            }
 
             // Extracted OCR / Text Content Section
             val allExtracted = item.ocrText ?: item.extractedText
+            var isExtractedExpanded by rememberSaveable(item.id) { mutableStateOf(false) }
             if (!allExtracted.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(24.dp))
                 Row(
@@ -451,7 +470,10 @@ fun ItemDetailScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = if (!item.ocrText.isNullOrBlank()) "On-Device OCR Text" else "Extracted Content",
+                        text = stringResource(
+                        if (!item.ocrText.isNullOrBlank()) R.string.detail_ocr_text
+                        else R.string.detail_extracted_content
+                    ),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -476,97 +498,95 @@ fun ItemDetailScreen(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
                     )
                 ) {
-                    Text(
-                        text = allExtracted,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(14.dp)
-                    )
-                }
-            }
-
-            // 7. Personal Notes (User Note & Capture Note)
-            var userNoteText by remember(item.userNote) { mutableStateOf(item.userNote ?: "") }
-            Spacer(modifier = Modifier.height(24.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = stringResource(R.string.detail_personal_notes),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                if (userNoteText != (item.userNote ?: "")) {
-                    TextButton(onClick = { viewModel.saveUserNote(userNoteText) }) {
-                        Text(stringResource(R.string.detail_save_note), fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = userNoteText,
-                onValueChange = { userNoteText = it },
-                placeholder = { Text(stringResource(R.string.detail_add_your_thoughts_key_takeaways_or)) },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3,
-                maxLines = 8,
-                shape = RoundedCornerShape(12.dp)
-            )
-
-            // 8. Related Saves in Vault (Memory Engine)
-            if (uiState.relatedItems.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(28.dp))
-                Text(
-                    text = stringResource(R.string.detail_related_saves_in_your_vault),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    uiState.relatedItems.forEach { related ->
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onNavigateToDetail?.invoke(related.id) },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        // The text a screenshot or PDF gave up is the reason many of these
+                        // items were saved, and copy-all was the only way to reach it. A
+                        // selection container makes the phone number in the middle of it
+                        // reachable on its own.
+                        SelectionContainer {
+                            Text(
+                                text = allExtracted,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = if (isExtractedExpanded) Int.MAX_VALUE else COLLAPSED_TEXT_LINES,
+                                overflow = TextOverflow.Ellipsis
                             )
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                        }
+                        // A scanned PDF can run to thousands of words; unbounded, it buried
+                        // the notes and actions below it.
+                        if (allExtracted.length > COLLAPSE_TEXT_THRESHOLD) {
+                            TextButton(
+                                onClick = { isExtractedExpanded = !isExtractedExpanded },
+                                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp)
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = related.title,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = related.sourceDomain ?: related.contentType.name,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
+                                Text(
+                                    text = stringResource(
+                                        if (isExtractedExpanded) R.string.detail_show_less
+                                        else R.string.detail_show_more
+                                    ),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
                         }
                     }
                 }
             }
 
+            // 7. Personal Notes (User Note & Capture Note)
+            var userNoteText by remember(item.userNote) { mutableStateOf(item.userNote ?: "") }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            DetailSection(
+                title = stringResource(R.string.detail_personal_notes),
+                action = {
+                    if (userNoteText != (item.userNote ?: "")) {
+                        TextButton(onClick = { viewModel.saveUserNote(userNoteText) }) {
+                            Text(stringResource(R.string.detail_save_note), fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            ) {
+                // An empty note is an invitation, not content: as a three-line box it was the
+                // largest thing below the fold while saying nothing.
+                if (noteExpanded || userNoteText.isNotBlank()) {
+                    OutlinedTextField(
+                        value = userNoteText,
+                        onValueChange = { userNoteText = it },
+                        placeholder = { Text(stringResource(R.string.detail_add_your_thoughts_key_takeaways_or)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 3,
+                        maxLines = 8,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                } else {
+                    TextButton(onClick = { noteExpanded = true }) {
+                        Icon(imageVector = Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(stringResource(R.string.detail_add_note))
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(48.dp))
+          }
         }
+    }
+
+    if (reminderDialogOpen) {
+        ReminderDialog(
+            initialRemindAt = item.remindAt,
+            initialNote = item.remindNote,
+            onDismiss = { reminderDialogOpen = false },
+            onSave = { at, note ->
+                viewModel.setReminderAt(at, note)
+                reminderDialogOpen = false
+            },
+            onClear = {
+                viewModel.clearReminder()
+                reminderDialogOpen = false
+            }
+        )
     }
 
     // Full screen image dialog viewer
@@ -811,7 +831,7 @@ fun ItemPreviewCard(
                                                 imageVector = Icons.Filled.PlayArrow,
                                                 contentDescription = stringResource(R.string.components_play),
                                                 tint = TuckTheme.colors.onScrim,
-                                                modifier = Modifier.size(32.dp)
+                                                modifier = Modifier.size(48.dp)
                                             )
                                         }
                                     }
@@ -860,7 +880,7 @@ fun ItemPreviewCard(
                                     item.sourceDomain?.contains("YouTube", ignoreCase = true) == true || item.originalUrl?.contains("youtube") == true || item.originalUrl?.contains("youtu.be") == true -> "Watch on YouTube"
                                     item.sourceDomain?.contains("TikTok", ignoreCase = true) == true || item.originalUrl?.contains("tiktok.com") == true -> "Watch on TikTok"
                                     item.sourceDomain?.contains("Twitter", ignoreCase = true) == true || item.originalUrl?.contains("twitter.com") == true || item.originalUrl?.contains("x.com") == true -> "Open on X"
-                                    else -> "Open in Browser"
+                                    else -> stringResource(R.string.action_open_in_browser)
                                 }
 
                                 Button(
@@ -939,7 +959,7 @@ fun shareItem(context: Context, item: SavedItem) {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
     }
-    context.startActivitySafe(Intent.createChooser(sendIntent, "Share via"))
+    context.startActivitySafe(Intent.createChooser(sendIntent, context.getString(R.string.action_share_via)))
 }
 
 fun openPdfFile(context: Context, filePath: String?) {
@@ -953,8 +973,29 @@ fun openPdfFile(context: Context, filePath: String?) {
         }
         context.startActivity(intent)
     } catch (e: Exception) {
-        Toast.makeText(context, "No PDF viewer app found", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, R.string.detail_no_pdf_viewer, Toast.LENGTH_SHORT).show()
     }
+}
+
+/**
+ * Opens the archived copy through a FileProvider.
+ *
+ * The snapshot is a normal HTML file, so any browser can read it — and because everything it
+ * needs is inlined, it renders with no network at all.
+ */
+fun openSnapshot(context: Context, path: String) {
+    val file = java.io.File(path)
+    if (!file.exists()) return
+    val uri = androidx.core.content.FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.fileprovider",
+        file
+    )
+    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+        setDataAndType(uri, "text/html")
+        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    context.startActivitySafe(intent)
 }
 
 fun openBrowserUrl(context: Context, url: String?) {
@@ -967,7 +1008,7 @@ fun copyToClipboard(context: Context, label: String, text: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     val clip = ClipData.newPlainText(label, text)
     clipboard.setPrimaryClip(clip)
-    Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+    Toast.makeText(context, R.string.detail_copied, Toast.LENGTH_SHORT).show()
 }
 
 @Composable
@@ -1002,7 +1043,11 @@ fun ThreadedCommentTreeSection(
 
                 if (totalCount > 4) {
                     Text(
-                        text = if (isExpanded) "Show Top Only" else "Show Full Tree ($totalCount)",
+                        text = if (isExpanded) {
+                        stringResource(R.string.action_show_top_only)
+                    } else {
+                        stringResource(R.string.action_show_full_tree, totalCount)
+                    },
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary,
@@ -1219,7 +1264,7 @@ fun ThreadedCommentTreeSection(
 private fun FollowUpSection(
     remindAt: Long?,
     completedAt: Long?,
-    onPickPreset: (ReminderPreset) -> Unit,
+    onOpenReminder: () -> Unit,
     onClearReminder: () -> Unit,
     onToggleCompleted: () -> Unit
 ) {
@@ -1228,21 +1273,17 @@ private fun FollowUpSection(
     var isPicking by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = stringResource(R.string.detail_follow_up),
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.ExtraBold,
-            letterSpacing = 1.2.sp,
-            color = tuckColors.textMuted
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
         Row(verticalAlignment = Alignment.CenterVertically) {
             FilterChip(
                 selected = isCompleted,
                 onClick = onToggleCompleted,
-                label = { Text(if (isCompleted) "Done" else "Mark done") }
+                label = {
+                Text(
+                    stringResource(
+                        if (isCompleted) R.string.detail_done else R.string.action_mark_done
+                    )
+                )
+            }
             )
 
             Spacer(modifier = Modifier.width(8.dp))
@@ -1269,29 +1310,9 @@ private fun FollowUpSection(
                 )
             } else if (!isCompleted) {
                 AssistChip(
-                    onClick = { isPicking = !isPicking },
+                    onClick = onOpenReminder,
                     label = { Text(stringResource(R.string.detail_remind_me)) }
                 )
-            }
-        }
-
-        if (isPicking && remindAt == null && !isCompleted) {
-            Spacer(modifier = Modifier.height(8.dp))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(
-                    ReminderPreset.LATER_TODAY to "Later today",
-                    ReminderPreset.TOMORROW_MORNING to "Tomorrow",
-                    ReminderPreset.THIS_WEEKEND to "This weekend",
-                    ReminderPreset.NEXT_WEEK to "Next week"
-                ).forEach { (preset, label) ->
-                    AssistChip(
-                        onClick = {
-                            onPickPreset(preset)
-                            isPicking = false
-                        },
-                        label = { Text(label) }
-                    )
-                }
             }
         }
     }
@@ -1392,7 +1413,7 @@ private fun FindWithinItem(
             ) {
                 Text(
                     text = when {
-                        matches.isEmpty() -> "No matches in this item"
+                        matches.isEmpty() -> stringResource(R.string.detail_no_matches)
                         else -> "${matchIndex + 1} of ${matches.size} · in ${current?.blockLabel.orEmpty()}"
                     },
                     style = MaterialTheme.typography.bodySmall,
@@ -1483,7 +1504,9 @@ private fun ChecklistSection(
             ) {
                 Icon(
                     imageVector = if (entry.isDone) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
-                    contentDescription = if (entry.isDone) "Done" else "Not done",
+                    contentDescription = stringResource(
+                        if (entry.isDone) R.string.detail_done else R.string.action_not_done
+                    ),
                     tint = if (entry.isDone) tuckColors.success else tuckColors.textMuted,
                     modifier = Modifier.size(19.dp)
                 )
@@ -1545,7 +1568,26 @@ private fun AudioPlayerBlock(path: String) {
     var player by remember { mutableStateOf<MediaPlayer?>(null) }
     var isPlaying by remember { mutableStateOf(false) }
     var positionMs by remember { mutableIntStateOf(0) }
-    var durationMs by remember { mutableIntStateOf(0) }
+
+    // Read the length up front so the row shows "0:00 / 0:42" rather than "0:00 / 0:00"
+    // until the first play. A retriever is far cheaper than holding a prepared player.
+    var durationMs by remember(path) {
+        mutableIntStateOf(
+            try {
+                val retriever = MediaMetadataRetriever()
+                try {
+                    retriever.setDataSource(file.absolutePath)
+                    retriever
+                        .extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                        ?.toIntOrNull() ?: 0
+                } finally {
+                    retriever.release()
+                }
+            } catch (e: Exception) {
+                0
+            }
+        )
+    }
 
     DisposableEffect(path) {
         onDispose {
@@ -1600,7 +1642,9 @@ private fun AudioPlayerBlock(path: String) {
             ) {
                 Icon(
                     imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                    contentDescription = if (isPlaying) "Pause" else "Play"
+                    contentDescription = stringResource(
+                        if (isPlaying) R.string.action_pause else R.string.components_play
+                    )
                 )
             }
             Spacer(modifier = Modifier.width(14.dp))
@@ -1623,7 +1667,13 @@ private fun AudioPlayerBlock(path: String) {
     }
 }
 
-private fun formatClock(ms: Int): String {
+internal fun formatClock(ms: Int): String {
     val totalSeconds = ms / 1000
     return "%d:%02d".format(totalSeconds / 60, totalSeconds % 60)
 }
+
+/** Lines of recognised text shown before the reader has to ask for the rest. */
+private const val COLLAPSED_TEXT_LINES = 12
+
+/** Above this many characters the text is worth collapsing at all. */
+private const val COLLAPSE_TEXT_THRESHOLD = 600

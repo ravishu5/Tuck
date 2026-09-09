@@ -5,8 +5,15 @@ import com.tuck.app.data.local.db.entity.SavedItemFtsEntity
 data class FtsSearchResult(
     val rowid: Long,
     val snippet: String? = null,
-    /** BM25 score. Lower is a better match; nulls sort last. */
-    val rank: Double = 0.0
+    /** Weighted `matchinfo` score. Higher is a better match. */
+    val rank: Double = 0.0,
+    /**
+     * Indices of the indexed columns this row actually had hits in, in the column
+     * order declared by `SavedItemFtsDaoImpl.CREATE_TABLE`. The scorer already walks
+     * every phrase/column pair to compute [rank]; recording which of those pairs were
+     * non-zero costs nothing and is what lets the UI say why a result matched.
+     */
+    val matchedColumns: Set<Int> = emptySet()
 )
 
 interface SavedItemFtsDao {

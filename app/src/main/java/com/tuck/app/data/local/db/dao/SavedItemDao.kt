@@ -67,8 +67,12 @@ interface SavedItemDao {
     @Query("SELECT * FROM saved_items WHERE isDeleted = 0 AND localFilePath IS NOT NULL AND localFilePath != ''")
     suspend fun getItemsWithFiles(): List<SavedItemEntity>
 
+    @Query("UPDATE saved_items SET remindAt = :remindAt, remindNote = :note, updatedAt = :now WHERE id = :id")
+    suspend fun setRemindAt(id: Long, remindAt: Long?, note: String?, now: Long = System.currentTimeMillis())
+
+    /** Moves a reminder without touching its note — snoozing does not change why it was set. */
     @Query("UPDATE saved_items SET remindAt = :remindAt, updatedAt = :now WHERE id = :id")
-    suspend fun setRemindAt(id: Long, remindAt: Long?, now: Long = System.currentTimeMillis())
+    suspend fun rescheduleRemindAt(id: Long, remindAt: Long, now: Long = System.currentTimeMillis())
 
     @Query("UPDATE saved_items SET completedAt = :completedAt, updatedAt = :now WHERE id = :id")
     suspend fun setCompletedAt(id: Long, completedAt: Long?, now: Long = System.currentTimeMillis())
@@ -133,6 +137,10 @@ interface SavedItemDao {
         updatedAt: Long = System.currentTimeMillis()
     )
 
+    /** Points a link item at media downloaded for it, so the app can play the file it holds. */
+    @Query("UPDATE saved_items SET localFilePath = :path, updatedAt = :now WHERE id = :id")
+    suspend fun setLocalFilePath(id: Long, path: String, now: Long = System.currentTimeMillis())
+
     @Query("SELECT * FROM saved_items WHERE canonicalUrl = :canonicalUrl AND isDeleted = 0 LIMIT 1")
     suspend fun findByCanonicalUrl(canonicalUrl: String): SavedItemEntity?
 
@@ -141,6 +149,10 @@ interface SavedItemDao {
 
     @Query("SELECT * FROM saved_items WHERE imageSha256 = :sha256 AND isDeleted = 0 LIMIT 1")
     suspend fun findByImageHash(sha256: String): SavedItemEntity?
+
+    /** Whether a live item already carries this exact title, used to keep auto-names distinct. */
+    @Query("SELECT EXISTS(SELECT 1 FROM saved_items WHERE title = :title AND isDeleted = 0)")
+    suspend fun titleExists(title: String): Boolean
 
     @Query("SELECT * FROM saved_items WHERE id IN (:ids)")
     suspend fun getItemsByIds(ids: List<Long>): List<SavedItemEntity>

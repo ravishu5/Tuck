@@ -14,17 +14,11 @@ import com.tuck.app.ui.theme.color.CobaltDarkPalette
 import com.tuck.app.ui.theme.color.CobaltLightPalette
 import com.tuck.app.ui.theme.color.ForestDarkPalette
 import com.tuck.app.ui.theme.color.ForestLightPalette
+import com.tuck.app.ui.theme.color.HarborDarkPalette
+import com.tuck.app.ui.theme.color.HarborLightPalette
 import com.tuck.app.ui.theme.color.LinenDarkPalette
 import com.tuck.app.ui.theme.color.LinenLightPalette
-import com.tuck.app.ui.theme.color.LinenDarkPalette
 import com.tuck.app.ui.theme.color.NoirDarkPalette
-import com.tuck.app.ui.theme.color.NoirLightPalette
-import com.tuck.app.ui.theme.color.ForestLightPalette
-import com.tuck.app.ui.theme.color.ForestDarkPalette
-import com.tuck.app.ui.theme.color.CobaltLightPalette
-import com.tuck.app.ui.theme.color.CobaltDarkPalette
-import com.tuck.app.ui.theme.color.PlumLightPalette
-import com.tuck.app.ui.theme.color.PlumDarkPalette
 import com.tuck.app.ui.theme.color.NoirLightPalette
 import com.tuck.app.ui.theme.color.PaletteSlot
 import com.tuck.app.ui.theme.color.PlumDarkPalette
@@ -148,9 +142,9 @@ data class TuckColors(
     /** Text and icons drawn on top of [scrim]. */
     val onScrim: Color = Color(0xFFFFFFFF),
     /** The favourite star. Warm in both themes, so it reads as a marked state. */
-    val favorite: Color = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706),
+    val favorite: Color = if (isDark) Color(0xFFFBBF24) else Color(0xFFD37200),
     val destructive: Color = if (isDark) Color(0xFFF87171) else Color(0xFFDC2626),
-    val warning: Color = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706),
+    val warning: Color = if (isDark) Color(0xFFFBBF24) else Color(0xFFD37200),
     val success: Color = if (isDark) Color(0xFF4ADE80) else Color(0xFF16A34A),
 
     // Multi-Hue Coordinated Palette
@@ -185,9 +179,9 @@ data class TuckSpacing(
 
 data class TuckShapes(
     val small: Shape = RoundedCornerShape(12.dp),
-    val medium: Shape = RoundedCornerShape(16.dp),
-    val large: Shape = RoundedCornerShape(20.dp),
-    val extraLarge: Shape = RoundedCornerShape(24.dp),
+    val medium: Shape = RoundedCornerShape(20.dp),
+    val large: Shape = RoundedCornerShape(24.dp),
+    val extraLarge: Shape = RoundedCornerShape(32.dp),
     val pill: Shape = RoundedCornerShape(28.dp),
     val circle: Shape = CircleShape
 )
@@ -204,8 +198,8 @@ val LinenLight = TuckColors(
     borderSubtle = Color(0xFFF0E9DF),
     dividerHairline = Color(0xFFE8DFD3),
     textPrimary = Color(0xFF1C1917),
-    textSecondary = Color(0xFF6E665E),
-    textMuted = Color(0xFF9C9287),
+    textSecondary = Color(0xFF514942),
+    textMuted = Color(0xFF6F665C),
     accent = LinenLightPalette[PaletteSlot.PRIMARY_CORE].fill,
     accentLight = Color(0xFFF07650),
     accentContainer = Color(0xFFFDEEE9),
@@ -228,8 +222,8 @@ val LinenDark = TuckColors(
     borderSubtle = Color(0xFF2B2621),
     dividerHairline = Color(0xFF3B352E),
     textPrimary = Color(0xFFF7F4EE),
-    textSecondary = Color(0xFFB5ADA4),
-    textMuted = Color(0xFF7C746B),
+    textSecondary = Color(0xFFC9C1B7),
+    textMuted = Color(0xFFA29A91),
     accent = LinenDarkPalette[PaletteSlot.PRIMARY_CORE].fill,
     accentLight = Color(0xFFFFA080),
     accentContainer = Color(0xFF3D261E),
@@ -253,8 +247,8 @@ val NoirDark = TuckColors(
     borderSubtle = Color(0xFF22222A),
     dividerHairline = Color(0xFF2E2E38),
     textPrimary = Color(0xFFF4F4F6),
-    textSecondary = Color(0xFFA2A2AD),
-    textMuted = Color(0xFF6B6B76),
+    textSecondary = Color(0xFFBBBCC7),
+    textMuted = Color(0xFF9596A1),
     accent = NoirDarkPalette[PaletteSlot.PRIMARY_CORE].fill,
     accentLight = Color(0xFFFF886E),
     accentContainer = Color(0xFF3A1E17),
@@ -277,8 +271,8 @@ val NoirLight = TuckColors(
     borderSubtle = Color(0xFFE8E8EC),
     dividerHairline = Color(0xFFDCDCE2),
     textPrimary = Color(0xFF111113),
-    textSecondary = Color(0xFF5A5A66),
-    textMuted = Color(0xFF8C8C9A),
+    textSecondary = Color(0xFF484753),
+    textMuted = Color(0xFF646472),
     accent = NoirLightPalette[PaletteSlot.PRIMARY_CORE].fill,
     accentLight = Color(0xFFFF6B4A),
     accentContainer = Color(0xFFFFEBE6),
@@ -302,8 +296,8 @@ val ForestLight = TuckColors(
     borderSubtle = Color(0xFFE3EDE6),
     dividerHairline = Color(0xFFD1E0D5),
     textPrimary = Color(0xFF111D14),
-    textSecondary = Color(0xFF475E4D),
-    textMuted = Color(0xFF789480),
+    textSecondary = Color(0xFF394F3F),
+    textMuted = Color(0xFF526D5A),
     accent = ForestLightPalette[PaletteSlot.PRIMARY_CORE].fill,
     accentLight = Color(0xFF52B788),
     accentContainer = Color(0xFFE5F6EE),
@@ -326,8 +320,8 @@ val ForestDark = TuckColors(
     borderSubtle = Color(0xFF1F2E24),
     dividerHairline = Color(0xFF2A3D30),
     textPrimary = Color(0xFFEEF7F1),
-    textSecondary = Color(0xFFA5C2AC),
-    textMuted = Color(0xFF6B8773),
+    textSecondary = Color(0xFFB9D6C0),
+    textMuted = Color(0xFF90AE98),
     accent = ForestDarkPalette[PaletteSlot.PRIMARY_CORE].fill,
     accentLight = Color(0xFF74C69D),
     accentContainer = Color(0xFF1A3D2A),
@@ -351,14 +345,14 @@ val CobaltLight = TuckColors(
     borderSubtle = Color(0xFFDEEAF7),
     dividerHairline = Color(0xFFCADDF0),
     textPrimary = Color(0xFF0F1B2C),
-    textSecondary = Color(0xFF485E7C),
-    textMuted = Color(0xFF7B93B2),
+    textSecondary = Color(0xFF354A67),
+    textMuted = Color(0xFF516785),
     accent = CobaltLightPalette[PaletteSlot.PRIMARY_CORE].fill,
     accentLight = Color(0xFF3B82F6),
     accentContainer = Color(0xFFEFF6FF),
     textOnAccent = CobaltLightPalette[PaletteSlot.PRIMARY_CORE].onFill,
     highlight = Color(0xFFBAE6FD),
-    highlightText = Color(0xFF0369A1),
+    highlightText = Color(0xFF00679E),
     badgeBackground = Color(0xFFD7E5F4),
     isDark = false,
     palette = CobaltLightPalette
@@ -375,8 +369,8 @@ val CobaltDark = TuckColors(
     borderSubtle = Color(0xFF1B293A),
     dividerHairline = Color(0xFF27384E),
     textPrimary = Color(0xFFEFF5FC),
-    textSecondary = Color(0xFFA1BBD9),
-    textMuted = Color(0xFF65809E),
+    textSecondary = Color(0xFFB5CFEE),
+    textMuted = Color(0xFF8BA7C6),
     accent = CobaltDarkPalette[PaletteSlot.PRIMARY_CORE].fill,
     accentLight = Color(0xFF60A5FA),
     accentContainer = Color(0xFF173054),
@@ -400,8 +394,8 @@ val PlumLight = TuckColors(
     borderSubtle = Color(0xFFEEDEEF),
     dividerHairline = Color(0xFFE2CCE5),
     textPrimary = Color(0xFF241026),
-    textSecondary = Color(0xFF69486E),
-    textMuted = Color(0xFF9E77A4),
+    textSecondary = Color(0xFF5C3B61),
+    textMuted = Color(0xFF7C5682),
     accent = PlumLightPalette[PaletteSlot.PRIMARY_CORE].fill,
     accentLight = Color(0xFFA855F7),
     accentContainer = Color(0xFFFAF5FF),
@@ -424,8 +418,8 @@ val PlumDark = TuckColors(
     borderSubtle = Color(0xFF2A1D30),
     dividerHairline = Color(0xFF3B2942),
     textPrimary = Color(0xFFFAF3FC),
-    textSecondary = Color(0xFFD1B4D9),
-    textMuted = Color(0xFF8D6F96),
+    textSecondary = Color(0xFFD4B6DC),
+    textMuted = Color(0xFFAE8FB7),
     accent = PlumDarkPalette[PaletteSlot.PRIMARY_CORE].fill,
     accentLight = Color(0xFFC084FC),
     accentContainer = Color(0xFF3D184E),
@@ -435,6 +429,55 @@ val PlumDark = TuckColors(
     badgeBackground = Color(0xFF3D2C45),
     isDark = true,
     palette = PlumDarkPalette
+)
+
+// 6. Harbor Palettes (Coastal Slate & Seafoam Amber)
+val HarborLight = TuckColors(
+    canvas = Color(0xFFF2F5F8),
+    surface = Color(0xFFFFFFFF),
+    surfaceCard = Color(0xFFE6EDF4),
+    surfaceElevated = Color(0xFFFFFFFF),
+    surfaceVariant = Color(0xFFD8E4EF),
+    surfaceSubtle = Color(0xFFEEF3F8),
+    border = Color(0xFFCCDCEB),
+    borderSubtle = Color(0xFFDFEAF4),
+    dividerHairline = Color(0xFFCCDCEB),
+    textPrimary = Color(0xFF101C26),
+    textSecondary = Color(0xFF384A5B),
+    textMuted = Color(0xFF556778),
+    accent = HarborLightPalette[PaletteSlot.PRIMARY_CORE].fill,
+    accentLight = Color(0xFF0284C7),
+    accentContainer = Color(0xFFE0F2FE),
+    textOnAccent = HarborLightPalette[PaletteSlot.PRIMARY_CORE].onFill,
+    highlight = Color(0xFFBAE6FD),
+    highlightText = Color(0xFF00679E),
+    badgeBackground = Color(0xFFD8E4EF),
+    isDark = false,
+    palette = HarborLightPalette
+)
+
+val HarborDark = TuckColors(
+    canvas = Color(0xFF0C1319),
+    surface = Color(0xFF131D26),
+    surfaceCard = Color(0xFF1A2733),
+    surfaceElevated = Color(0xFF223242),
+    surfaceVariant = Color(0xFF2B3D50),
+    surfaceSubtle = Color(0xFF101921),
+    border = Color(0xFF283A4C),
+    borderSubtle = Color(0xFF1B2835),
+    dividerHairline = Color(0xFF283A4C),
+    textPrimary = Color(0xFFF0F6FC),
+    textSecondary = Color(0xFFBBD0E4),
+    textMuted = Color(0xFF8FA8BF),
+    accent = HarborDarkPalette[PaletteSlot.PRIMARY_CORE].fill,
+    accentLight = Color(0xFF38BDF8),
+    accentContainer = Color(0xFF133854),
+    textOnAccent = HarborDarkPalette[PaletteSlot.PRIMARY_CORE].onFill,
+    highlight = Color(0xFF0369A1),
+    highlightText = Color(0xFFE0F2FE),
+    badgeBackground = Color(0xFF2B3D50),
+    isDark = true,
+    palette = HarborDarkPalette
 )
 
 val LocalTuckColors = staticCompositionLocalOf { LinenLight }
@@ -448,5 +491,6 @@ fun getTuckColors(flavor: TuckThemeFlavor, isDark: Boolean): TuckColors {
         TuckThemeFlavor.FOREST -> if (isDark) ForestDark else ForestLight
         TuckThemeFlavor.COBALT -> if (isDark) CobaltDark else CobaltLight
         TuckThemeFlavor.PLUM -> if (isDark) PlumDark else PlumLight
+        TuckThemeFlavor.HARBOR -> if (isDark) HarborDark else HarborLight
     }
 }

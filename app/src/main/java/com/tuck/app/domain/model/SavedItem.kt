@@ -25,6 +25,8 @@ data class SavedItem(
     val comments: List<SavedComment> = emptyList(),
     val capturedAt: Long? = null,
     val remindAt: Long? = null,
+    /** Why the reminder was set; cleared with it. */
+    val remindNote: String? = null,
     val completedAt: Long? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),

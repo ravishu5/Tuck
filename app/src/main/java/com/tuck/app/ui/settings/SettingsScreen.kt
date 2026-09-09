@@ -11,6 +11,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,10 +38,18 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.HealthAndSafety
 import androidx.compose.material.icons.filled.Rule
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.SettingsBrightness
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material3.ripple
+import androidx.compose.ui.graphics.Color
+import com.tuck.app.ui.theme.TuckGradients
+import com.tuck.app.ui.theme.pressScale
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -96,7 +105,7 @@ fun SettingsScreen(
         if (!granted) {
             Toast.makeText(
                 context,
-                "Weekly Memory is on, but notifications are blocked for Tuck",
+                context.getString(R.string.setting_notifications_blocked),
                 Toast.LENGTH_LONG
             ).show()
         }
@@ -115,13 +124,23 @@ fun SettingsScreen(
         return
     }
 
-    LazyColumn(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(tuckColors.background),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 100.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .background(tuckColors.background)
     ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(180.dp)
+                .background(TuckGradients.canvasWash(tuckColors.accent, tuckColors.background))
+        )
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
         // Header
         item {
             Column {
@@ -132,7 +151,7 @@ fun SettingsScreen(
                     if (onNavigateBack != null) {
                         IconButton(
                             onClick = onNavigateBack,
-                            modifier = Modifier.size(36.dp)
+                            modifier = Modifier.size(48.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -190,7 +209,7 @@ fun SettingsScreen(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // 5 Theme Preview Cards
+                    // Theme Preview Cards (6 Curated Families)
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         TuckThemeFlavor.values().forEach { flavor ->
                             TuckThemePreviewCard(
@@ -213,25 +232,64 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(tuckShapes.pill)
+                            .background(tuckColors.surfaceCard)
+                            .border(1.dp, tuckColors.borderSubtle, tuckShapes.pill)
+                            .padding(3.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         listOf(
-                            "System" to AppTheme.SYSTEM,
-                            "Light" to AppTheme.LIGHT,
-                            "Dark" to AppTheme.DARK
-                        ).forEach { (label, theme) ->
-                            TuckCategoryChip(
-                                label = label,
-                                isSelected = uiState.settings.theme == theme,
-                                onClick = { viewModel.setTheme(theme) },
-                                modifier = Modifier.weight(1f)
-                            )
+                            Triple(stringResource(R.string.theme_system), AppTheme.SYSTEM, Icons.Filled.SettingsBrightness),
+                            Triple(stringResource(R.string.theme_light), AppTheme.LIGHT, Icons.Filled.LightMode),
+                            Triple(stringResource(R.string.theme_dark), AppTheme.DARK, Icons.Filled.DarkMode)
+                        ).forEach { (label, theme, icon) ->
+                            val isSelected = uiState.settings.theme == theme
+                            val chipSource = remember { MutableInteractionSource() }
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(38.dp)
+                                    .pressScale(chipSource, pressedScale = 0.95f)
+                                    .clip(tuckShapes.pill)
+                                    .background(if (isSelected) tuckColors.surface else Color.Transparent)
+                                    .then(
+                                        if (isSelected) Modifier.border(1.dp, tuckColors.border, tuckShapes.pill)
+                                        else Modifier
+                                    )
+                                    .clickable(
+                                        interactionSource = chipSource,
+                                        indication = ripple(color = tuckColors.accent),
+                                        onClick = { viewModel.setTheme(theme) }
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = null,
+                                        tint = if (isSelected) tuckColors.accent else tuckColors.textMuted,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) tuckColors.textPrimary else tuckColors.textSecondary
+                                    )
+                                }
+                            }
                         }
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
 
+                    val gallerySource = remember { MutableInteractionSource() }
                     // Theme Palette Gallery Launcher (Debug / Review)
                     Surface(
                         shape = tuckShapes.medium,
@@ -239,7 +297,12 @@ fun SettingsScreen(
                         border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.borderSubtle),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { showPaletteGallery = true }
+                            .pressScale(gallerySource)
+                            .clickable(
+                                interactionSource = gallerySource,
+                                indication = ripple(color = tuckColors.accent),
+                                onClick = { showPaletteGallery = true }
+                            )
                     ) {
                         Row(
                             modifier = Modifier
@@ -248,7 +311,11 @@ fun SettingsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column {
+                            // The description is the only part that may wrap. Without the
+                            // weight it claimed its full intrinsic width and squeezed the
+                            // action to one letter per line in every locale with longer
+                            // words than English.
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = stringResource(R.string.settings_inspect_color_palettes),
                                     style = MaterialTheme.typography.bodyMedium,
@@ -262,11 +329,13 @@ fun SettingsScreen(
                                     color = tuckColors.textSecondary
                                 )
                             }
+                            Spacer(modifier = Modifier.width(12.dp))
                             Text(
                                 text = stringResource(R.string.settings_view),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = tuckColors.accent
+                                color = tuckColors.accent,
+                                maxLines = 1
                             )
                         }
                     }
@@ -293,8 +362,8 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     SettingsSwitchRow(
-                        title = "On-Device OCR",
-                        subtitle = "Recognize and index text inside screenshots & images",
+                        title = stringResource(R.string.setting_ocr),
+                        subtitle = stringResource(R.string.setting_ocr_sub),
                         checked = uiState.settings.ocrEnabled,
                         onCheckedChange = { viewModel.setOcrEnabled(it) }
                     )
@@ -302,8 +371,8 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     SettingsSwitchRow(
-                        title = "Auto-Categorize",
-                        subtitle = "Automatically organize content into smart folders",
+                        title = stringResource(R.string.setting_auto_categorize),
+                        subtitle = stringResource(R.string.setting_auto_categorize_sub),
                         checked = uiState.settings.autoCategorizeEnabled,
                         onCheckedChange = { viewModel.setAutoCategorizeEnabled(it) }
                     )
@@ -311,8 +380,8 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     SettingsSwitchRow(
-                        title = "Save Community Comments",
-                        subtitle = "Index top discussions from Reddit and social posts for offline search",
+                        title = stringResource(R.string.setting_save_comments),
+                        subtitle = stringResource(R.string.setting_save_comments_sub),
                         checked = uiState.settings.saveCommentsEnabled,
                         onCheckedChange = { viewModel.setSaveCommentsEnabled(it) }
                     )
@@ -321,16 +390,16 @@ fun SettingsScreen(
 
                     SettingsActionRow(
                         icon = Icons.Filled.Rule,
-                        title = "Auto-filing rules",
-                        subtitle = "Send matching saves straight to a collection",
+                        title = stringResource(R.string.rules_auto_filing_rules),
+                        subtitle = stringResource(R.string.setting_rules_sub),
                         onClick = onNavigateToFilingRules
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
 
                     SettingsSwitchRow(
-                        title = "Weekly Memory",
-                        subtitle = "Resurface one forgotten save each week. Off by default.",
+                        title = stringResource(R.string.setting_weekly_memory),
+                        subtitle = stringResource(R.string.setting_weekly_memory_sub),
                         checked = uiState.settings.memoryResurfacingEnabled,
                         onCheckedChange = { enabled ->
                             if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
@@ -348,10 +417,37 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     SettingsSwitchRow(
-                        title = "Wi-Fi Only for Previews",
-                        subtitle = "Fetch rich link previews and metadata only on Wi-Fi",
+                        title = stringResource(R.string.setting_wifi_only),
+                        subtitle = stringResource(R.string.setting_wifi_only_sub),
                         checked = uiState.settings.wifiOnlyMetadata,
                         onCheckedChange = { viewModel.setWifiOnlyMetadata(it) }
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    SettingsSwitchRow(
+                        title = stringResource(R.string.setting_archive),
+                        subtitle = stringResource(R.string.setting_archive_sub),
+                        checked = uiState.settings.archivePages,
+                        onCheckedChange = { viewModel.setArchivePages(it) }
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    SettingsSwitchRow(
+                        title = stringResource(R.string.setting_transcribe),
+                        subtitle = stringResource(R.string.setting_transcribe_sub),
+                        checked = uiState.settings.transcribeVoiceNotes,
+                        onCheckedChange = { viewModel.setTranscribeVoiceNotes(it) }
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    SettingsSwitchRow(
+                        title = stringResource(R.string.setting_deep_capture),
+                        subtitle = stringResource(R.string.setting_deep_capture_sub),
+                        checked = uiState.settings.deepCaptureEnabled,
+                        onCheckedChange = { viewModel.setDeepCaptureEnabled(it) }
                     )
                 }
             }
@@ -377,8 +473,8 @@ fun SettingsScreen(
 
                     SettingsActionRow(
                         icon = Icons.Filled.HealthAndSafety,
-                        title = "Vault health",
-                        subtitle = "Check that every save is intact and searchable",
+                        title = stringResource(R.string.health_vault_health),
+                        subtitle = stringResource(R.string.setting_vault_health_sub),
                         onClick = onNavigateToVaultHealth
                     )
 
@@ -386,8 +482,8 @@ fun SettingsScreen(
 
                     SettingsActionRow(
                         icon = Icons.Filled.Download,
-                        title = "Export Full Vault Archive (.tuck)",
-                        subtitle = "Complete archive with photos, PDFs, and notes",
+                        title = stringResource(R.string.setting_export_archive),
+                        subtitle = stringResource(R.string.setting_export_archive_sub),
                         onClick = {
                             viewModel.exportFullArchive { path ->
                                 Toast.makeText(context, "Archive exported: $path", Toast.LENGTH_SHORT).show()
@@ -399,8 +495,8 @@ fun SettingsScreen(
 
                     SettingsActionRow(
                         icon = Icons.Filled.Download,
-                        title = "Export Vault JSON",
-                        subtitle = "Lightweight text and metadata backup",
+                        title = stringResource(R.string.setting_export_json),
+                        subtitle = stringResource(R.string.setting_export_json_sub),
                         onClick = {
                             viewModel.exportVault { path ->
                                 Toast.makeText(context, "Backup exported: $path", Toast.LENGTH_SHORT).show()
@@ -416,7 +512,11 @@ fun SettingsScreen(
                             viewModel.reclaimSpace { freed ->
                                 Toast.makeText(
                                     context,
-                                    if (freed > 0) "Freed ${formatBytes(freed)}" else "Nothing to reclaim",
+                                    if (freed > 0) {
+                                    context.getString(R.string.setting_freed, formatBytes(freed))
+                                } else {
+                                    context.getString(R.string.setting_nothing_to_reclaim)
+                                },
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
@@ -427,7 +527,7 @@ fun SettingsScreen(
 
                     SettingsActionRow(
                         icon = Icons.Filled.Delete,
-                        title = "Trash & Recovery",
+                        title = stringResource(R.string.setting_trash_recovery),
                         subtitle = "${uiState.trashedCount} items in trash",
                         onClick = onNavigateToTrash
                     )
@@ -492,6 +592,7 @@ fun SettingsScreen(
                 )
             }
         }
+    }
     }
 }
 
@@ -618,11 +719,11 @@ private fun StorageBreakdown(
     val palette = tuckColors.palette
 
     val segments = listOf(
-        Triple("Images", usage.imagesSizeBytes, palette[PaletteSlot.PRIMARY_CORE].fill),
-        Triple("PDFs", usage.pdfsSizeBytes, palette[PaletteSlot.SECONDARY_CORE].fill),
-        Triple("Documents", usage.documentsSizeBytes, palette[PaletteSlot.TERTIARY_CORE].fill),
-        Triple("Previews", usage.thumbnailsSizeBytes, palette[PaletteSlot.PRIMARY_SOFT].fill),
-        Triple("Cache", usage.cacheSizeBytes, palette[PaletteSlot.SECONDARY_SOFT].fill)
+        Triple(stringResource(R.string.storage_images), usage.imagesSizeBytes, palette[PaletteSlot.PRIMARY_CORE].fill),
+        Triple(stringResource(R.string.storage_pdfs), usage.pdfsSizeBytes, palette[PaletteSlot.SECONDARY_CORE].fill),
+        Triple(stringResource(R.string.storage_documents), usage.documentsSizeBytes, palette[PaletteSlot.TERTIARY_CORE].fill),
+        Triple(stringResource(R.string.storage_previews), usage.thumbnailsSizeBytes, palette[PaletteSlot.PRIMARY_SOFT].fill),
+        Triple(stringResource(R.string.storage_cache), usage.cacheSizeBytes, palette[PaletteSlot.SECONDARY_SOFT].fill)
     ).filter { it.second > 0 }
 
     Column(modifier = Modifier.fillMaxWidth()) {

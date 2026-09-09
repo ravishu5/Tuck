@@ -13,7 +13,20 @@ enum class TuckThemeFlavor(val displayName: String, val tagline: String) {
     NOIR("Noir", "Quiet & luxurious"),
     FOREST("Forest", "Calm & natural"),
     COBALT("Cobalt", "Focused & technical"),
-    PLUM("Plum", "Creative & expressive")
+    PLUM("Plum", "Creative & expressive"),
+    HARBOR("Harbor", "Cool & composed")
+}
+
+/**
+ * How the saved-items feed is laid out.
+ *
+ * A list reads well for links and notes; a grid is the only way a wall of screenshots
+ * is browsable, because the picture *is* the identifier. Which one a person wants
+ * depends on what they save, so it is theirs to choose and it is remembered.
+ */
+enum class FeedViewMode {
+    LIST,
+    GRID
 }
 
 data class AppSettings(
@@ -23,9 +36,20 @@ data class AppSettings(
     val autoCategorizeEnabled: Boolean = true,
     val saveCommentsEnabled: Boolean = true,
     val wifiOnlyMetadata: Boolean = false,
+    /**
+     * Tier 2 capture: render pages in a headless WebView when a plain fetch returns a shell.
+     * Off by default — it costs memory, seconds and battery, and it loads pages as the reader.
+     */
+    val deepCaptureEnabled: Boolean = false,
+    /** Transcribe voice notes on device so their words reach search. */
+    val transcribeVoiceNotes: Boolean = true,
+    /** Keep a self-contained copy of each saved page, against the original going away. */
+    val archivePages: Boolean = false,
     /** Weekly resurfacing notification. Opt-in: nothing is posted unless the user turns it on. */
     val memoryResurfacingEnabled: Boolean = false,
-    val autoDismissShareSeconds: Int = 3
+    val autoDismissShareSeconds: Int = 3,
+    /** Layout of the home feed. Remembered across launches. */
+    val feedViewMode: FeedViewMode = FeedViewMode.LIST
 )
 
 data class StorageUsage(
@@ -53,7 +77,11 @@ interface SettingsRepository {
     suspend fun setAutoCategorizeEnabled(enabled: Boolean)
     suspend fun setSaveCommentsEnabled(enabled: Boolean)
     suspend fun setWifiOnlyMetadata(wifiOnly: Boolean)
+    suspend fun setDeepCaptureEnabled(enabled: Boolean)
+    suspend fun setTranscribeVoiceNotes(enabled: Boolean)
+    suspend fun setArchivePages(enabled: Boolean)
     suspend fun setMemoryResurfacingEnabled(enabled: Boolean)
+    suspend fun setFeedViewMode(mode: FeedViewMode)
     suspend fun getStorageUsage(): StorageUsage
     suspend fun clearCache(): Boolean
     /** Frees regenerable data only; returns the bytes actually recovered. */

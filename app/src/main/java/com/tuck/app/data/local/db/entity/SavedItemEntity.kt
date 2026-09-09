@@ -47,6 +47,8 @@ data class SavedItemEntity(
     val capturedAt: Long? = null,
     /** When to surface this item again. Null means no reminder is set. */
     val remindAt: Long? = null,
+    /** Why the reminder was set; cleared with it. */
+    val remindNote: String? = null,
     /** When the user marked this acted-on. Null means it is still outstanding. */
     val completedAt: Long? = null,
     val createdAt: Long = System.currentTimeMillis(),

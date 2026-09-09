@@ -69,7 +69,6 @@
     <string name="detail_detected_entities_actions">Detected Entities &amp; Actions</string>
     <string name="detail_collections_tags">Collections &amp; Tags</string>
     <string name="detail_personal_notes">Personal Notes</string>
-    <string name="detail_related_saves_in_your_vault">Related Saves in Your Vault</string>
     <string name="detail_op">OP</string>
     <string name="detail_follow_up">FOLLOW UP</string>
     <string name="detail_checklist">CHECKLIST</string>
@@ -111,7 +110,7 @@
     <string name="home_doc_pdf">Doc/PDF</string>
     <string name="home_quick_note">Quick note</string>
     <string name="home_document">Document</string>
-    <string name="home_add_file">Add file</string>
+    <string name="home_add_file">File</string>
     <string name="inbox_inbox">Inbox</string>
     <string name="inbox_file_into_collection">File into Collection</string>
     <string name="inbox_collection">Collection</string>
@@ -205,7 +204,32 @@
     <string name="saved_at">Saved %1$s</string>
 
     <!-- Bottom navigation -->
+    <string name="detail_open_fullscreen">Open full screen</string>
+    <string name="detail_view_on_source">View on %1$s</string>
+    <string name="share_save_to_tuck">Save to Tuck</string>
+    <string name="share_quick_save">Quick save</string>
+    <string name="reminder_clear">Clear</string>
+    <string name="detail_view_profile">View profile</string>
+    <string name="setting_transcribe">Transcribe Voice Notes</string>
+    <string name="setting_transcribe_sub">Convert recordings to text on device so you can search what you said. Needs Android 13 or later</string>
+    <string name="detail_add_note">Add note</string>
+    <string name="reminder_new">New Reminder</string>
+    <string name="reminder_edit">Edit Reminder</string>
+    <string name="reminder_subtitle">Set a time and optionally add a note.</string>
+    <string name="reminder_mode_relative">Remind me in</string>
+    <string name="reminder_mode_exact">Pick a time</string>
+    <string name="reminder_change">Change</string>
+    <string name="reminder_note_placeholder">Why you\'re saving this. A restaurant to try, something to do this weekend, a gift idea…</string>
+    <string name="player_play">Play</string>
+    <string name="player_pause">Pause</string>
+    <string name="player_back_10">Back 10 seconds</string>
+    <string name="player_forward_10">Forward 10 seconds</string>
+    <string name="setting_archive">Archive Pages</string>
+    <string name="setting_archive_sub">Keep a self-contained copy of each saved article, so it still opens when the original goes away. Uses storage and takes longer to save</string>
+    <string name="detail_archived_copy">Archived copy</string>
+    <string name="detail_open_archived_copy">Open archived page</string>
     <string name="nav_home">Home</string>
+    <string name="nav_capture">Add to Tuck</string>
     <string name="nav_inbox">Inbox</string>
     <string name="nav_collections">Collections</string>
     <string name="nav_search">Search</string>
@@ -221,16 +245,14 @@
     <string name="home_voice_too_short">Too short to save</string>
     <string name="home_voice_failed">Could not start recording</string>
     <string name="home_voice_needs_mic">Microphone access is needed for voice notes</string>
-    <string name="home_scan_multi_page">Scan · %1$d pages</string>
+    <!-- Titles for a scanned document. Separate from the Scan button, whose label is a
+         verb in most languages and reads wrong as the name of a saved item. -->
+    <string name="title_scan">Scanned document</string>
+    <string name="home_scan_multi_page">Scanned document · %1$d pages</string>
 
     <!-- Relative time, so dates read naturally in every language -->
-    <string name="time_just_now">Just now</string>
-    <string name="time_minutes_ago">%1$dm ago</string>
-    <string name="time_hours_ago">%1$dh ago</string>
-    <string name="time_yesterday">Yesterday</string>
-    <string name="time_days_ago">%1$dd ago</string>
 
-    <string name="resurfaced_you_saved_this">You saved this %1$s: \"%2$s\"</string>
+    <string name="resurfaced_you_saved_this">Saved %1$s: \"%2$s\"</string>
 
     <!-- Content badges -->
     <string name="badge_screenshot">Screenshot</string>
@@ -348,6 +370,8 @@
     <string name="setting_weekly_memory_sub">Resurface one forgotten save each week. Off by default.</string>
     <string name="setting_wifi_only">Wi-Fi Only for Previews</string>
     <string name="setting_wifi_only_sub">Fetch rich link previews and metadata only on Wi-Fi</string>
+    <string name="setting_deep_capture">Deep Capture</string>
+    <string name="setting_deep_capture_sub">Render pages that hide their content from a plain fetch, such as Instagram. Slower, uses more battery, and loads pages using your signed-in sessions</string>
     <string name="setting_vault_health_sub">Check that every save is intact and searchable</string>
     <string name="setting_export_archive">Export Full Vault Archive (.tuck)</string>
     <string name="setting_export_archive_sub">Complete archive with photos, PDFs, and notes</string>
@@ -379,4 +403,165 @@
     <string name="title_imported_document">Imported Document</string>
     <string name="title_voice_note">Voice note · %1$ds</string>
     <string name="collection_empty">Empty</string>
+
+    <!-- Notifications -->
+    <string name="notif_memory_channel">Vault Memories &amp; Rediscovery</string>
+    <string name="notif_memory_channel_desc">Weekly resurfacing of forgotten saved items</string>
+    <string name="notif_memory_title">Rediscover from your vault</string>
+    <string name="notif_reminder_channel">Reminders</string>
+    <string name="notif_reminder_channel_desc">Items you asked Tuck to bring back</string>
+    <string name="notif_reminder_body">You asked to be reminded about this</string>
+    <string name="notif_snooze_a_day">Snooze a day</string>
+    <string name="tile_tuck_away">Tuck Away</string>
+
+    <!-- Vault health checks -->
+    <string name="health_search_index">Search index</string>
+    <string name="health_search_index_ok">Every save is searchable.</string>
+    <string name="health_rebuild_index">Rebuild index</string>
+    <string name="health_background_processing">Background processing</string>
+    <string name="health_background_ok">Nothing is stuck.</string>
+    <string name="health_try_again">Try again</string>
+    <string name="health_missing_files">Missing files</string>
+    <string name="health_missing_files_ok">Every saved file is present.</string>
+    <string name="health_clear_broken_links">Clear broken links</string>
+    <string name="health_unused_storage">Unused storage</string>
+    <string name="health_unused_storage_ok">No wasted space.</string>
+    <string name="health_reclaim_space">Reclaim space</string>
+    <string name="health_nothing_to_do">Nothing to do.</string>
+    <string name="health_nothing_needed_fixing">Nothing needed fixing.</string>
+
+    <string name="setting_save_comments_sub">Index top discussions from Reddit and social posts for offline search</string>
+    <string name="collection_all_done">%1$s · all done</string>
+    <string name="collection_to_go">%1$s · %2$d to go</string>
+    <string name="collection_done_count">%1$s · %2$d done</string>
+    <string name="empty_drawer_body">Save articles, screenshots, PDFs, notes, or links.\nEverything is indexed locally and private.</string>
+    <string name="empty_no_source_body">Tuck items from %1$s to see them here.</string>
+
+    <!-- Content type labels -->
+    <string name="type_link">Link</string>
+    <string name="type_note">Note</string>
+    <string name="type_image">Image</string>
+    <string name="type_pdf" translatable="false">PDF</string>
+    <string name="type_document">Document</string>
+    <string name="type_video">Video</string>
+    <string name="type_audio">Voice</string>
+    <string name="type_gallery">Gallery</string>
+    <string name="type_contact">Contact</string>
+    <string name="type_location">Location</string>
+    <string name="type_item">Item</string>
+
+    <!-- Search provenance: which field a result matched on -->
+    <string name="match_title">Title</string>
+    <string name="match_tag">Tag</string>
+    <string name="match_entity">Detail</string>
+    <string name="match_description">Description</string>
+    <string name="match_text">Text</string>
+    <string name="match_comment">Comment</string>
+    <string name="match_ocr">Recognised text</string>
+    <string name="match_url">Link</string>
+    <string name="match_domain">Site</string>
+    <string name="match_matched_in">Matched in %1$s</string>
+    <string name="search_no_match_body">Try a shorter word, or search what a screenshot says rather than what you called it.</string>
+    <plurals name="search_result_count">
+        <item quantity="one">%d result</item>
+        <item quantity="other">%d results</item>
+    </plurals>
+    <string name="feed_view_list">List view</string>
+    <string name="feed_view_grid">Grid view</string>
+    <string name="detail_show_more">Show all text</string>
+    <string name="detail_show_less">Show less</string>
+    <string name="nav_travel">Travel</string>
+    <string name="travel_title">Travel</string>
+    <string name="travel_subtitle">Everywhere you\'ve been</string>
+    <string name="travel_tab_trips">Trips</string>
+    <string name="travel_tab_countries">Countries</string>
+    <string name="travel_tab_bucket">Bucket list</string>
+    <string name="travel_stat_countries">Countries</string>
+    <string name="travel_stat_cities">Cities</string>
+    <string name="travel_stat_states">US states</string>
+    <string name="travel_stat_trips">Trips</string>
+    <string name="travel_stat_days">Days away</string>
+    <string name="travel_stat_continents">Continents</string>
+    <string name="travel_stat_longest">Longest trip</string>
+    <string name="travel_stat_this_year">This year</string>
+    <string name="travel_upcoming">Upcoming</string>
+    <string name="travel_in_progress">Happening now</string>
+    <string name="travel_add_trip">Add a trip</string>
+    <string name="travel_edit_trip">Edit trip</string>
+    <string name="travel_delete_trip">Delete trip</string>
+    <string name="travel_scan_photos">Find trips from photos</string>
+    <string name="travel_scan_photos_hint">Reads the place and date already stored in your photos. Nothing is uploaded.</string>
+    <string name="travel_scanning">Reading your photos…</string>
+    <string name="travel_scanning_progress">%1$d of %2$d photos</string>
+    <string name="travel_naming">Naming the places…</string>
+    <string name="travel_naming_progress">%1$d of %2$d places</string>
+    <string name="travel_scan_cancel">Stop</string>
+    <string name="travel_review_title">Trips we found</string>
+    <string name="travel_review_subtitle">Nothing is saved until you say so.</string>
+    <string name="travel_review_import">Add %1$d trips</string>
+    <string name="travel_review_import_one">Add 1 trip</string>
+    <string name="travel_review_none_selected">Nothing selected</string>
+    <string name="travel_review_select_all">Select all</string>
+    <string name="travel_review_clear_all">Clear</string>
+    <string name="travel_review_already_saved">Already in your history</string>
+    <string name="travel_review_empty">No trips found</string>
+    <string name="travel_review_empty_hint">Your photos don\'t carry enough location data to rebuild a history. You can still add trips by hand.</string>
+    <string name="travel_review_merge">Merge selected</string>
+    <string name="travel_photo_count">%1$d photos</string>
+    <string name="travel_imported">Added %1$d trips</string>
+    <string name="travel_error_permission">Tuck needs access to your photos to find your past trips.</string>
+    <string name="travel_error_media_location">Tuck can see your photos but not where they were taken. Allow location access for photos in system settings.</string>
+    <string name="travel_error_no_located_photos">None of your photos carry a location, so there is nothing to rebuild a history from.</string>
+    <string name="travel_grant_access">Allow access</string>
+    <string name="travel_empty_title">No trips yet</string>
+    <string name="travel_empty_body">Add a trip by hand, or let Tuck rebuild your history from the places and dates already in your photos.</string>
+    <string name="travel_countries_empty">Countries appear here once you add your first trip.</string>
+    <string name="travel_bucket_empty">Places you want to go, kept in one list.</string>
+    <string name="travel_bucket_add">Add a place</string>
+    <string name="travel_bucket_achieved">Visited</string>
+    <string name="travel_bucket_mark_visited">Mark as visited</string>
+    <string name="travel_days_count">%1$d days</string>
+    <string name="travel_day_count_one">1 day</string>
+    <string name="travel_trips_count">%1$d trips</string>
+    <string name="travel_trip_count_one">1 trip</string>
+    <string name="travel_field_title">Trip name</string>
+    <string name="travel_field_country">Country</string>
+    <string name="travel_field_city">City</string>
+    <string name="travel_field_region">State or region</string>
+    <string name="travel_field_start">Start date</string>
+    <string name="travel_field_end">End date</string>
+    <string name="travel_field_notes">Notes</string>
+    <string name="travel_field_place">Place</string>
+    <string name="travel_save">Save</string>
+    <string name="travel_cancel">Cancel</string>
+    <string name="travel_delete">Delete</string>
+    <string name="travel_map_hint">Map tiles come from OpenStreetMap.</string>
+    <string name="travel_source_photos">From photos</string>
+    <string name="travel_country_required">A country is required</string>
+    <string name="travel_dates_invalid">The end date cannot be before the start date</string>
+    <string name="home_editorial_eyebrow">YOUR PERSONAL LIBRARY</string>
+    <string name="nav_folders">Folders</string>
+    <string name="travel_scan_new_photos">Find trips in new photos</string>
+    <string name="travel_scan_new_action">Scan new photos</string>
+    <string name="travel_scan_since">Only photos taken since %1$s. Nothing is uploaded.</string>
+    <string name="travel_rescan_all">Rescan everything</string>
+    <string name="travel_imported_extended">Added %1$d, extended %2$d</string>
+    <string name="tile_quick_memo">Quick Memo</string>
+    <string name="tile_quick_memo_recording">Recording…</string>
+    <string name="shortcut_record_memo_short">Record memo</string>
+    <string name="shortcut_record_memo_long">Record Voice Memo</string>
+    <string name="quick_record_recording">Recording</string>
+    <string name="quick_record_starting">Starting…</string>
+    <string name="quick_record_stop_save">Stop &amp; save</string>
+    <string name="quick_record_discard">Discard</string>
+    <string name="quick_record_autosave_hint">Saved automatically with the date and time.</string>
+    <string name="quick_record_saved">Saved “%1$s”</string>
+    <string name="quick_record_too_short">Too short to keep</string>
+    <string name="quick_record_save_failed">Could not save the memo. The recording is still on the device.</string>
+    <string name="quick_record_could_not_start">Could not start recording. The microphone may be in use.</string>
+    <string name="quick_record_needs_microphone">Tuck needs the microphone to record a memo.</string>
+    <string name="quick_record_notification_title">Recording a memo</string>
+    <string name="quick_record_notification_text">Tap to open, or stop from here.</string>
+    <string name="quick_record_channel_name">Voice recording</string>
+    <string name="quick_record_channel_description">Shown while a voice memo is being recorded.</string>
 </resources>

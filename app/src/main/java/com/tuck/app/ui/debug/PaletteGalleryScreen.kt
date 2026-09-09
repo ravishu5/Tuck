@@ -122,7 +122,9 @@ fun PaletteGalleryScreen(
         "Cobalt Light" to (com.tuck.app.ui.theme.CobaltLight to com.tuck.app.ui.theme.color.CobaltLightPalette),
         "Cobalt Dark" to (com.tuck.app.ui.theme.CobaltDark to com.tuck.app.ui.theme.color.CobaltDarkPalette),
         "Plum Light" to (com.tuck.app.ui.theme.PlumLight to com.tuck.app.ui.theme.color.PlumLightPalette),
-        "Plum Dark" to (com.tuck.app.ui.theme.PlumDark to com.tuck.app.ui.theme.color.PlumDarkPalette)
+        "Plum Dark" to (com.tuck.app.ui.theme.PlumDark to com.tuck.app.ui.theme.color.PlumDarkPalette),
+        "Harbor Light" to (com.tuck.app.ui.theme.HarborLight to com.tuck.app.ui.theme.color.HarborLightPalette),
+        "Harbor Dark" to (com.tuck.app.ui.theme.HarborDark to com.tuck.app.ui.theme.color.HarborDarkPalette)
     )
 
     val currentThemePair = themes[selectedThemeIndex].second
@@ -141,7 +143,7 @@ fun PaletteGalleryScreen(
                             color = currentColors.textPrimary
                         )
                         Text(
-                            text = "5 Multi-Hue Families · Light & Dark Verified",
+                            text = "6 Multi-Hue Families · Light & Dark Verified",
                             style = MaterialTheme.typography.labelSmall,
                             color = currentColors.textSecondary
                         )

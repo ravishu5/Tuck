@@ -1,5 +1,6 @@
 package com.tuck.app.ui.components
 
+import android.text.format.DateUtils
 import androidx.compose.ui.res.stringResource
 import com.tuck.app.R
 
@@ -108,7 +109,7 @@ fun SavedItemCard(
                     ContentTypeBadge(contentType = item.contentType)
                     Spacer(modifier = Modifier.width(8.dp))
 
-                    val sourceText = item.sourceDomain ?: item.sourceApp ?: item.contentType.displayName
+                    val sourceText = item.sourceDomain ?: item.sourceApp ?: stringResource(item.contentType.labelRes)
                     Text(
                         text = "$sourceText · ${formatRelativeTime(item.createdAt)}",
                         style = MaterialTheme.typography.labelSmall,
@@ -277,7 +278,7 @@ fun ContentTypeBadge(contentType: ContentType) {
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
-                text = contentType.displayName,
+                text = stringResource(contentType.labelRes),
                 style = MaterialTheme.typography.labelSmall,
                 color = tintColor,
                 fontWeight = FontWeight.Bold,
@@ -387,62 +388,26 @@ fun EmptyState(
     icon: ImageVector = Icons.Filled.Description,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    TuckEmptyState(
+        title = title,
+        description = description,
+        icon = icon,
         modifier = modifier
-            .fillMaxWidth()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Surface(
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-            modifier = Modifier.size(72.dp)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(36.dp)
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            fontWeight = FontWeight.SemiBold
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = description,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-        )
-    }
+    )
 }
 
-@Composable
-fun formatRelativeTime(timestamp: Long): String {
-    val now = System.currentTimeMillis()
-    val diff = now - timestamp
-    val seconds = TimeUnit.MILLISECONDS.toSeconds(diff)
-    val minutes = TimeUnit.MILLISECONDS.toMinutes(diff)
-    val hours = TimeUnit.MILLISECONDS.toHours(diff)
-    val days = TimeUnit.MILLISECONDS.toDays(diff)
-
-    return when {
-        seconds < 60 -> stringResource(R.string.time_just_now)
-        minutes < 60 -> stringResource(R.string.time_minutes_ago, minutes)
-        hours < 24 -> stringResource(R.string.time_hours_ago, hours)
-        days == 1L -> stringResource(R.string.time_yesterday)
-        days < 7 -> stringResource(R.string.time_days_ago, days)
-        else -> SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(timestamp))
-    }
-}
+/**
+ * "5 min ago", "yesterday", "26 August" - whatever the platform says in the user's
+ * language. Rolling our own meant an English "Aug 26" leaking into a translated
+ * sentence, and a hand-built "MMM d" that reads as nonsense in most languages.
+ */
+fun formatRelativeTime(timestamp: Long): String =
+    DateUtils.getRelativeTimeSpanString(
+        timestamp,
+        System.currentTimeMillis(),
+        DateUtils.MINUTE_IN_MILLIS,
+        DateUtils.FORMAT_ABBREV_RELATIVE
+    ).toString()
 
 fun Context.startActivitySafe(intent: Intent) {
     try {

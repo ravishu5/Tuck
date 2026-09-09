@@ -3,13 +3,13 @@ package com.tuck.app.ui.navigation
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Inbox
+import androidx.compose.material.icons.outlined.Flight
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.StarBorder
@@ -30,11 +30,11 @@ sealed class BottomNavScreen(
         unselectedIcon = Icons.Outlined.Home
     )
 
-    data object Inbox : BottomNavScreen(
-        route = "inbox",
-        titleRes = R.string.nav_inbox,
-        selectedIcon = Icons.Filled.Inbox,
-        unselectedIcon = Icons.Outlined.Inbox
+    data object Travel : BottomNavScreen(
+        route = "travel",
+        titleRes = R.string.nav_travel,
+        selectedIcon = Icons.Filled.Flight,
+        unselectedIcon = Icons.Outlined.Flight
     )
 
     data object Collections : BottomNavScreen(
@@ -54,8 +54,17 @@ sealed class BottomNavScreen(
 
 object NavRoutes {
     const val HOME = "home"
-    const val INBOX = "inbox"
+    const val TRAVEL = "travel"
     const val COLLECTIONS = "collections"
+    /**
+     * The Collections tab, optionally opened straight onto one collection.
+     *
+     * The bare [COLLECTIONS] route still matches — the argument defaults to
+     * [NO_COLLECTION] — so the bottom bar is unaffected.
+     */
+    const val COLLECTIONS_WITH_ARG = "collections?collectionId={collectionId}"
+    const val ARG_COLLECTION_ID = "collectionId"
+    const val NO_COLLECTION = -1L
     const val CATEGORIES = "collections" // Alias for backwards compatibility
     const val SEARCH = "search"
     const val FAVORITES = "favorites"
@@ -67,5 +76,6 @@ object NavRoutes {
     const val CATEGORY_DETAIL = "category_detail/{collectionId}/{collectionName}"
 
     fun detail(itemId: Long) = "detail/$itemId"
+    fun collection(collectionId: Long) = "collections?collectionId=$collectionId"
     fun categoryDetail(collectionId: Long, name: String) = "category_detail/$collectionId/${android.net.Uri.encode(name)}"
 }

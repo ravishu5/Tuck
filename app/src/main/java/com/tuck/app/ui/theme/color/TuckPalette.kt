@@ -214,7 +214,7 @@ object TuckTriads {
     val Plum = ThemeTriad(primaryHue = 325.0, secondaryHue = 268.0, tertiaryHue = 90.0)
 
     /** Cool and composed: slate, seafoam, sand. */
-    val Harbor = ThemeTriad(primaryHue = 235.0, secondaryHue = 175.0, tertiaryHue = 75.0)
+    val Harbor = ThemeTriad(primaryHue = 240.0, secondaryHue = 160.0, tertiaryHue = 75.0)
 }
 
 private fun lightPalette(triad: ThemeTriad): TuckPalette =

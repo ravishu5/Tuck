@@ -54,3 +54,6 @@ captures/
 keystore.properties
 *.jks
 *.keystore
+
+# Kotlin compiler session files (build output)
+.kotlin/

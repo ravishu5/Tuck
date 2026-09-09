@@ -162,7 +162,8 @@ fun FilingRulesScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(rule.query, fontWeight = FontWeight.Bold, color = tuckColors.textPrimary)
                             Text(
-                                "→ ${uiState.collectionNameFor(rule.collectionId)}",
+                                "→ " + (uiState.collectionNameFor(rule.collectionId)
+                                    ?: stringResource(R.string.rules_unknown_collection)),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = tuckColors.textSecondary
                             )

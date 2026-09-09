@@ -20,12 +20,15 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -34,6 +37,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
+import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -81,7 +88,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.material.icons.rounded.EditNote
+import androidx.compose.material.icons.rounded.DocumentScanner
+import androidx.compose.material.icons.rounded.UploadFile
+import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
@@ -92,7 +111,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tuck.app.R
 import com.tuck.app.domain.model.SavedItem
+import com.tuck.app.ui.components.ListBottomGap
+import com.tuck.app.ui.components.RailCardHeight
+import com.tuck.app.ui.components.RailBodyPadding
+import com.tuck.app.ui.components.RailMediaHeight
 import com.tuck.app.ui.components.CountStat
+import com.tuck.app.domain.repository.FeedViewMode
+import com.tuck.app.ui.components.FeedViewModeToggle
+import com.tuck.app.ui.components.TuckGridCard
 import com.tuck.app.ui.components.QuickCaptureSpeedDialSheet
 import com.tuck.app.ui.components.SectionLabel
 import com.tuck.app.ui.components.TuckCategoryChip
@@ -106,6 +132,8 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SettingsBrightness
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.rememberModalBottomSheetState
 import com.tuck.app.ui.theme.color.PaletteSlot
@@ -122,9 +150,12 @@ import com.tuck.app.ui.components.ItemQuickActionsSheet
 @Composable
 fun HomeScreen(
     onNavigateToSearch: () -> Unit,
-    onNavigateToCollections: () -> Unit = {},
+    /** Opens the Collections tab; a non-null id opens that collection directly. */
+    onNavigateToCollections: (Long?) -> Unit = {},
     onNavigateToDetail: (Long) -> Unit,
     onNavigateToSettings: () -> Unit = {},
+    /** Incremented by the nav bar's capture button; each change opens the quick-add sheet. */
+    captureSignal: Int = 0,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -134,6 +165,11 @@ fun HomeScreen(
     val tuckShapes = TuckTheme.shapes
 
     var showQuickAddSheet by remember { mutableStateOf(false) }
+
+    // Keyed on the counter rather than a Boolean so pressing capture twice works the second time.
+    LaunchedEffect(captureSignal) {
+        if (captureSignal > 0) showQuickAddSheet = true
+    }
     var showThemeSheet by remember { mutableStateOf(false) }
     var showPasteDialog by remember { mutableStateOf(false) }
     var pasteContent by remember { mutableStateOf("") }
@@ -165,9 +201,26 @@ fun HomeScreen(
         }
     }
 
-    // A recording left running when the screen goes away would hold the mic open.
+    // A recording this screen started would otherwise hold the mic open after it goes away.
+    // One started from the Quick Settings tile is left alone — it is meant to outlive screens.
     DisposableEffect(Unit) {
-        onDispose { if (viewModel.isRecording.value) viewModel.cancelVoiceNote() }
+        onDispose { viewModel.cancelVoiceNoteIfOwned() }
+    }
+
+    // One voice-note action, shared by the quick-action row and the capture sheet. The
+    // sheet's "voice note" row used to be wired to an empty lambda, so the app offered a
+    // recorder that did nothing when you asked for it from there.
+    val toggleVoiceNote: () -> Unit = {
+        when {
+            isRecording -> viewModel.stopAndSaveVoiceNote { saved ->
+                voiceMessage = if (saved) R.string.home_voice_saved else R.string.home_voice_too_short
+            }
+            hasAudioPermission() -> {
+                if (!viewModel.startVoiceNote()) voiceMessage = R.string.home_voice_failed
+            }
+            // Asked at the point of use, never on first launch.
+            else -> audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
     }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
@@ -191,7 +244,7 @@ fun HomeScreen(
                 titleOverride = if (pages > 1) {
                     context.getString(R.string.home_scan_multi_page, pages)
                 } else {
-                    context.getString(R.string.home_scan)
+                    context.getString(R.string.title_scan)
                 }
             )
         }
@@ -216,195 +269,234 @@ fun HomeScreen(
             .fillMaxSize()
             .background(tuckColors.background)
     ) {
-        LazyColumn(
+        // A staggered grid rather than a column: in list mode every section spans the
+        // full line and it behaves exactly as the column did, but it can also lay the
+        // feed out as tiles without a second scroller nested inside this one.
+        //
+        // Every section body is wrapped in a Column, and must stay wrapped. A LazyColumn
+        // stacks the several children of one `item {}` down the main axis; a staggered
+        // grid places them all at the same offset instead, so a bare `item { Header();
+        // Rail() }` draws the header on top of the rail.
+        val feedViewMode = appSettings.feedViewMode
+        LazyVerticalStaggeredGrid(
+            columns = StaggeredGridCells.Fixed(2),
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = 4.dp, bottom = 80.dp)
+            contentPadding = PaddingValues(top = 4.dp, bottom = ListBottomGap),
+            verticalItemSpacing = 0.dp
         ) {
             // 1. Hero Brand Header & Search Trigger
-            item {
-                HomeHeroHeader(
-                    itemCount = uiState.items.size,
-                    folderCount = uiState.collections.size,
-                    isDarkMode = isDark,
-                    onOpenThemePicker = { showThemeSheet = true },
-                    onNavigateToSettings = onNavigateToSettings,
-                    onNavigateToSearch = onNavigateToSearch
-                )
+            item(span = StaggeredGridItemSpan.FullLine) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    HomeHeroHeader(
+                        itemCount = uiState.items.size,
+                        folderCount = uiState.collections.size,
+                        isDarkMode = isDark,
+                        onOpenThemePicker = { showThemeSheet = true },
+                        onNavigateToSettings = onNavigateToSettings,
+                        onNavigateToSearch = onNavigateToSearch
+                    )
+                }
             }
 
             // 2. Quick Action Buttons Row
-            item {
-                HomeQuickActionRow(
-                    onNote = {
-                        pasteContent = ""
-                        showPasteDialog = true
-                    },
-                    onScan = {
-                        val activity = context as? Activity
-                        if (activity == null) {
-                            photoPickerLauncher.launch(
-                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                            )
-                        } else {
-                            DocumentScanner.start(
-                                activity = activity,
-                                onReady = {
-                                    scannerLauncher.launch(IntentSenderRequest.Builder(it).build())
-                                },
-                                onUnavailable = {
-                                    // Expected on de-Googled devices - fall back, do not scold.
-                                    photoPickerLauncher.launch(
-                                        PickVisualMediaRequest(
-                                            ActivityResultContracts.PickVisualMedia.ImageOnly
+            item(span = StaggeredGridItemSpan.FullLine) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    HomeQuickActionRow(
+                        onNote = {
+                            pasteContent = ""
+                            showPasteDialog = true
+                        },
+                        onScan = {
+                            val activity = context as? Activity
+                            if (activity == null) {
+                                photoPickerLauncher.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            } else {
+                                DocumentScanner.start(
+                                    activity = activity,
+                                    onReady = {
+                                        scannerLauncher.launch(IntentSenderRequest.Builder(it).build())
+                                    },
+                                    onUnavailable = {
+                                        // Expected on de-Googled devices - fall back, do not scold.
+                                        photoPickerLauncher.launch(
+                                            PickVisualMediaRequest(
+                                                ActivityResultContracts.PickVisualMedia.ImageOnly
+                                            )
                                         )
-                                    )
-                                }
-                            )
-                        }
-                    },
-                    onPdf = {
-                        docPickerLauncher.launch(arrayOf("application/pdf", "text/*"))
-                    },
-                    onVoice = {
-                        if (isRecording) {
-                            viewModel.stopAndSaveVoiceNote { saved ->
-                                voiceMessage = if (saved) {
-                                    R.string.home_voice_saved
-                                } else {
-                                    R.string.home_voice_too_short
-                                }
+                                    }
+                                )
                             }
-                        } else if (hasAudioPermission()) {
-                            if (!viewModel.startVoiceNote()) {
-                                voiceMessage = R.string.home_voice_failed
-                            }
-                        } else {
-                            // Asked at the point of use, never on first launch.
-                            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                        }
-                    },
-                    isRecording = isRecording
-                )
-                Spacer(modifier = Modifier.height(14.dp))
+                        },
+                        onPdf = {
+                            docPickerLauncher.launch(arrayOf("application/pdf", "text/*"))
+                        },
+                        onVoice = toggleVoiceNote,
+                        isRecording = isRecording
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                }
             }
 
             // 3. Screenshot Detection Banner
             if (uiState.unimportedScreenshotsCount > 0) {
-                item {
-                    ScreenshotSyncBanner(
-                        count = uiState.unimportedScreenshotsCount,
-                        isImporting = uiState.isImporting,
-                        onImport = { viewModel.importAllGalleryScreenshots() },
-                        onDismiss = { viewModel.dismissScreenshotBanner() }
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
+                item(span = StaggeredGridItemSpan.FullLine) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        ScreenshotSyncBanner(
+                            count = uiState.unimportedScreenshotsCount,
+                            isImporting = uiState.isImporting,
+                            onImport = { viewModel.importAllGalleryScreenshots() },
+                            onDismiss = { viewModel.dismissScreenshotBanner() }
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                    }
                 }
             }
 
             // 4. Resurfaced Memory / Intent Recall Card
             if (!isDismissedResurface && uiState.rediscoverItems.isNotEmpty() && uiState.selectedSource == null) {
                 val itemToResurface = uiState.rediscoverItems.first()
-                item {
-                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-                        TuckResurfacingCard(
-                            item = itemToResurface,
-                            onOpen = { onNavigateToDetail(itemToResurface.id) },
-                            onDismiss = { isDismissedResurface = true }
-                        )
+                item(span = StaggeredGridItemSpan.FullLine) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                            TuckResurfacingCard(
+                                item = itemToResurface,
+                                onOpen = { onNavigateToDetail(itemToResurface.id) },
+                                onDismiss = { isDismissedResurface = true }
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
                     }
-                    Spacer(modifier = Modifier.height(12.dp))
                 }
             }
 
             // 5. Platform Filter Chips Row
-            item {
-                HomePlatformChipsRow(
-                    selectedSource = uiState.selectedSource,
-                    onSelectSource = { viewModel.selectSource(it) }
-                )
-                Spacer(modifier = Modifier.height(12.dp))
+            item(span = StaggeredGridItemSpan.FullLine) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    HomePlatformChipsRow(
+                        selectedSource = uiState.selectedSource,
+                        onSelectSource = { viewModel.selectSource(it) }
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
             }
 
             // 6. Horizontal "Recently Saved" Carousel (when viewing All and items exist)
             if (uiState.selectedSource == null && uiState.items.isNotEmpty()) {
-                item {
-                    TuckSectionHeader(
-                        title = stringResource(R.string.home_recently_tucked),
-                        actionText = "See All (${uiState.items.size})"
-                    )
-                    RecentlySavedRail(
-                        items = uiState.items.take(6),
-                        onItemClick = onNavigateToDetail,
-                        onToggleFavorite = { id, isFav ->
-                            viewModel.toggleFavorite(id, isFav)
-                        }
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
+                item(span = StaggeredGridItemSpan.FullLine) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        TuckSectionHeader(
+                            title = stringResource(R.string.home_recently_tucked)
+                        )
+                        RecentlySavedRail(
+                            items = uiState.items.take(6),
+                            onItemClick = onNavigateToDetail,
+                            onToggleFavorite = { id, isFav ->
+                                viewModel.toggleFavorite(id, isFav)
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
                 }
             }
 
             // 6b. Collections rail — the fullest first, same tiles as the Collections tab
             if (uiState.selectedSource == null && uiState.collections.any { it.itemCount > 0 }) {
-                item {
-                    TuckSectionHeader(
-                        title = stringResource(R.string.home_collections),
-                        actionText = "View all"
-                    )
-                    CollectionsRail(
-                        collections = uiState.collections
-                            .sortedWith(
-                                compareByDescending<com.tuck.app.domain.model.Collection> { it.itemCount }
-                                    .thenBy { it.name.lowercase() }
-                            )
-                            .take(6),
-                        onCollectionClick = { onNavigateToCollections() }
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
+                item(span = StaggeredGridItemSpan.FullLine) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        TuckSectionHeader(
+                            title = stringResource(R.string.home_collections),
+                            actionText = stringResource(R.string.action_view_all),
+                            onAction = { onNavigateToCollections(null) }
+                        )
+                        CollectionsRail(
+                            collections = uiState.collections
+                                .sortedWith(
+                                    compareByDescending<com.tuck.app.domain.model.Collection> { it.itemCount }
+                                        .thenBy { it.name.lowercase() }
+                                )
+                                .take(6),
+                            onCollectionClick = { collectionId -> onNavigateToCollections(collectionId) }
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
                 }
             }
 
             // 7. Feed Title
-            item {
-                TuckSectionHeader(
-                    title = if (uiState.selectedSource != null) "${uiState.selectedSource} Items" else "All Tucked Items"
-                )
+            item(span = StaggeredGridItemSpan.FullLine) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    TuckSectionHeader(
+                        title = uiState.selectedSource?.let { stringResource(R.string.home_source_items, it) }
+                                ?: stringResource(R.string.home_all_tucked_items),
+                        trailing = if (uiState.items.isNotEmpty()) {
+                            {
+                                FeedViewModeToggle(
+                                    mode = feedViewMode,
+                                    onSelect = { viewModel.setFeedViewMode(it) }
+                                )
+                            }
+                        } else {
+                            null
+                        }
+                    )
+                }
             }
 
             // 8. Saved Items Feed or Empty State
             if (uiState.items.isEmpty()) {
-                item {
-                    TuckEmptyState(
-                        title = if (uiState.selectedSource != null) "No ${uiState.selectedSource} items found" else "Your drawer is empty.",
-                        description = if (uiState.selectedSource != null) "Tuck items from ${uiState.selectedSource} to see them here." else "Save articles, screenshots, PDFs, notes, or links.\nEverything is indexed locally and private.",
-                        actionLabel = "Quick Save (+)",
-                        onAction = { showQuickAddSheet = true },
-                        modifier = Modifier.padding(top = 24.dp)
-                    )
+                item(span = StaggeredGridItemSpan.FullLine) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        TuckEmptyState(
+                            title = uiState.selectedSource?.let { stringResource(R.string.empty_no_source_items, it) }
+                                ?: stringResource(R.string.empty_drawer),
+                            description = uiState.selectedSource?.let {
+                                stringResource(R.string.empty_no_source_body, it)
+                            } ?: stringResource(R.string.empty_drawer_body),
+                            actionLabel = stringResource(R.string.action_quick_save),
+                            onAction = { showQuickAddSheet = true },
+                            modifier = Modifier.padding(top = 24.dp)
+                        )
+                    }
                 }
             } else {
-                items(uiState.items, key = { it.id }) { item ->
-                    Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-                        TuckContentCard(
-                            item = item,
-                            onLongPress = { quickActionsFor = item },
-                            onClick = { onNavigateToDetail(item.id) },
-                            onToggleFavorite = {
-                                viewModel.toggleFavorite(item.id, item.isFavorite)
-                            }
-                        )
+                items(
+                    items = uiState.items,
+                    key = { it.id },
+                    span = {
+                        if (feedViewMode == FeedViewMode.GRID) {
+                            StaggeredGridItemSpan.SingleLane
+                        } else {
+                            StaggeredGridItemSpan.FullLine
+                        }
+                    }
+                ) { item ->
+                    if (feedViewMode == FeedViewMode.GRID) {
+                        Box(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)) {
+                            TuckGridCard(
+                                item = item,
+                                onLongPress = { quickActionsFor = item },
+                                onClick = { onNavigateToDetail(item.id) }
+                            )
+                        }
+                    } else {
+                        Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                            TuckContentCard(
+                                item = item,
+                                onLongPress = { quickActionsFor = item },
+                                onClick = { onNavigateToDetail(item.id) },
+                                onToggleFavorite = {
+                                    viewModel.toggleFavorite(item.id, item.isFavorite)
+                                }
+                            )
+                        }
                     }
                 }
             }
         }
 
-        // Floating Action Button anchored to bottom-end
-        TuckFab(
-                    onClick = { showQuickAddSheet = true },
-                    contentDescription = stringResource(R.string.home_quick_save),
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(end = 16.dp, bottom = 16.dp)
-                )
+
     }
 
     quickActionsFor?.let { target ->
@@ -441,9 +533,7 @@ fun HomeScreen(
                 pasteContent = ""
                 showPasteDialog = true
             },
-            onRecordAudio = {
-                // Audio memo trigger
-            }
+            onRecordAudio = toggleVoiceNote
         )
     }
 
@@ -551,102 +641,136 @@ private fun HomeHeroHeader(
     val tuckColors = TuckTheme.colors
     val tuckShapes = TuckTheme.shapes
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = stringResource(R.string.home_my_stash),
-                    style = TuckTheme.typography.displayLarge,
-                    color = tuckColors.textPrimary
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                CountStat(
-                    savesCount = itemCount,
-                    foldersCount = folderCount
-                )
-            }
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Theme Switcher Quick Button
-                Surface(
-                    onClick = onOpenThemePicker,
-                    shape = tuckShapes.medium,
-                    color = tuckColors.surfaceCard,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.border),
-                    modifier = Modifier.size(44.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Filled.Palette,
-                            contentDescription = stringResource(R.string.home_switch_theme_palette),
-                            tint = tuckColors.accent,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                }
-
-                // Settings Screen Button
-                Surface(
-                    onClick = onNavigateToSettings,
-                    shape = tuckShapes.medium,
-                    color = tuckColors.surfaceCard,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.border),
-                    modifier = Modifier.size(44.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Filled.Settings,
-                            contentDescription = stringResource(R.string.home_settings),
-                            tint = tuckColors.textPrimary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // Large Search Field Trigger
-        Surface(
+    Box(modifier = Modifier.fillMaxWidth()) {
+        // Atmospheric brand wash diffusing from top
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp)
-                .clip(tuckShapes.pill)
-                .clickable { onNavigateToSearch() },
-            color = tuckColors.surfaceCard,
-            shape = tuckShapes.pill,
-            border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.border)
+                .height(160.dp)
+                .background(TuckGradients.canvasWash(tuckColors.accent, tuckColors.background))
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 18.dp),
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Search,
-                    contentDescription = stringResource(R.string.components_search),
-                    tint = tuckColors.accent,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = stringResource(R.string.home_search_anything_ocr_text_or_tags),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = tuckColors.textMuted
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.home_editorial_eyebrow),
+                        style = TuckTheme.typography.sectionLabel,
+                        color = tuckColors.accent
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.home_my_stash),
+                        style = TuckTheme.typography.displayLarge,
+                        color = tuckColors.textPrimary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    CountStat(
+                        savesCount = itemCount,
+                        foldersCount = folderCount
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val themeSource = remember { MutableInteractionSource() }
+                    // Theme Switcher Quick Button
+                    Surface(
+                        onClick = onOpenThemePicker,
+                        shape = tuckShapes.medium,
+                        color = tuckColors.surface,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.borderSubtle),
+                        modifier = Modifier
+                            .size(48.dp)
+                            .pressScale(themeSource)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Filled.Palette,
+                                contentDescription = stringResource(R.string.home_switch_theme_palette),
+                                tint = tuckColors.accent,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+
+                    val settingsSource = remember { MutableInteractionSource() }
+                    // Settings Screen Button
+                    Surface(
+                        onClick = onNavigateToSettings,
+                        shape = tuckShapes.medium,
+                        color = tuckColors.surface,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.borderSubtle),
+                        modifier = Modifier
+                            .size(48.dp)
+                            .pressScale(settingsSource)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Filled.Settings,
+                                contentDescription = stringResource(R.string.home_settings),
+                                tint = tuckColors.textPrimary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            val searchSource = remember { MutableInteractionSource() }
+            // Large Search Field Trigger
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(58.dp)
+                    .pressScale(searchSource)
+                    .shadow(
+                        elevation = 2.dp,
+                        shape = tuckShapes.pill,
+                        ambientColor = tuckColors.accent.copy(alpha = 0.08f),
+                        spotColor = tuckColors.accent.copy(alpha = 0.08f)
+                    )
+                    .clip(tuckShapes.pill)
+                    .clickable(
+                        interactionSource = searchSource,
+                        indication = ripple(color = tuckColors.accent),
+                        onClick = onNavigateToSearch
+                    ),
+                color = tuckColors.surface,
+                shape = tuckShapes.pill,
+                border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.borderSubtle)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 18.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Search,
+                        contentDescription = stringResource(R.string.components_search),
+                        tint = tuckColors.accent,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = stringResource(R.string.home_search_anything_ocr_text_or_tags),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = tuckColors.textMuted
+                    )
+                }
             }
         }
     }
@@ -663,41 +787,40 @@ private fun HomeQuickActionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 20.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         QuickActionButton(
             label = stringResource(R.string.home_note),
             sublabel = stringResource(R.string.home_quick_note),
-            icon = Icons.Filled.Notes,
-            tint = TuckTheme.colors.palette[PaletteSlot.PRIMARY_CORE].fill,
+            icon = Icons.Rounded.EditNote,
+            slot = PaletteSlot.PRIMARY_CORE,
             modifier = Modifier.weight(1f),
             onClick = onNote
         )
         QuickActionButton(
             label = stringResource(R.string.home_scan),
             sublabel = stringResource(R.string.home_document),
-            icon = Icons.Filled.CameraAlt,
-            tint = TuckTheme.colors.palette[PaletteSlot.SECONDARY_CORE].fill,
+            icon = Icons.Rounded.DocumentScanner,
+            slot = PaletteSlot.SECONDARY_CORE,
             modifier = Modifier.weight(1f),
             onClick = onScan
         )
         QuickActionButton(
             label = stringResource(R.string.home_doc_pdf),
             sublabel = stringResource(R.string.home_add_file),
-            icon = Icons.Filled.PictureAsPdf,
-            tint = TuckTheme.colors.palette[PaletteSlot.TERTIARY_CORE].fill,
+            icon = Icons.Rounded.UploadFile,
+            slot = PaletteSlot.TERTIARY_CORE,
             modifier = Modifier.weight(1f),
             onClick = onPdf
         )
         QuickActionButton(
             label = stringResource(if (isRecording) R.string.home_stop else R.string.home_voice),
             sublabel = stringResource(if (isRecording) R.string.home_recording else R.string.home_record),
-            icon = if (isRecording) Icons.Filled.Stop else Icons.Filled.Mic,
+            icon = if (isRecording) Icons.Rounded.Stop else Icons.Rounded.GraphicEq,
             // The recording state gets the deep tone so a live mic is unmistakable.
-            tint = TuckTheme.colors.palette[
-                if (isRecording) PaletteSlot.PRIMARY_DEEP else PaletteSlot.PRIMARY_SOFT
-            ].fill,
+            slot = if (isRecording) PaletteSlot.PRIMARY_DEEP else PaletteSlot.SECONDARY_DEEP,
+            isActive = isRecording,
             modifier = Modifier.weight(1f),
             onClick = onVoice
         )
@@ -709,59 +832,83 @@ private fun QuickActionButton(
     label: String,
     sublabel: String,
     icon: ImageVector,
-    tint: Color,
+    slot: PaletteSlot,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isActive: Boolean = false
 ) {
-    val tuckColors = TuckTheme.colors
+    val colors = TuckTheme.colors
+    val palette = colors.palette[slot]
     val interactionSource = remember { MutableInteractionSource() }
+    val shape = RoundedCornerShape(22.dp)
+    val iconShape = RoundedCornerShape(16.dp)
 
-    // Same treatment as an empty collection tile: tinted ground, saturated icon chip.
-    // The four actions then read as one family with the rest of the app rather than as
-    // a separate row of outlined buttons.
     Column(
         modifier = modifier
-            .pressScale(interactionSource)
-            .clip(RoundedCornerShape(16.dp))
-            .background(TuckGradients.tint(tint, tuckColors.isDark))
-            .border(1.dp, TuckGradients.tintEdge(tint, tuckColors.isDark), RoundedCornerShape(16.dp))
+            .pressScale(interactionSource, pressedScale = 0.95f)
+            .clip(shape)
+            .background(
+                Brush.verticalGradient(
+                    listOf(TuckGradients.tint(palette.fill, colors.isDark), colors.surface)
+                )
+            )
+            .border(
+                1.dp,
+                if (isActive) palette.fill else colors.borderSubtle,
+                shape
+            )
+            .semantics(mergeDescendants = true) {
+                if (isActive) liveRegion = LiveRegionMode.Polite
+            }
             .clickable(
                 interactionSource = interactionSource,
-                indication = ripple(color = tint),
+                indication = ripple(color = palette.fill),
+                role = Role.Button,
                 onClick = onClick
             )
-            .padding(vertical = 11.dp, horizontal = 8.dp),
+            .padding(vertical = 14.dp, horizontal = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
-            modifier = Modifier
-                .size(28.dp)
-                .clip(RoundedCornerShape(9.dp))
-                .background(TuckGradients.tile(tint, tuckColors.isDark)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = tuckColors.onScrim,
-                modifier = Modifier.size(15.dp)
+        // A tilted backing card gives the four tools a shared, tactile silhouette.
+        // Keep the actual glyph upright and use the palette's contrast-tested foreground.
+        Box(Modifier.size(52.dp), contentAlignment = Alignment.Center) {
+            Box(
+                Modifier.size(44.dp).rotate(-10f)
+                    .background(palette.fill.copy(alpha = 0.18f), iconShape)
             )
+            Box(
+                Modifier.size(42.dp)
+                    .shadow(3.dp, iconShape, ambientColor = palette.fill.copy(alpha = 0.2f),
+                        spotColor = palette.fill.copy(alpha = 0.2f))
+                    .background(palette.fill, iconShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = palette.onFill, modifier = Modifier.size(26.dp))
+            }
+            if (isActive) {
+                Box(
+                    Modifier.align(Alignment.TopEnd).size(10.dp)
+                        .background(colors.destructive, CircleShape)
+                        .border(2.dp, colors.surface, CircleShape)
+                )
+            }
         }
-
-        Spacer(modifier = Modifier.height(7.dp))
-
+        Spacer(Modifier.height(9.dp))
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
-            color = tuckColors.textPrimary,
-            maxLines = 1
+            color = colors.textPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
+        Spacer(Modifier.height(2.dp))
         Text(
             text = sublabel,
             style = MaterialTheme.typography.labelSmall,
-            color = tuckColors.textMuted,
-            maxLines = 1
+            color = colors.textSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
@@ -772,20 +919,20 @@ private fun HomePlatformChipsRow(
     onSelectSource: (String?) -> Unit
 ) {
     val platforms = listOf(
-        "All" to null,
-        "Screenshots" to "Screenshots",
+        stringResource(R.string.filter_all) to null,
+        stringResource(R.string.filter_screenshots) to "Screenshots",
         "Reddit" to "Reddit",
         "YouTube" to "YouTube",
         "Twitter / X" to "Twitter",
         "LinkedIn" to "LinkedIn",
         "Instagram" to "Instagram",
-        "Articles" to "Articles",
-        "Education" to "Education",
-        "Finance" to "Finance",
-        "Programming" to "Programming",
+        stringResource(R.string.filter_articles) to "Articles",
+        stringResource(R.string.filter_education) to "Education",
+        stringResource(R.string.filter_finance) to "Finance",
+        stringResource(R.string.filter_programming) to "Programming",
         "Web" to "Web",
-        "Notes" to "Notes",
-        "PDFs" to "PDFs"
+        stringResource(R.string.filter_notes) to "Notes",
+        stringResource(R.string.filter_pdfs) to "PDFs"
     )
 
     LazyRow(
@@ -813,11 +960,17 @@ private fun RecentlySavedRail(
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(items, key = { "rail_${it.id}" }) { item ->
-            Box(modifier = Modifier.width(260.dp)) {
+            Box(modifier = Modifier.width(260.dp).height(RailCardHeight)) {
                 TuckContentCard(
                     item = item,
                     onClick = { onItemClick(item.id) },
-                    onToggleFavorite = { onToggleFavorite(item.id, item.isFavorite) }
+                    onToggleFavorite = { onToggleFavorite(item.id, item.isFavorite) },
+                    uniformMedia = true,
+                    mediaHeight = RailMediaHeight,
+                    showDescription = false,
+                    bodyPadding = RailBodyPadding,
+                    showFooterMeta = false,
+                    modifier = Modifier.fillMaxHeight()
                 )
             }
         }
@@ -923,6 +1076,7 @@ private fun QuickThemePickerSheet(
     onDismiss: () -> Unit
 ) {
     val tuckColors = TuckTheme.colors
+    val tuckShapes = TuckTheme.shapes
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
@@ -931,9 +1085,13 @@ private fun QuickThemePickerSheet(
         containerColor = tuckColors.surface,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
+        // Six preview cards are taller than any phone's sheet, so without this the last
+        // three palettes were drawn off the bottom edge and could not be reached at all —
+        // Cobalt, Plum and Harbor were effectively unselectable from here.
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 8.dp)
                 .padding(bottom = 36.dp)
         ) {
@@ -959,20 +1117,58 @@ private fun QuickThemePickerSheet(
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(tuckShapes.pill)
+                    .background(tuckColors.surfaceCard)
+                    .border(1.dp, tuckColors.borderSubtle, tuckShapes.pill)
+                    .padding(3.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 listOf(
-                    "System" to com.tuck.app.domain.repository.AppTheme.SYSTEM,
-                    "Light" to com.tuck.app.domain.repository.AppTheme.LIGHT,
-                    "Dark" to com.tuck.app.domain.repository.AppTheme.DARK
-                ).forEach { (label, theme) ->
-                    TuckCategoryChip(
-                        label = label,
-                        isSelected = currentTheme == theme,
-                        onClick = { onSelectTheme(theme) },
-                        modifier = Modifier.weight(1f)
-                    )
+                    Triple(stringResource(R.string.theme_system), com.tuck.app.domain.repository.AppTheme.SYSTEM, Icons.Filled.SettingsBrightness),
+                    Triple(stringResource(R.string.theme_light), com.tuck.app.domain.repository.AppTheme.LIGHT, Icons.Filled.LightMode),
+                    Triple(stringResource(R.string.theme_dark), com.tuck.app.domain.repository.AppTheme.DARK, Icons.Filled.DarkMode)
+                ).forEach { (label, theme, icon) ->
+                    val isSelected = currentTheme == theme
+                    val chipSource = remember { MutableInteractionSource() }
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(38.dp)
+                            .pressScale(chipSource, pressedScale = 0.95f)
+                            .clip(tuckShapes.pill)
+                            .background(if (isSelected) tuckColors.surface else Color.Transparent)
+                            .then(
+                                if (isSelected) Modifier.border(1.dp, tuckColors.border, tuckShapes.pill)
+                                else Modifier
+                            )
+                            .clickable(
+                                interactionSource = chipSource,
+                                indication = ripple(color = tuckColors.accent),
+                                onClick = { onSelectTheme(theme) }
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                tint = if (isSelected) tuckColors.accent else tuckColors.textMuted,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) tuckColors.textPrimary else tuckColors.textSecondary
+                            )
+                        }
+                    }
                 }
             }
 

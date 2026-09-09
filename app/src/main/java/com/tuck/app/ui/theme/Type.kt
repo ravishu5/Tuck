@@ -6,13 +6,13 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// Typography hierarchy matching the Tuck specification (Manrope-inspired metrics)
+// Editorial headings paired with quiet, readable interface typography.
 val TuckTypography = Typography(
     headlineLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.ExtraBold,
-        fontSize = 28.sp,
-        lineHeight = 34.sp,
+        fontFamily = FontFamily.Serif,
+        fontWeight = FontWeight.Normal,
+        fontSize = 34.sp,
+        lineHeight = 40.sp,
         letterSpacing = (-0.5).sp
     ),
     headlineMedium = TextStyle(
@@ -48,15 +48,15 @@ val TuckTypography = Typography(
     ),
     bodyLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Medium,
-        fontSize = 15.sp,
-        lineHeight = 22.sp
+        fontWeight = FontWeight.Normal,
+        fontSize = 16.sp,
+        lineHeight = 24.sp
     ),
     bodyMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Medium,
-        fontSize = 13.sp,
-        lineHeight = 19.sp
+        fontWeight = FontWeight.Normal,
+        fontSize = 14.sp,
+        lineHeight = 21.sp
     ),
     bodySmall = TextStyle(
         fontFamily = FontFamily.SansSerif,
@@ -89,17 +89,17 @@ val TuckTypography = Typography(
  */
 data class TuckTypographyExtension(
     val displayLarge: TextStyle = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Black,
-        fontSize = 30.sp,
-        lineHeight = 36.sp,
+        fontFamily = FontFamily.Serif,
+        fontWeight = FontWeight.Normal,
+        fontSize = 38.sp,
+        lineHeight = 44.sp,
         letterSpacing = (-0.6).sp
     ),
     val displayMedium: TextStyle = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.ExtraBold,
-        fontSize = 24.sp,
-        lineHeight = 30.sp,
+        fontFamily = FontFamily.Serif,
+        fontWeight = FontWeight.Normal,
+        fontSize = 28.sp,
+        lineHeight = 34.sp,
         letterSpacing = (-0.4).sp
     ),
     val sectionLabel: TextStyle = TextStyle(

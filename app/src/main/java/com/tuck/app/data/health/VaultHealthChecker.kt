@@ -1,5 +1,6 @@
 package com.tuck.app.data.health
 
+import com.tuck.app.R
 import android.content.Context
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
@@ -57,43 +58,43 @@ class VaultHealthChecker @Inject constructor(
             findings = listOf(
                 HealthFinding(
                     id = UNSEARCHABLE,
-                    title = "Search index",
-                    detail = if (unsearchable.isEmpty()) "Every save is searchable."
+                    title = context.getString(R.string.health_search_index),
+                    detail = if (unsearchable.isEmpty()) context.getString(R.string.health_search_index_ok)
                     else "${unsearchable.size} ${saves(unsearchable.size)} cannot be found by " +
                         "search. They are safe - only the index is out of date.",
                     affectedCount = unsearchable.size,
                     severity = severity(unsearchable.size, HealthFinding.Severity.PROBLEM),
-                    repairLabel = "Rebuild index".takeIf { unsearchable.isNotEmpty() }
+                    repairLabel = context.getString(R.string.health_rebuild_index).takeIf { unsearchable.isNotEmpty() }
                 ),
                 HealthFinding(
                     id = STALLED,
-                    title = "Background processing",
-                    detail = if (stalled.isEmpty()) "Nothing is stuck."
+                    title = context.getString(R.string.health_background_processing),
+                    detail = if (stalled.isEmpty()) context.getString(R.string.health_background_ok)
                     else "${stalled.size} ${saves(stalled.size)} never finished processing, so " +
                         "titles, previews or recognised text may be missing.",
                     affectedCount = stalled.size,
                     severity = severity(stalled.size, HealthFinding.Severity.ATTENTION),
-                    repairLabel = "Try again".takeIf { stalled.isNotEmpty() }
+                    repairLabel = context.getString(R.string.health_try_again).takeIf { stalled.isNotEmpty() }
                 ),
                 HealthFinding(
                     id = MISSING_MEDIA,
-                    title = "Missing files",
-                    detail = if (missingMedia.isEmpty()) "Every saved file is present."
+                    title = context.getString(R.string.health_missing_files),
+                    detail = if (missingMedia.isEmpty()) context.getString(R.string.health_missing_files_ok)
                     else "${missingMedia.size} ${saves(missingMedia.size)} point to a file that is " +
                         "no longer on this device. The save itself is kept.",
                     affectedCount = missingMedia.size,
                     severity = severity(missingMedia.size, HealthFinding.Severity.PROBLEM),
-                    repairLabel = "Clear broken links".takeIf { missingMedia.isNotEmpty() }
+                    repairLabel = context.getString(R.string.health_clear_broken_links).takeIf { missingMedia.isNotEmpty() }
                 ),
                 HealthFinding(
                     id = ORPHANED_FILES,
-                    title = "Unused storage",
-                    detail = if (orphans.isEmpty()) "No wasted space."
+                    title = context.getString(R.string.health_unused_storage),
+                    detail = if (orphans.isEmpty()) context.getString(R.string.health_unused_storage_ok)
                     else "${orphans.size} ${files(orphans.size)} on this device belong to no save, " +
                         "using ${formatBytes(orphanBytes)}.",
                     affectedCount = orphans.size,
                     severity = severity(orphans.size, HealthFinding.Severity.ATTENTION),
-                    repairLabel = "Reclaim space".takeIf { orphans.isNotEmpty() },
+                    repairLabel = context.getString(R.string.health_reclaim_space).takeIf { orphans.isNotEmpty() },
                     reclaimableBytes = orphanBytes
                 )
             )
@@ -106,13 +107,13 @@ class VaultHealthChecker @Inject constructor(
             STALLED -> retryStalled()
             MISSING_MEDIA -> clearBrokenLinks()
             ORPHANED_FILES -> deleteOrphans()
-            else -> RepairResult(summary = "Nothing to do.")
+            else -> RepairResult(summary = context.getString(R.string.health_nothing_to_do))
         }
     }
 
     suspend fun repairAll(report: HealthReport): RepairResult = withContext(Dispatchers.IO) {
         val results = report.findings.filterNot { it.isHealthy }.map { repair(it.id) }
-        if (results.isEmpty()) return@withContext RepairResult(summary = "Nothing needed fixing.")
+        if (results.isEmpty()) return@withContext RepairResult(summary = context.getString(R.string.health_nothing_needed_fixing))
         RepairResult(
             summary = results.joinToString(" ") { it.summary },
             itemsReindexed = results.sumOf { it.itemsReindexed },

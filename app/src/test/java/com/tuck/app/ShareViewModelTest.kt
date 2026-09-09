@@ -67,6 +67,7 @@ class ShareViewModelTest {
 
         viewModel = ShareViewModel(
             shareParser = shareParser,
+            context = context,
             savedItemRepository = savedItemRepository,
             collectionRepository = collectionRepository,
             fileStorageService = fileStorageService,

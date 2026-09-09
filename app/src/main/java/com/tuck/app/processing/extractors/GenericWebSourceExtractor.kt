@@ -36,6 +36,14 @@ class GenericWebSourceExtractor @Inject constructor() : SourceExtractor {
 
                 val siteName = doc.select("meta[property=og:site_name]").attr("content").ifBlank { domain }
 
+                val canonical = doc.select("link[rel=canonical]").attr("href").trim()
+                    .takeIf { it.isNotBlank() }
+                    ?.let { resolve(url, it) }
+                val favicon = doc.select("link[rel~=(?i)^(shortcut|icon|apple-touch-icon)]")
+                    .attr("href").trim()
+                    .takeIf { it.isNotBlank() }
+                    ?.let { resolve(url, it) }
+
                 // Article body extraction fallback (main paragraph text)
                 val paragraphs = doc.select("article p, main p, div[itemprop=articleBody] p, p")
                 val articleText = paragraphs.take(10).joinToString("\n\n") { it.text() }.take(4000)
@@ -47,8 +55,10 @@ class GenericWebSourceExtractor @Inject constructor() : SourceExtractor {
                     bodyText = if (articleText.isNotBlank()) articleText else ogDesc,
                     authorDisplay = author,
                     community = siteName,
-                    leadImageUrl = ogImage,
-                    mediaUrls = if (ogImage != null) listOf(ogImage) else emptyList()
+                    leadImageUrl = ogImage?.let { resolve(url, it) },
+                    mediaUrls = listOfNotNull(ogImage?.let { resolve(url, it) }),
+                    canonicalUrl = canonical ?: url,
+                    faviconUrl = favicon
                 )
             } catch (e: Exception) {
                 // Fall through
@@ -60,6 +70,13 @@ class GenericWebSourceExtractor @Inject constructor() : SourceExtractor {
             title = domain,
             community = domain
         )
+    }
+
+    /** Absolutises a page-relative href; a bad one is discarded rather than stored broken. */
+    private fun resolve(base: String, href: String): String? = try {
+        URI(base).resolve(href).toString()
+    } catch (e: Exception) {
+        href.takeIf { it.startsWith("http") }
     }
 
     private fun extractDomain(url: String): String {

@@ -1,5 +1,6 @@
 package com.tuck.app.ui.home
 
+import com.tuck.app.R
 import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
@@ -8,18 +9,22 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.tuck.app.data.local.storage.FileStorageService
-import com.tuck.app.domain.memory.RelatedItemsEngine
 import com.tuck.app.domain.model.Collection
 import com.tuck.app.domain.model.ContentType
 import com.tuck.app.domain.model.SavedItem
 import com.tuck.app.domain.repository.CollectionRepository
 import com.tuck.app.domain.repository.SavedItemRepository
 import com.tuck.app.processing.GalleryScreenshot
+import com.tuck.app.domain.memory.rediscoverPicks
 import com.tuck.app.processing.ItemProcessingWorker
+import com.tuck.app.processing.QuickRecordController
 import com.tuck.app.processing.ScreenshotImporter
 import com.tuck.app.processing.UrlMetadataProcessor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
@@ -59,11 +64,10 @@ class HomeViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val savedItemRepository: SavedItemRepository,
     private val collectionRepository: CollectionRepository,
-    private val voiceNoteRecorder: com.tuck.app.processing.VoiceNoteRecorder,
+    private val quickRecordController: com.tuck.app.processing.QuickRecordController,
     private val screenshotImporter: ScreenshotImporter,
     private val fileStorageService: FileStorageService,
     private val urlMetadataProcessor: UrlMetadataProcessor,
-    private val relatedItemsEngine: RelatedItemsEngine,
     private val settingsRepository: com.tuck.app.domain.repository.SettingsRepository
 ) : ViewModel() {
 
@@ -76,6 +80,12 @@ class HomeViewModel @Inject constructor(
     fun setTheme(theme: com.tuck.app.domain.repository.AppTheme) {
         viewModelScope.launch {
             settingsRepository.updateTheme(theme)
+        }
+    }
+
+    fun setFeedViewMode(mode: com.tuck.app.domain.repository.FeedViewMode) {
+        viewModelScope.launch {
+            settingsRepository.setFeedViewMode(mode)
         }
     }
 
@@ -111,31 +121,67 @@ class HomeViewModel @Inject constructor(
         FilterState(category = category, type = type, source = source)
     }
 
+    /**
+     * Fixed for the life of the screen, so the rediscover row keeps the same four saves while
+     * the reader is looking at it instead of re-dealing whenever anything in the vault changes.
+     */
+    private val rediscoverSeed = System.currentTimeMillis()
+
     private val baseDataFlow = combine(
         savedItemRepository.getAllActiveItems(),
-        collectionRepository.getAllCollections(),
-        relatedItemsEngine.getRediscoverItems(4)
-    ) { allItems, collections, rediscover ->
-        BaseHomeData(allItems = allItems, collections = collections, rediscoverItems = rediscover)
+        collectionRepository.getAllCollections()
+    ) { allItems, collections ->
+        // Derived from the items already in hand. Collecting the engine's own flow ran the same
+        // query and the same entity mapping a second time on every change.
+        BaseHomeData(
+            allItems = allItems,
+            collections = collections,
+            rediscoverItems = allItems.rediscoverPicks(limit = 4, seed = rediscoverSeed)
+        )
     }
 
     init {
-        viewModelScope.launch {
+        // Housekeeping, not the feed. None of it is needed to draw the home screen, and all of
+        // it used to run on the main thread while the first frame was trying to get out: a
+        // MediaStore scan for screenshots, and a WorkManager enqueue per item missing a
+        // thumbnail. Off the main thread, and behind the feed rather than in front of it.
+        viewModelScope.launch(Dispatchers.Default) {
             collectionRepository.ensureDefaultCollections()
-            checkGalleryScreenshots()
 
-            // Heal any previously saved URLs missing thumbnails
-            try {
-                val active = savedItemRepository.getAllActiveItems().first()
-                for (item in active) {
-                    if ((item.contentType == ContentType.URL || item.contentType == ContentType.VIDEO) && item.thumbnailPath.isNullOrBlank() && !item.originalUrl.isNullOrBlank()) {
-                        val workRequest = OneTimeWorkRequestBuilder<ItemProcessingWorker>()
-                            .setInputData(workDataOf(ItemProcessingWorker.KEY_ITEM_ID to item.id))
-                            .build()
-                        WorkManager.getInstance(context).enqueue(workRequest)
-                    }
+            healMissingThumbnails()
+
+            // Last, because it is the slowest and the least urgent — the banner it feeds can
+            // appear a moment after the vault does.
+            checkGalleryScreenshots()
+        }
+    }
+
+    /**
+     * Re-queues processing for saves whose preview never arrived.
+     *
+     * Reads the vault once rather than watching it: this is a one-off repair at launch, and
+     * collecting the live query would re-run the whole sweep on every later change.
+     */
+    private suspend fun healMissingThumbnails() {
+        try {
+            val active = savedItemRepository.getAllActiveItems().first()
+            val needsThumbnail = active.filter { item ->
+                (item.contentType == ContentType.URL || item.contentType == ContentType.VIDEO) &&
+                    item.thumbnailPath.isNullOrBlank() &&
+                    !item.originalUrl.isNullOrBlank()
+            }
+            if (needsThumbnail.isEmpty()) return
+
+            // One enqueue call rather than one per item: each is a binder round trip and a
+            // write, and a vault with a hundred unprocessed links paid for all of them.
+            WorkManager.getInstance(context).enqueue(
+                needsThumbnail.map { item ->
+                    OneTimeWorkRequestBuilder<ItemProcessingWorker>()
+                        .setInputData(workDataOf(ItemProcessingWorker.KEY_ITEM_ID to item.id))
+                        .build()
                 }
-            } catch (_: Exception) {}
+            )
+        } catch (_: Exception) {
         }
     }
 
@@ -193,14 +239,21 @@ class HomeViewModel @Inject constructor(
             isImporting = isImporting,
             isLoading = false
         )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = HomeUiState(isLoading = true)
-    )
+    }
+        // The filter above walks every saved item and lowercases several of its fields, and a
+        // `combine` runs its transform on whoever collects it — which for `stateIn(viewModelScope)`
+        // is the main thread. So every database change re-filtered the whole vault between
+        // frames, which is what made opening the app stutter and the feed appear to redraw.
+        // `flowOn` moves the combine and everything upstream of it onto a worker.
+        .flowOn(Dispatchers.Default)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = HomeUiState(isLoading = true)
+        )
 
     fun checkGalleryScreenshots() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.Default) {
             try {
                 val recent = screenshotImporter.getRecentScreenshots(limit = 30)
                 _unimportedScreenshots.value = recent
@@ -250,7 +303,7 @@ class HomeViewModel @Inject constructor(
                 val domain = urlMetadataProcessor.extractDomain(trimmed)
                 Quad(ContentType.URL, domain.ifBlank { "Shared Link" }, trimmed, null)
             } else {
-                val titlePreview = trimmed.lines().firstOrNull { it.isNotBlank() }?.take(50) ?: "Quick Note"
+                val titlePreview = trimmed.lines().firstOrNull { it.isNotBlank() }?.take(50) ?: context.getString(R.string.title_quick_note)
                 Quad(ContentType.TEXT, titlePreview, null, trimmed)
             }
 
@@ -281,7 +334,7 @@ class HomeViewModel @Inject constructor(
                     val saveResult = fileStorageService.saveImageFromUri(uri)
                     val item = SavedItem(
                         contentType = ContentType.IMAGE,
-                        title = "Saved Photo",
+                        title = context.getString(R.string.title_saved_photo),
                         localFilePath = saveResult.localFilePath,
                         thumbnailPath = saveResult.thumbnailPath,
                         mimeType = "image/jpeg",
@@ -305,47 +358,50 @@ class HomeViewModel @Inject constructor(
 
     // --- Voice notes -------------------------------------------------------------
 
-    private val _isRecording = MutableStateFlow(false)
-    val isRecording: StateFlow<Boolean> = _isRecording.asStateFlow()
+    /**
+     * The recorder's own state, not a copy of it.
+     *
+     * Home is one of several ways into the same microphone — the Quick Settings tile and the
+     * launcher shortcut are others — so it reads the shared controller rather than tracking a
+     * flag of its own, and a memo started from the tile shows as recording here too.
+     */
+    val isRecording: StateFlow<Boolean> = quickRecordController.state
+        .map { it is QuickRecordController.State.Recording }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    /**
+     * Whether the recording currently running was started from this screen.
+     *
+     * Home tears down its recording when it goes away, which is right for one it started and
+     * badly wrong for one it did not: a memo begun from the Quick Settings tile is meant to
+     * outlive every screen, and would otherwise be cancelled the moment the reader switched
+     * tabs with the app still open.
+     */
+    private var startedFromHome = false
 
     fun startVoiceNote(): Boolean {
-        val started = voiceNoteRecorder.start()
-        _isRecording.value = started
-        return started
+        if (quickRecordController.isRecording) return true
+        startedFromHome = true
+        viewModelScope.launch { quickRecordController.start() }
+        return true
     }
 
     fun cancelVoiceNote() {
-        voiceNoteRecorder.cancel()
-        _isRecording.value = false
+        startedFromHome = false
+        viewModelScope.launch { quickRecordController.cancel() }
+    }
+
+    /** Cancels only a recording this screen owns. See [startedFromHome]. */
+    fun cancelVoiceNoteIfOwned() {
+        if (startedFromHome) cancelVoiceNote()
     }
 
     /** Stops recording and saves it. Returns false when nothing usable was captured. */
     fun stopAndSaveVoiceNote(onResult: (Boolean) -> Unit) {
-        val note = voiceNoteRecorder.stop()
-        _isRecording.value = false
-        if (note == null) {
-            onResult(false)
-            return
-        }
+        startedFromHome = false
         viewModelScope.launch {
-            val seconds = (note.durationMs / 1000).coerceAtLeast(1)
-            val item = SavedItem(
-                contentType = ContentType.AUDIO,
-                title = "Voice note · ${seconds}s",
-                localFilePath = note.file.absolutePath,
-                mimeType = "audio/mp4",
-                sourceDomain = "Voice note",
-                sourceApp = "Tuck"
-            )
-            val id = savedItemRepository.insertItem(item)
-            if (id > 0) {
-                WorkManager.getInstance(context).enqueue(
-                    OneTimeWorkRequestBuilder<ItemProcessingWorker>()
-                        .setInputData(workDataOf(ItemProcessingWorker.KEY_ITEM_ID to id))
-                        .build()
-                )
-            }
-            onResult(id > 0)
+            val result = quickRecordController.stopAndSave()
+            onResult(result is QuickRecordController.SaveResult.Saved)
         }
     }
 
@@ -357,7 +413,7 @@ class HomeViewModel @Inject constructor(
                 val saveResult = fileStorageService.saveStreamUri(uri, mimeType)
                 val item = SavedItem(
                     contentType = if (isPdf) ContentType.PDF else ContentType.DOCUMENT,
-                    title = titleOverride ?: "Imported Document",
+                    title = titleOverride ?: context.getString(R.string.title_imported_document),
                     localFilePath = saveResult.localFilePath,
                     thumbnailPath = saveResult.thumbnailPath,
                     mimeType = mimeType,

@@ -15,6 +15,7 @@ room = "2.6.1"
 work = "2.10.0"
 hiltWork = "1.2.0"
 coil = "2.7.0"
+osmdroid = "6.1.20"
 jsoup = "1.18.3"
 mlkitTextRecognition = "16.0.1"
 mlkitDocumentScanner = "16.0.0-beta1"
@@ -72,6 +73,7 @@ mlkit-document-scanner = { group = "com.google.android.gms", name = "play-servic
 
 # Jsoup
 jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
+osmdroid-android = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
 
 # Coroutines & Serialization
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }

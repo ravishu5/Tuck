@@ -155,6 +155,10 @@ dependencies {
     // Jsoup
     implementation(libs.jsoup)
 
+    // OpenStreetMap tiles for the travel map. No API key and no billing account, unlike the
+    // Maps SDK; tiles are fetched per view from OSM's servers.
+    implementation(libs.osmdroid.android)
+
     // DataStore
     implementation(libs.androidx.datastore.preferences)
 

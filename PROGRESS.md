@@ -111,12 +111,16 @@ app on a device. Not when the code merely exists, and not when a class exists bu
 ---
 
 ## Milestone 4: Jetpack Compose UI & Design System
-- [x] 5 multi-hue theme families (Linen, Noir, Forest, Cobalt, Plum) in Light & Dark built on OKLCH perceptual color math
+- [x] 6 multi-hue theme families (Linen, Noir, Forest, Cobalt, Plum, Harbor) in Light & Dark built on OKLCH perceptual color math
   - 8 coordinated canonical slots: `TERRACOTTA`, `AMBER`, `MUSTARD`, `SAGE`, `TEAL`, `DENIM`, `PLUM`, `ROSE`
   - Automated contrast calculation ($\ge 4.5:1$ foreground text, $\ge 3:1$ canvas tile separation)
   - Pairwise OKLab distinctness floor ($\Delta E \ge 0.06$) and Viénot 1999 CVD verification (Deuteranopia, Protanopia, Tritanopia)
-  - 10/10 theme palettes passing automated verification in `PaletteValidationTest`
+  - 12/12 theme palettes passing automated verification in `PaletteValidationTest`
   - Debug Palette & Theme Gallery screen with live swatch coords & CVD simulation rows
+- [x] Tactile elevation, spring physics (`pressScale`), subtle top `sheen` highlights, and ambient `canvasWash` headers across Home, Collections, and Settings
+- [x] Mode-aware `TuckThemePreviewCard` matching active light/dark state with 8-capsule swatch bar and live theme indicator
+- [x] Segmented pill appearance mode selector (`SYSTEM`, `LIGHT`, `DARK`) in Quick Theme Picker and Settings
+- [x] Floating nav bar with accent border ring, tactile scale, and jeweled gradient `CaptureButton` with radial sheen
 - [x] 4-tab navigation (Home, Inbox, Collections, Search) + global FAB
 - [x] Inbox release valve with swipe actions
 - [x] Collections with multi-home item support & deterministic 8-slot non-adjacent hue assignment

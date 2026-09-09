@@ -54,12 +54,12 @@ class ReminderActionReceiver : BroadcastReceiver() {
                 when (intent.action) {
                     ACTION_DONE -> {
                         savedItemDao.setCompletedAt(itemId, System.currentTimeMillis())
-                        savedItemDao.setRemindAt(itemId, null)
+                        savedItemDao.setRemindAt(itemId, null, null)
                         reminderScheduler.cancel(itemId)
                     }
                     ACTION_SNOOZE -> {
                         val next = System.currentTimeMillis() + TimeUnit.DAYS.toMillis(1)
-                        savedItemDao.setRemindAt(itemId, next)
+                        savedItemDao.rescheduleRemindAt(itemId, next)
                         reminderScheduler.schedule(itemId, next)
                     }
                 }

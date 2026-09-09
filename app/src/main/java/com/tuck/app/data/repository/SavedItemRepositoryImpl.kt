@@ -267,8 +267,9 @@ class SavedItemRepositoryImpl @Inject constructor(
         Unit
     }
 
-    override suspend fun setReminder(id: Long, remindAt: Long?) {
-        savedItemDao.setRemindAt(id, remindAt)
+    override suspend fun setReminder(id: Long, remindAt: Long?, note: String?) {
+        // Clearing the reminder clears its note with it: the reason only made sense alongside it.
+        savedItemDao.setRemindAt(id, remindAt, note?.takeIf { remindAt != null && it.isNotBlank() })
         if (remindAt != null) {
             reminderScheduler.schedule(id, remindAt)
         } else {
@@ -281,7 +282,7 @@ class SavedItemRepositoryImpl @Inject constructor(
         // A completed item should never nag; an un-completed one does not silently
         // regain the reminder it used to have.
         if (completed) {
-            savedItemDao.setRemindAt(id, null)
+            savedItemDao.setRemindAt(id, null, null)
             reminderScheduler.cancel(id)
         }
     }
@@ -300,6 +301,10 @@ class SavedItemRepositoryImpl @Inject constructor(
 
     override suspend fun findByImageHash(sha256: String): SavedItem? = withContext(Dispatchers.IO) {
         savedItemDao.findByImageHash(sha256)?.toDomain()
+    }
+
+    override suspend fun titleExists(title: String): Boolean = withContext(Dispatchers.IO) {
+        savedItemDao.titleExists(title)
     }
 
     override suspend fun addItemToCollection(itemId: Long, collectionId: Long) = withContext(Dispatchers.IO) {

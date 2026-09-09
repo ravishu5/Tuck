@@ -191,16 +191,23 @@ class ShareParser @Inject constructor(
                     )
                 }
 
+                // Instagram share sheets hand over three different hosts for the same post.
+                val isInstagram = listOf("instagram.com", "instagr.am", "ig.me").any { domain.contains(it) }
+                val isInstagramReel = isInstagram && listOf("/reel/", "/reels/", "/share/reel/", "/tv/")
+                    .any { foundUrl.contains(it, ignoreCase = true) }
+
                 val inferredType = when {
-                    domain.contains("instagram.com") && (foundUrl.contains("/reel/") || foundUrl.contains("/reels/") || foundUrl.contains("/tv/")) -> ContentType.VIDEO
+                    isInstagramReel -> ContentType.VIDEO
                     domain.contains("youtube.com") || domain.contains("youtu.be") || domain.contains("tiktok.com") -> ContentType.VIDEO
                     else -> ContentType.URL
                 }
 
                 val title = subject?.ifBlank { null }
-                    ?: if (remainingText.isNotBlank() && remainingText.length < 80) remainingText
-                    else if (domain.contains("instagram.com") && (foundUrl.contains("/reel/") || foundUrl.contains("/reels/"))) "Instagram Reel"
-                    else if (domain.contains("instagram.com")) "Instagram Post"
+                    // Shares often carry the link again as loose text; that is not a title.
+                    ?: if (remainingText.isNotBlank() && remainingText.length < 80 &&
+                        !remainingText.contains("http", ignoreCase = true)) remainingText
+                    else if (isInstagramReel) "Instagram Reel"
+                    else if (isInstagram) "Instagram Post"
                     else if (domain.contains("reddit.com") || domain.contains("redd.it")) "Reddit Post"
                     else if (domain.contains("linkedin.com")) "LinkedIn Post"
                     else if (domain.contains("twitter.com") || domain.contains("x.com")) "Post on X"

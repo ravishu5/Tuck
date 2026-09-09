@@ -13,18 +13,21 @@ back to `FEATURE_BACKLOG.md`.
 | J4 — Real document scanner | `DocumentScanner` behind Home's **Scan** button, photo picker as the fallback |
 | J5 — Checklists inside an item | `checklist_items` table (schema v8), inline list in the detail screen |
 | J6 — Move an item from the long-press menu | `ItemQuickActionsSheet` |
+| J7 — Localisation | ~340 strings extracted to `strings.xml`; Spanish, French and Italian in `values-es/fr/it` |
 | J8 — Storage reclaim UI | `StorageBreakdown` in Settings, on top of J1's orphan cleanup |
 
 ---
 
 ## From Section J — remaining competitor gaps
 
-### J7 — Localisation
-Spanish, French and Italian were requested across *both* competitors' threads, and one commenter
-said the app was not worth it to them without their language. Spanish alone is 400M+ speakers.
+Nothing left here. Everything still open is in the table below, blocked on a decision
+rather than on work.
 
-**Scope:** extract every hardcoded string to `strings.xml` first — that is the real work — then
-translate. Do this before the string count grows further.
+**One caveat on J7:** the three translations are a first pass and are marked as such in a
+comment at the top of each file. They should be read by a native speaker before release —
+`values-es`, `values-fr` and `values-it` are the only files to review. Item titles created
+before a language switch keep the language they were saved in, which is deliberate: a
+title is user data, not chrome.
 
 ---
 
