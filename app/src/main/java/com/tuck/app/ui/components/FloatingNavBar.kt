@@ -54,13 +54,32 @@ import com.tuck.app.R
 import com.tuck.app.ui.navigation.BottomNavScreen
 import com.tuck.app.ui.theme.TuckTheme
 
-/** Height the content area must reserve so the floating bar never covers the last row. */
-val FloatingNavBarSpace: Dp = 108.dp
-
 private val BarHeight = 76.dp
 private val BarSideMargin = 16.dp
 private val BarBottomMargin = 14.dp
 private val CaptureSize = 50.dp
+
+/**
+ * Height the content area must reserve so the floating bar never covers the last row.
+ *
+ * Derived from the bar's own measurements rather than written down, because a hand-written
+ * figure drifts the moment the bar is restyled — and it drifts in the direction of a dead band
+ * at the bottom of every screen, which is invisible to whoever changed the bar.
+ *
+ * The system navigation inset is *not* included: the bar is already offset by it where it is
+ * placed, so counting it here would push content up by it twice.
+ */
+val FloatingNavBarSpace: Dp = BarHeight + BarBottomMargin + 8.dp
+
+/**
+ * Breathing room under the last row of a scrolling screen.
+ *
+ * Clearance for the floating bar is [FloatingNavBarSpace] and is applied once, around the whole
+ * nav graph. Screens inside it were each adding their own 80-100dp on top of that, which is
+ * where the empty band at the bottom of every tab came from; this is the gap a list wants
+ * anyway, and nothing to do with the bar.
+ */
+val ListBottomGap: Dp = 16.dp
 
 /**
  * Tracks whether the floating bar should be showing, from the scroll of whatever is beneath it.

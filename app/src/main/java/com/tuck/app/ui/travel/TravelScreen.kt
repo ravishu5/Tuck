@@ -76,6 +76,7 @@ import com.tuck.app.domain.model.ScanScope
 import com.tuck.app.domain.model.TravelStats
 import com.tuck.app.domain.model.Trip
 import com.tuck.app.domain.model.TripSource
+import com.tuck.app.ui.components.ListBottomGap
 import com.tuck.app.ui.components.SectionLabel
 import com.tuck.app.ui.components.TuckEmptyState
 import com.tuck.app.ui.theme.TuckTheme
@@ -170,7 +171,7 @@ fun TravelScreen(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 32.dp),
+            contentPadding = PaddingValues(bottom = ListBottomGap),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (uiState.mappableTrips.isNotEmpty()) {

@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tuck.app.domain.model.Collection
+import com.tuck.app.ui.components.ListBottomGap
 import com.tuck.app.ui.components.CollectionTile
 import com.tuck.app.ui.components.CountStat
 import com.tuck.app.ui.components.FilterPill
@@ -220,7 +221,7 @@ fun CollectionsScreen(
 
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = ListBottomGap),
                             verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
                             if (outstanding.isNotEmpty() && finished.isNotEmpty()) {
@@ -284,7 +285,7 @@ fun CollectionsScreen(
                     // cramped for that, so the grid is two.
                     columns = GridCells.Fixed(if (isGridView) 2 else 1),
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 88.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 20.dp, bottom = ListBottomGap),
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {

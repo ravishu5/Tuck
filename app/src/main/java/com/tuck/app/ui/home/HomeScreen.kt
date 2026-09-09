@@ -110,6 +110,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tuck.app.R
 import com.tuck.app.domain.model.SavedItem
+import com.tuck.app.ui.components.ListBottomGap
 import com.tuck.app.ui.components.CountStat
 import com.tuck.app.domain.repository.FeedViewMode
 import com.tuck.app.ui.components.FeedViewModeToggle
@@ -275,7 +276,7 @@ fun HomeScreen(
         LazyVerticalStaggeredGrid(
             columns = StaggeredGridCells.Fixed(2),
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = 4.dp, bottom = 80.dp),
+            contentPadding = PaddingValues(top = 4.dp, bottom = ListBottomGap),
             verticalItemSpacing = 0.dp
         ) {
             // 1. Hero Brand Header & Search Trigger

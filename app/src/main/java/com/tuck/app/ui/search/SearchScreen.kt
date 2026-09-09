@@ -57,6 +57,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tuck.app.domain.model.ContentType
 import com.tuck.app.domain.model.SortOrder
+import com.tuck.app.ui.components.ListBottomGap
 import com.tuck.app.ui.components.TuckCategoryChip
 import com.tuck.app.ui.components.TuckContentCard
 import com.tuck.app.ui.components.TuckEmptyState
@@ -154,7 +155,7 @@ fun SearchScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 80.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = ListBottomGap),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     // A count tells the reader whether to keep scrolling or narrow the query.
