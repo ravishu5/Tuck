@@ -1180,10 +1180,13 @@ private val MEDIA_BLOCK_HEIGHT = 196.dp
  * height for every card, but a one-line title beside a two-line one still leaves the row
  * ragged along its bottom edge.
  */
-val RailCardHeight = 316.dp
+val RailCardHeight = 288.dp
 
 /** Media block height inside a rail card. */
-val RailMediaHeight = 140.dp
+val RailMediaHeight = 116.dp
+
+/** Body padding inside a rail card. */
+val RailBodyPadding = 14.dp
 
 // 7. Platform-Aware Content Card
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
@@ -1216,7 +1219,19 @@ fun TuckContentCard(
      * Lines the description may run to. One in a rail, which is a glance rather than a read,
      * and where a second line is what pushes the body past the card and gets sliced in half.
      */
-    descriptionMaxLines: Int = 2
+    descriptionMaxLines: Int = 2,
+    /**
+     * Padding around the words under the media. Tighter in a rail, where every dp spent on
+     * whitespace is a dp the card grows by.
+     */
+    bodyPadding: Dp = 18.dp,
+    /**
+     * Show the collections and comment-count chips at the foot of the card.
+     *
+     * Off in a rail: they are the least useful line on a glance-sized card and the first thing
+     * to be sliced in half when the body runs past a fixed height.
+     */
+    showFooterMeta: Boolean = true
 ) {
     val tuckColors = TuckTheme.colors
     val tuckShapes = TuckTheme.shapes
@@ -1364,7 +1379,7 @@ fun TuckContentCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(18.dp)
+                    .padding(bodyPadding)
             ) {
                 // Header Meta Row: Badge + Date + Favorite
                 Row(
@@ -1467,7 +1482,7 @@ fun TuckContentCard(
                 // Collections & Comments Meta Row
                 val hasCollections = item.collections.isNotEmpty()
                 val hasComments = item.comments.isNotEmpty()
-                if (hasCollections || hasComments) {
+                if (showFooterMeta && (hasCollections || hasComments)) {
                     Spacer(modifier = Modifier.height(10.dp))
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),

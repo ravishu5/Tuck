@@ -113,6 +113,7 @@ import com.tuck.app.R
 import com.tuck.app.domain.model.SavedItem
 import com.tuck.app.ui.components.ListBottomGap
 import com.tuck.app.ui.components.RailCardHeight
+import com.tuck.app.ui.components.RailBodyPadding
 import com.tuck.app.ui.components.RailMediaHeight
 import com.tuck.app.ui.components.CountStat
 import com.tuck.app.domain.repository.FeedViewMode
@@ -965,7 +966,9 @@ private fun RecentlySavedRail(
                     onToggleFavorite = { onToggleFavorite(item.id, item.isFavorite) },
                     uniformMedia = true,
                     mediaHeight = RailMediaHeight,
-                    descriptionMaxLines = 1,
+                    descriptionMaxLines = 2,
+                    bodyPadding = RailBodyPadding,
+                    showFooterMeta = false,
                     modifier = Modifier.fillMaxHeight()
                 )
             }
