@@ -15,6 +15,18 @@
         <categories android:name="com.tuck.app.category.QUICK_ACTION" />
     </shortcut>
     <shortcut
+        android:shortcutId="record_voice_memo"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_record_memo_short"
+        android:shortcutLongLabel="@string/shortcut_record_memo_long">
+        <intent
+            android:action="com.tuck.app.action.QUICK_RECORD"
+            android:targetPackage="com.tuck.app"
+            android:targetClass="com.tuck.app.ui.quickrecord.QuickRecordActivity" />
+        <categories android:name="com.tuck.app.category.QUICK_ACTION" />
+    </shortcut>
+    <shortcut
         android:shortcutId="search_vault"
         android:enabled="true"
         android:icon="@mipmap/ic_launcher"

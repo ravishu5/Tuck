@@ -499,4 +499,22 @@
     <string name="travel_scan_since">Solo le foto scattate dal %1$s. Non viene caricato nulla.</string>
     <string name="travel_rescan_all">Rianalizza tutto</string>
     <string name="travel_imported_extended">Aggiunti %1$d, estesi %2$d</string>
+    <string name="tile_quick_memo">Memo vocale</string>
+    <string name="tile_quick_memo_recording">Registrazione…</string>
+    <string name="shortcut_record_memo_short">Registra memo</string>
+    <string name="shortcut_record_memo_long">Registra un memo vocale</string>
+    <string name="quick_record_recording">Registrazione</string>
+    <string name="quick_record_starting">Avvio…</string>
+    <string name="quick_record_stop_save">Ferma e salva</string>
+    <string name="quick_record_discard">Elimina</string>
+    <string name="quick_record_autosave_hint">Salvato automaticamente con data e ora.</string>
+    <string name="quick_record_saved">Salvato «%1$s»</string>
+    <string name="quick_record_too_short">Troppo breve per essere salvato</string>
+    <string name="quick_record_save_failed">Impossibile salvare il memo. La registrazione è ancora sul dispositivo.</string>
+    <string name="quick_record_could_not_start">Impossibile avviare la registrazione. Il microfono potrebbe essere in uso.</string>
+    <string name="quick_record_needs_microphone">Tuck ha bisogno del microfono per registrare un memo.</string>
+    <string name="quick_record_notification_title">Registrazione di un memo</string>
+    <string name="quick_record_notification_text">Tocca per aprire o ferma da qui.</string>
+    <string name="quick_record_channel_name">Registrazione vocale</string>
+    <string name="quick_record_channel_description">Mostrato mentre viene registrato un memo vocale.</string>
 </resources>

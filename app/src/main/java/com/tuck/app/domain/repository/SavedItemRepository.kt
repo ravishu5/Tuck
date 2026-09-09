@@ -36,6 +36,9 @@ interface SavedItemRepository {
     suspend fun findByTextHash(hash: String): SavedItem?
     suspend fun findByImageHash(sha256: String): SavedItem?
 
+    /** Whether a live item already carries this exact title. */
+    suspend fun titleExists(title: String): Boolean
+
     suspend fun addItemToCollection(itemId: Long, collectionId: Long)
     suspend fun removeItemFromCollection(itemId: Long, collectionId: Long)
     suspend fun setItemCollections(itemId: Long, collectionIds: List<Long>)

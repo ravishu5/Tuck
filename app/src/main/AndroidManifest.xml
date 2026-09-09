@@ -7,6 +7,13 @@
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <!--
+        A voice memo has to survive the screen going off, and from Android 12 an app in the
+        background loses the microphone unless a foreground service of this type is running.
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <!--
         Reading a photo's coordinates needs its own grant on Android 10 and up: without it
@@ -127,6 +134,50 @@
                 android:value="androidx.startup"
                 tools:node="remove" />
         </provider>
+
+        <!--
+            Quick Memo: the single entry point the tile, the launcher shortcut and the
+            recording notification all route through.
+
+            `singleTask` so a second tap lands on the running memo rather than opening a
+            second screen over it; `excludeFromRecents` because a finished memo has no reason
+            to sit in the task switcher; `noHistory` is deliberately NOT set, since the
+            recording must survive the screen turning off.
+        -->
+        <activity
+            android:name=".ui.quickrecord.QuickRecordActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:taskAffinity=".quickrecord"
+            android:theme="@style/Theme.Tuck">
+            <intent-filter>
+                <action android:name="com.tuck.app.action.QUICK_RECORD" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".service.VoiceRecordingService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
+        <!-- Quick Settings Tile: swipe, tap, talk. -->
+        <service
+            android:name=".service.QuickMemoTileService"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/tile_quick_memo"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.ACTIVE_TILE"
+                android:value="false" />
+        </service>
 
         <!-- Quick Settings Tile for 1-Tap Quick Capture -->
         <service

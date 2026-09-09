@@ -303,6 +303,10 @@ class SavedItemRepositoryImpl @Inject constructor(
         savedItemDao.findByImageHash(sha256)?.toDomain()
     }
 
+    override suspend fun titleExists(title: String): Boolean = withContext(Dispatchers.IO) {
+        savedItemDao.titleExists(title)
+    }
+
     override suspend fun addItemToCollection(itemId: Long, collectionId: Long) = withContext(Dispatchers.IO) {
         collectionDao.insertItemCollectionCrossRef(
             SavedItemCollectionCrossRef(savedItemId = itemId, collectionId = collectionId)

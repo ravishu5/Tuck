@@ -546,4 +546,22 @@
     <string name="travel_scan_since">Only photos taken since %1$s. Nothing is uploaded.</string>
     <string name="travel_rescan_all">Rescan everything</string>
     <string name="travel_imported_extended">Added %1$d, extended %2$d</string>
+    <string name="tile_quick_memo">Quick Memo</string>
+    <string name="tile_quick_memo_recording">Recording…</string>
+    <string name="shortcut_record_memo_short">Record memo</string>
+    <string name="shortcut_record_memo_long">Record Voice Memo</string>
+    <string name="quick_record_recording">Recording</string>
+    <string name="quick_record_starting">Starting…</string>
+    <string name="quick_record_stop_save">Stop &amp; save</string>
+    <string name="quick_record_discard">Discard</string>
+    <string name="quick_record_autosave_hint">Saved automatically with the date and time.</string>
+    <string name="quick_record_saved">Saved “%1$s”</string>
+    <string name="quick_record_too_short">Too short to keep</string>
+    <string name="quick_record_save_failed">Could not save the memo. The recording is still on the device.</string>
+    <string name="quick_record_could_not_start">Could not start recording. The microphone may be in use.</string>
+    <string name="quick_record_needs_microphone">Tuck needs the microphone to record a memo.</string>
+    <string name="quick_record_notification_title">Recording a memo</string>
+    <string name="quick_record_notification_text">Tap to open, or stop from here.</string>
+    <string name="quick_record_channel_name">Voice recording</string>
+    <string name="quick_record_channel_description">Shown while a voice memo is being recorded.</string>
 </resources>

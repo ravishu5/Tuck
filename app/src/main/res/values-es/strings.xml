@@ -499,4 +499,22 @@
     <string name="travel_scan_since">Solo las fotos tomadas desde el %1$s. No se sube nada.</string>
     <string name="travel_rescan_all">Volver a analizar todo</string>
     <string name="travel_imported_extended">Añadidos %1$d, ampliados %2$d</string>
+    <string name="tile_quick_memo">Nota rápida de voz</string>
+    <string name="tile_quick_memo_recording">Grabando…</string>
+    <string name="shortcut_record_memo_short">Grabar nota</string>
+    <string name="shortcut_record_memo_long">Grabar nota de voz</string>
+    <string name="quick_record_recording">Grabando</string>
+    <string name="quick_record_starting">Iniciando…</string>
+    <string name="quick_record_stop_save">Detener y guardar</string>
+    <string name="quick_record_discard">Descartar</string>
+    <string name="quick_record_autosave_hint">Se guarda automáticamente con la fecha y la hora.</string>
+    <string name="quick_record_saved">Se guardó «%1$s»</string>
+    <string name="quick_record_too_short">Demasiado corta para guardarla</string>
+    <string name="quick_record_save_failed">No se pudo guardar la nota. La grabación sigue en el dispositivo.</string>
+    <string name="quick_record_could_not_start">No se pudo empezar a grabar. Puede que el micrófono esté en uso.</string>
+    <string name="quick_record_needs_microphone">Tuck necesita el micrófono para grabar una nota.</string>
+    <string name="quick_record_notification_title">Grabando una nota</string>
+    <string name="quick_record_notification_text">Toca para abrir o detén desde aquí.</string>
+    <string name="quick_record_channel_name">Grabación de voz</string>
+    <string name="quick_record_channel_description">Se muestra mientras se graba una nota de voz.</string>
 </resources>

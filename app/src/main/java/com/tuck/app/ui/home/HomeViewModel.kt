@@ -17,10 +17,12 @@ import com.tuck.app.domain.repository.CollectionRepository
 import com.tuck.app.domain.repository.SavedItemRepository
 import com.tuck.app.processing.GalleryScreenshot
 import com.tuck.app.processing.ItemProcessingWorker
+import com.tuck.app.processing.QuickRecordController
 import com.tuck.app.processing.ScreenshotImporter
 import com.tuck.app.processing.UrlMetadataProcessor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
@@ -60,7 +62,7 @@ class HomeViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val savedItemRepository: SavedItemRepository,
     private val collectionRepository: CollectionRepository,
-    private val voiceNoteRecorder: com.tuck.app.processing.VoiceNoteRecorder,
+    private val quickRecordController: com.tuck.app.processing.QuickRecordController,
     private val screenshotImporter: ScreenshotImporter,
     private val fileStorageService: FileStorageService,
     private val urlMetadataProcessor: UrlMetadataProcessor,
@@ -312,46 +314,50 @@ class HomeViewModel @Inject constructor(
 
     // --- Voice notes -------------------------------------------------------------
 
-    private val _isRecording = MutableStateFlow(false)
-    val isRecording: StateFlow<Boolean> = _isRecording.asStateFlow()
+    /**
+     * The recorder's own state, not a copy of it.
+     *
+     * Home is one of several ways into the same microphone — the Quick Settings tile and the
+     * launcher shortcut are others — so it reads the shared controller rather than tracking a
+     * flag of its own, and a memo started from the tile shows as recording here too.
+     */
+    val isRecording: StateFlow<Boolean> = quickRecordController.state
+        .map { it is QuickRecordController.State.Recording }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    /**
+     * Whether the recording currently running was started from this screen.
+     *
+     * Home tears down its recording when it goes away, which is right for one it started and
+     * badly wrong for one it did not: a memo begun from the Quick Settings tile is meant to
+     * outlive every screen, and would otherwise be cancelled the moment the reader switched
+     * tabs with the app still open.
+     */
+    private var startedFromHome = false
 
     fun startVoiceNote(): Boolean {
-        val started = voiceNoteRecorder.start()
-        _isRecording.value = started
-        return started
+        if (quickRecordController.isRecording) return true
+        startedFromHome = true
+        viewModelScope.launch { quickRecordController.start() }
+        return true
     }
 
     fun cancelVoiceNote() {
-        voiceNoteRecorder.cancel()
-        _isRecording.value = false
+        startedFromHome = false
+        viewModelScope.launch { quickRecordController.cancel() }
+    }
+
+    /** Cancels only a recording this screen owns. See [startedFromHome]. */
+    fun cancelVoiceNoteIfOwned() {
+        if (startedFromHome) cancelVoiceNote()
     }
 
     /** Stops recording and saves it. Returns false when nothing usable was captured. */
     fun stopAndSaveVoiceNote(onResult: (Boolean) -> Unit) {
-        val note = voiceNoteRecorder.stop()
-        _isRecording.value = false
-        if (note == null) {
-            onResult(false)
-            return
-        }
+        startedFromHome = false
         viewModelScope.launch {
-            val seconds = (note.durationMs / 1000).coerceAtLeast(1)
-            val item = SavedItem(
-                contentType = ContentType.AUDIO,
-                title = context.getString(R.string.title_voice_note, seconds),
-                localFilePath = note.file.absolutePath,
-                mimeType = "audio/mp4",
-                sourceApp = "Tuck"
-            )
-            val id = savedItemRepository.insertItem(item)
-            if (id > 0) {
-                WorkManager.getInstance(context).enqueue(
-                    OneTimeWorkRequestBuilder<ItemProcessingWorker>()
-                        .setInputData(workDataOf(ItemProcessingWorker.KEY_ITEM_ID to id))
-                        .build()
-                )
-            }
-            onResult(id > 0)
+            val result = quickRecordController.stopAndSave()
+            onResult(result is QuickRecordController.SaveResult.Saved)
         }
     }
 

@@ -150,6 +150,10 @@ interface SavedItemDao {
     @Query("SELECT * FROM saved_items WHERE imageSha256 = :sha256 AND isDeleted = 0 LIMIT 1")
     suspend fun findByImageHash(sha256: String): SavedItemEntity?
 
+    /** Whether a live item already carries this exact title, used to keep auto-names distinct. */
+    @Query("SELECT EXISTS(SELECT 1 FROM saved_items WHERE title = :title AND isDeleted = 0)")
+    suspend fun titleExists(title: String): Boolean
+
     @Query("SELECT * FROM saved_items WHERE id IN (:ids)")
     suspend fun getItemsByIds(ids: List<Long>): List<SavedItemEntity>
 

@@ -29,6 +29,20 @@ class VoiceNoteRecorder @Inject constructor(
 
     val isRecording: Boolean get() = recorder != null
 
+    /** When the current recording began, or null when nothing is being recorded. */
+    val startedAtMillis: Long? get() = if (isRecording) startedAt else null
+
+    /**
+     * Loudness right now, 0f..1f, or 0f when idle.
+     *
+     * `getMaxAmplitude` reports the peak since it was last called and is scaled here against
+     * the 16-bit ceiling, so the caller gets something it can draw without knowing that.
+     */
+    fun amplitude(): Float {
+        val active = recorder ?: return 0f
+        return runCatching { (active.maxAmplitude / 32767f).coerceIn(0f, 1f) }.getOrDefault(0f)
+    }
+
     /** Returns false if the recorder could not start, leaving nothing half-created. */
     fun start(): Boolean {
         if (isRecording) return false

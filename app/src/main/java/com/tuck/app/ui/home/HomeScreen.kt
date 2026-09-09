@@ -201,9 +201,10 @@ fun HomeScreen(
         }
     }
 
-    // A recording left running when the screen goes away would hold the mic open.
+    // A recording this screen started would otherwise hold the mic open after it goes away.
+    // One started from the Quick Settings tile is left alone — it is meant to outlive screens.
     DisposableEffect(Unit) {
-        onDispose { if (viewModel.isRecording.value) viewModel.cancelVoiceNote() }
+        onDispose { viewModel.cancelVoiceNoteIfOwned() }
     }
 
     // One voice-note action, shared by the quick-action row and the capture sheet. The
