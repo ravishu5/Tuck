@@ -1180,7 +1180,7 @@ private val MEDIA_BLOCK_HEIGHT = 196.dp
  * height for every card, but a one-line title beside a two-line one still leaves the row
  * ragged along its bottom edge.
  */
-val RailCardHeight = 288.dp
+val RailCardHeight = 244.dp
 
 /** Media block height inside a rail card. */
 val RailMediaHeight = 116.dp
@@ -1216,10 +1216,14 @@ fun TuckContentCard(
      */
     mediaHeight: Dp = MEDIA_BLOCK_HEIGHT,
     /**
-     * Lines the description may run to. One in a rail, which is a glance rather than a read,
-     * and where a second line is what pushes the body past the card and gets sliced in half.
+     * Show the item's description under the title.
+     *
+     * Off in a rail. A rail is mixed — a screenshot and a voice note have no description at
+     * all — and with a fixed card height the ones that have none are left holding an empty
+     * block the height of two lines. Dropping it everywhere in the rail is more even than
+     * showing it on some cards and not others.
      */
-    descriptionMaxLines: Int = 2,
+    showDescription: Boolean = true,
     /**
      * Padding around the words under the media. Tighter in a rail, where every dp spent on
      * whitespace is a dp the card grows by.
@@ -1468,13 +1472,13 @@ fun TuckContentCard(
                             modifier = Modifier.padding(8.dp)
                         )
                     }
-                } else if (!item.description.isNullOrBlank()) {
+                } else if (showDescription && !item.description.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = item.description ?: "",
                         style = MaterialTheme.typography.bodySmall,
                         color = tuckColors.textSecondary,
-                        maxLines = descriptionMaxLines,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
                 }

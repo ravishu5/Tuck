@@ -966,7 +966,7 @@ private fun RecentlySavedRail(
                     onToggleFavorite = { onToggleFavorite(item.id, item.isFavorite) },
                     uniformMedia = true,
                     mediaHeight = RailMediaHeight,
-                    descriptionMaxLines = 2,
+                    showDescription = false,
                     bodyPadding = RailBodyPadding,
                     showFooterMeta = false,
                     modifier = Modifier.fillMaxHeight()
