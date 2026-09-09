@@ -494,4 +494,9 @@
     <string name="travel_dates_invalid">La data di fine non può precedere quella di inizio</string>
     <string name="home_editorial_eyebrow">LA TUA BIBLIOTECA</string>
     <string name="nav_folders">Raccolte</string>
+    <string name="travel_scan_new_photos">Trova viaggi nelle nuove foto</string>
+    <string name="travel_scan_new_action">Analizza le nuove foto</string>
+    <string name="travel_scan_since">Solo le foto scattate dal %1$s. Non viene caricato nulla.</string>
+    <string name="travel_rescan_all">Rianalizza tutto</string>
+    <string name="travel_imported_extended">Aggiunti %1$d, estesi %2$d</string>
 </resources>

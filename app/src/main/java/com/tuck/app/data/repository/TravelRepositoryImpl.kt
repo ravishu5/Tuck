@@ -109,6 +109,9 @@ internal fun List<Trip>.toCountryVisits(): List<CountryVisit> =
                 cities = trips.mapNotNull { it.city?.takeIf(String::isNotBlank) }
                     .distinct()
                     .sorted(),
+                regions = trips.mapNotNull { it.region?.takeIf(String::isNotBlank) }
+                    .distinct()
+                    .sorted(),
                 firstVisit = trips.minOf { it.startDate },
                 lastVisit = trips.maxOf { it.endDate }
             )

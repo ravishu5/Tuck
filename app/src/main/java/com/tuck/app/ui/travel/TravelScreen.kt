@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -31,6 +32,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Public
@@ -44,11 +46,13 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,6 +72,7 @@ import com.tuck.app.domain.model.BucketListPlace
 import com.tuck.app.domain.model.CountryVisit
 import com.tuck.app.domain.model.PhotoScanState
 import com.tuck.app.domain.model.ScanFailure
+import com.tuck.app.domain.model.ScanScope
 import com.tuck.app.domain.model.TravelStats
 import com.tuck.app.domain.model.Trip
 import com.tuck.app.domain.model.TripSource
@@ -76,6 +81,7 @@ import com.tuck.app.ui.components.TuckEmptyState
 import com.tuck.app.ui.theme.TuckTheme
 import com.tuck.app.ui.theme.pressScale
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
 
@@ -94,7 +100,25 @@ fun TravelScreen(
     val colors = TuckTheme.colors
     val context = LocalContext.current
 
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+
     var tab by remember { mutableStateOf(TravelTab.TRIPS) }
+    // The trip the map is looking at. Tapping a row moves the map rather than opening a form:
+    // the first thing anyone wants from a trip in a travel history is to see where it was.
+    var focusedTrip by remember { mutableStateOf<Trip?>(null) }
+
+    /**
+     * Points the map at a trip and brings the map back on screen.
+     *
+     * Zooming alone is no use from halfway down the list, where the map is scrolled off the
+     * top — the map would move where nobody could see it. The map is the first item, so
+     * showing it is a scroll to the top of the list.
+     */
+    fun focusOnMap(trip: Trip) {
+        focusedTrip = trip
+        scope.launch { listState.animateScrollToItem(0) }
+    }
     var editingTrip by remember { mutableStateOf<Trip?>(null) }
     var showTripEditor by remember { mutableStateOf(false) }
     var showBucketEditor by remember { mutableStateOf(false) }
@@ -105,16 +129,21 @@ fun TravelScreen(
         Manifest.permission.READ_EXTERNAL_STORAGE
     }
 
+    // Remembered across the permission round trip, so the choice of scope survives the system
+    // dialog that sits between pressing the button and the scan actually starting.
+    var pendingScope by remember { mutableStateOf(ScanScope.NEW_PHOTOS_ONLY) }
+
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { granted ->
         // READ_MEDIA_IMAGES is the one that gates the scan at all; ACCESS_MEDIA_LOCATION only
         // decides whether the photos come back with their coordinates intact, and the scan
         // reports that itself when every photo turns out to be location-free.
-        if (granted[photoPermission] == true) viewModel.startPhotoScan()
+        if (granted[photoPermission] == true) viewModel.startPhotoScan(pendingScope)
     }
 
-    fun requestScan() {
+    fun requestScan(scope: ScanScope) {
+        pendingScope = scope
         val needed = buildList {
             add(photoPermission)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -124,7 +153,11 @@ fun TravelScreen(
         val missing = needed.filter {
             ContextCompat.checkSelfPermission(context, it) != android.content.pm.PackageManager.PERMISSION_GRANTED
         }
-        if (missing.isEmpty()) viewModel.startPhotoScan() else permissionLauncher.launch(missing.toTypedArray())
+        if (missing.isEmpty()) {
+            viewModel.startPhotoScan(scope)
+        } else {
+            permissionLauncher.launch(missing.toTypedArray())
+        }
     }
 
     Column(
@@ -135,6 +168,7 @@ fun TravelScreen(
         TravelHeader(stats = uiState.stats)
 
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -152,6 +186,7 @@ fun TravelScreen(
                     ) {
                         TravelMap(
                             trips = uiState.mappableTrips,
+                            focused = focusedTrip,
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -173,7 +208,7 @@ fun TravelScreen(
                             items(uiState.upcoming, key = { it.id }) { trip ->
                                 UpcomingTripCard(
                                     trip = trip,
-                                    onClick = { editingTrip = trip; showTripEditor = true }
+                                    onClick = { focusOnMap(trip) }
                                 )
                             }
                         }
@@ -205,7 +240,9 @@ fun TravelScreen(
                         items(uiState.trips, key = { it.id }) { trip ->
                             TripRow(
                                 trip = trip,
-                                onClick = { editingTrip = trip; showTripEditor = true },
+                                isFocused = trip.id == focusedTrip?.id,
+                                onClick = { focusOnMap(trip) },
+                                onEdit = { editingTrip = trip; showTripEditor = true },
                                 modifier = Modifier.padding(horizontal = 16.dp)
                             )
                         }
@@ -269,7 +306,11 @@ fun TravelScreen(
                             onClick = { editingTrip = null; showTripEditor = true }
                         )
                     }
-                    PhotoImportCard(onScan = ::requestScan)
+                    PhotoImportCard(
+                        lastScannedPhotoAt = uiState.lastScannedPhotoAt,
+                        onScanNew = { requestScan(ScanScope.NEW_PHOTOS_ONLY) },
+                        onRescanAll = { requestScan(ScanScope.ENTIRE_LIBRARY) }
+                    )
                 }
             }
         }
@@ -478,7 +519,9 @@ private fun TravelTabRow(
 @Composable
 private fun TripRow(
     trip: Trip,
+    isFocused: Boolean,
     onClick: () -> Unit,
+    onEdit: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val colors = TuckTheme.colors
@@ -486,8 +529,13 @@ private fun TripRow(
 
     Surface(
         shape = TuckTheme.shapes.large,
-        color = colors.surfaceCard,
-        border = androidx.compose.foundation.BorderStroke(1.dp, colors.borderSubtle),
+        // The row the map is showing is marked, so it is obvious which pin is which once the
+        // map has flown somewhere.
+        color = if (isFocused) colors.accentContainer else colors.surfaceCard,
+        border = androidx.compose.foundation.BorderStroke(
+            width = 1.dp,
+            color = if (isFocused) colors.accent else colors.borderSubtle
+        ),
         modifier = modifier
             .fillMaxWidth()
             .pressScale(source)
@@ -522,9 +570,16 @@ private fun TripRow(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "${trip.countryName} · ${dateRange(trip.startDate, trip.endDate)}",
+                    text = trip.locationLabel,
                     style = MaterialTheme.typography.bodySmall,
                     color = colors.textSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = dateRange(trip.startDate, trip.endDate),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.textMuted,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -545,6 +600,16 @@ private fun TripRow(
                 fontWeight = FontWeight.Bold,
                 color = colors.accent
             )
+
+            // Editing needs its own control now that the row itself moves the map.
+            IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
+                Icon(
+                    imageVector = Icons.Filled.Edit,
+                    contentDescription = stringResource(R.string.travel_edit_trip),
+                    tint = colors.textMuted,
+                    modifier = Modifier.size(17.dp)
+                )
+            }
         }
     }
 }
@@ -574,9 +639,16 @@ private fun UpcomingTripCard(trip: Trip, onClick: () -> Unit) {
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = dateRange(trip.startDate, trip.endDate),
+                text = trip.locationLabel,
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.textSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = dateRange(trip.startDate, trip.endDate),
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.textMuted,
                 maxLines = 1
             )
             if (trip.isInProgress()) {
@@ -615,11 +687,21 @@ private fun CountryRow(visit: CountryVisit, modifier: Modifier = Modifier) {
                     fontWeight = FontWeight.Bold,
                     color = colors.textPrimary
                 )
+                if (visit.regions.isNotEmpty()) {
+                    Text(
+                        text = visit.regions.joinToString(" · "),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        color = colors.textSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
                 if (visit.cities.isNotEmpty()) {
                     Text(
                         text = visit.cities.joinToString(" · "),
                         style = MaterialTheme.typography.bodySmall,
-                        color = colors.textSecondary,
+                        color = colors.textMuted,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -736,8 +818,13 @@ private fun OutlinedAction(
 }
 
 @Composable
-private fun PhotoImportCard(onScan: () -> Unit) {
+private fun PhotoImportCard(
+    lastScannedPhotoAt: Long?,
+    onScanNew: () -> Unit,
+    onRescanAll: () -> Unit
+) {
     val colors = TuckTheme.colors
+    val hasScanned = lastScannedPhotoAt != null
 
     Surface(
         shape = TuckTheme.shapes.large,
@@ -754,7 +841,10 @@ private fun PhotoImportCard(onScan: () -> Unit) {
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = stringResource(R.string.travel_scan_photos),
+                    text = stringResource(
+                        if (hasScanned) R.string.travel_scan_new_photos
+                        else R.string.travel_scan_photos
+                    ),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.ExtraBold,
                     color = colors.textPrimary
@@ -762,23 +852,44 @@ private fun PhotoImportCard(onScan: () -> Unit) {
             }
             Spacer(Modifier.height(6.dp))
             Text(
-                text = stringResource(R.string.travel_scan_photos_hint),
+                // Once there is a watermark the card says where the next scan will pick up,
+                // so it is clear the whole library is not being read again.
+                text = if (hasScanned) {
+                    stringResource(R.string.travel_scan_since, formatDate(lastScannedPhotoAt!!))
+                } else {
+                    stringResource(R.string.travel_scan_photos_hint)
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.textSecondary
             )
             Spacer(Modifier.height(12.dp))
-            Button(
-                onClick = onScan,
-                shape = TuckTheme.shapes.medium,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = colors.accent,
-                    contentColor = colors.textOnAccent
-                )
-            ) {
-                Text(
-                    text = stringResource(R.string.travel_scan_photos),
-                    fontWeight = FontWeight.Bold
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Button(
+                    onClick = onScanNew,
+                    shape = TuckTheme.shapes.medium,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.accent,
+                        contentColor = colors.textOnAccent
+                    )
+                ) {
+                    Text(
+                        text = stringResource(
+                            if (hasScanned) R.string.travel_scan_new_action
+                            else R.string.travel_scan_photos
+                        ),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                if (hasScanned) {
+                    Spacer(Modifier.width(8.dp))
+                    TextButton(onClick = onRescanAll) {
+                        Text(
+                            text = stringResource(R.string.travel_rescan_all),
+                            fontWeight = FontWeight.Bold,
+                            color = colors.accent
+                        )
+                    }
+                }
             }
         }
     }

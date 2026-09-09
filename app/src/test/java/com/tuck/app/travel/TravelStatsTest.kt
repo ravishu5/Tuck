@@ -123,6 +123,41 @@ class TravelStatsTest {
         // 1st to 10th inclusive, not 7 + 6.
         assertEquals(10, france.days)
         assertEquals(listOf("Nice", "Paris"), france.cities)
+        assertEquals(emptyList<String>(), france.regions)
+    }
+
+    /** A country is more than a list of towns once the states are known. */
+    @Test
+    fun countryVisitsCollectTheStatesVisited() {
+        val trips = listOf(
+            trip("India", "IN", day(2026, 5, 1), day(2026, 5, 3), city = "Araria", region = "Bihar"),
+            trip("India", "IN", day(2026, 7, 1), day(2026, 7, 2), city = "Rourkela", region = "Odisha"),
+            trip("India", "IN", day(2026, 9, 1), day(2026, 9, 2), city = "Kamtaul", region = "Bihar")
+        )
+        val india = trips.toCountryVisits().single()
+        assertEquals(listOf("Bihar", "Odisha"), india.regions)
+        assertEquals(listOf("Araria", "Kamtaul", "Rourkela"), india.cities)
+    }
+
+    /** A town whose name repeats its state or country is not printed twice. */
+    @Test
+    fun locationLabelReadsAsAnAddressWithoutRepeating() {
+        assertEquals(
+            "Araria, Bihar, India",
+            trip("India", "IN", 0, 0, city = "Araria", region = "Bihar").locationLabel
+        )
+        assertEquals(
+            "Delhi, India",
+            trip("India", "IN", 0, 0, city = "Delhi", region = "Delhi").locationLabel
+        )
+        assertEquals(
+            "Singapore",
+            trip("Singapore", "SG", 0, 0, city = "Singapore", region = "Singapore").locationLabel
+        )
+        assertEquals(
+            "France",
+            trip("France", "FR", 0, 0).locationLabel
+        )
     }
 
     @Test

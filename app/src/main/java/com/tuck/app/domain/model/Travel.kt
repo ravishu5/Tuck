@@ -52,6 +52,21 @@ data class Trip(
 
     /** The most specific name this trip has: a city if it knows one, else the country. */
     val placeLabel: String get() = city?.takeIf { it.isNotBlank() } ?: countryName
+
+    /**
+     * Where this was, written the way an address is: town, state, country.
+     *
+     * The state is what makes two identically-named towns tellable apart, and in a large
+     * country it is the part that actually locates the place — "Araria, India" could be almost
+     * anywhere, "Araria, Bihar" is somewhere. Repeated parts are dropped, because a city that
+     * is also its own state (Delhi, Singapore) should not be printed twice.
+     */
+    val locationLabel: String
+        get() = listOfNotNull(
+            city?.takeIf { it.isNotBlank() },
+            region?.takeIf { it.isNotBlank() },
+            countryName.takeIf { it.isNotBlank() }
+        ).distinctBy { it.trim().lowercase() }.joinToString(", ")
 }
 
 /** A place the traveller means to go. */
@@ -74,6 +89,8 @@ data class CountryVisit(
     val days: Int,
     val tripCount: Int,
     val cities: List<String>,
+    /** States or provinces visited in this country, so a big country reads as more than one place. */
+    val regions: List<String>,
     val firstVisit: Long,
     val lastVisit: Long
 )
@@ -120,6 +137,14 @@ data class DetectedTrip(
 ) {
     val days: Int
         get() = (TimeUnit.MILLISECONDS.toDays(endDate - startDate).toInt() + 1).coerceAtLeast(1)
+
+    /** Town, state, country — the same shape the trip list uses, so the review matches it. */
+    val locationLabel: String
+        get() = listOfNotNull(
+            city?.takeIf { it.isNotBlank() },
+            region?.takeIf { it.isNotBlank() },
+            countryName.takeIf { it.isNotBlank() }
+        ).distinctBy { it.trim().lowercase() }.joinToString(", ")
 
     fun toTrip(): Trip = Trip(
         title = title,

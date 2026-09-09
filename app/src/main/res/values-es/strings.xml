@@ -494,4 +494,9 @@
     <string name="travel_dates_invalid">La fecha de fin no puede ser anterior a la de inicio</string>
     <string name="home_editorial_eyebrow">TU BIBLIOTECA PERSONAL</string>
     <string name="nav_folders">Carpetas</string>
+    <string name="travel_scan_new_photos">Buscar viajes en fotos nuevas</string>
+    <string name="travel_scan_new_action">Buscar en fotos nuevas</string>
+    <string name="travel_scan_since">Solo las fotos tomadas desde el %1$s. No se sube nada.</string>
+    <string name="travel_rescan_all">Volver a analizar todo</string>
+    <string name="travel_imported_extended">Añadidos %1$d, ampliados %2$d</string>
 </resources>

@@ -263,9 +263,16 @@ private fun DetectedTripRow(
                     modifier = Modifier.clickable(onClick = onRename)
                 )
                 Text(
-                    text = dateRange(trip.startDate, trip.endDate),
+                    text = trip.locationLabel,
                     style = MaterialTheme.typography.bodySmall,
                     color = colors.textSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = dateRange(trip.startDate, trip.endDate),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.textMuted,
                     maxLines = 1
                 )
                 Text(
