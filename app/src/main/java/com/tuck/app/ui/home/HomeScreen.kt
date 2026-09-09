@@ -87,7 +87,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.material.icons.rounded.EditNote
+import androidx.compose.material.icons.rounded.DocumentScanner
+import androidx.compose.material.icons.rounded.UploadFile
+import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
@@ -769,41 +781,40 @@ private fun HomeQuickActionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 20.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         QuickActionButton(
             label = stringResource(R.string.home_note),
             sublabel = stringResource(R.string.home_quick_note),
-            icon = Icons.Filled.Notes,
-            tint = TuckTheme.colors.palette[PaletteSlot.PRIMARY_CORE].fill,
+            icon = Icons.Rounded.EditNote,
+            slot = PaletteSlot.PRIMARY_CORE,
             modifier = Modifier.weight(1f),
             onClick = onNote
         )
         QuickActionButton(
             label = stringResource(R.string.home_scan),
             sublabel = stringResource(R.string.home_document),
-            icon = Icons.Filled.CameraAlt,
-            tint = TuckTheme.colors.palette[PaletteSlot.SECONDARY_CORE].fill,
+            icon = Icons.Rounded.DocumentScanner,
+            slot = PaletteSlot.SECONDARY_CORE,
             modifier = Modifier.weight(1f),
             onClick = onScan
         )
         QuickActionButton(
             label = stringResource(R.string.home_doc_pdf),
             sublabel = stringResource(R.string.home_add_file),
-            icon = Icons.Filled.PictureAsPdf,
-            tint = TuckTheme.colors.palette[PaletteSlot.TERTIARY_CORE].fill,
+            icon = Icons.Rounded.UploadFile,
+            slot = PaletteSlot.TERTIARY_CORE,
             modifier = Modifier.weight(1f),
             onClick = onPdf
         )
         QuickActionButton(
             label = stringResource(if (isRecording) R.string.home_stop else R.string.home_voice),
             sublabel = stringResource(if (isRecording) R.string.home_recording else R.string.home_record),
-            icon = if (isRecording) Icons.Filled.Stop else Icons.Filled.Mic,
+            icon = if (isRecording) Icons.Rounded.Stop else Icons.Rounded.GraphicEq,
             // The recording state gets the deep tone so a live mic is unmistakable.
-            tint = TuckTheme.colors.palette[
-                if (isRecording) PaletteSlot.PRIMARY_DEEP else PaletteSlot.PRIMARY_SOFT
-            ].fill,
+            slot = if (isRecording) PaletteSlot.PRIMARY_DEEP else PaletteSlot.SECONDARY_DEEP,
+            isActive = isRecording,
             modifier = Modifier.weight(1f),
             onClick = onVoice
         )
@@ -815,59 +826,83 @@ private fun QuickActionButton(
     label: String,
     sublabel: String,
     icon: ImageVector,
-    tint: Color,
+    slot: PaletteSlot,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isActive: Boolean = false
 ) {
-    val tuckColors = TuckTheme.colors
+    val colors = TuckTheme.colors
+    val palette = colors.palette[slot]
     val interactionSource = remember { MutableInteractionSource() }
+    val shape = RoundedCornerShape(22.dp)
+    val iconShape = RoundedCornerShape(16.dp)
 
-    // Same treatment as an empty collection tile: tinted ground, saturated icon chip.
-    // The four actions then read as one family with the rest of the app rather than as
-    // a separate row of outlined buttons.
     Column(
         modifier = modifier
-            .pressScale(interactionSource)
-            .clip(RoundedCornerShape(16.dp))
-            .background(TuckGradients.tint(tint, tuckColors.isDark))
-            .border(1.dp, TuckGradients.tintEdge(tint, tuckColors.isDark), RoundedCornerShape(16.dp))
+            .pressScale(interactionSource, pressedScale = 0.95f)
+            .clip(shape)
+            .background(
+                Brush.verticalGradient(
+                    listOf(TuckGradients.tint(palette.fill, colors.isDark), colors.surface)
+                )
+            )
+            .border(
+                1.dp,
+                if (isActive) palette.fill else colors.borderSubtle,
+                shape
+            )
+            .semantics(mergeDescendants = true) {
+                if (isActive) liveRegion = LiveRegionMode.Polite
+            }
             .clickable(
                 interactionSource = interactionSource,
-                indication = ripple(color = tint),
+                indication = ripple(color = palette.fill),
+                role = Role.Button,
                 onClick = onClick
             )
-            .padding(vertical = 11.dp, horizontal = 8.dp),
+            .padding(vertical = 14.dp, horizontal = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
-            modifier = Modifier
-                .size(28.dp)
-                .clip(RoundedCornerShape(9.dp))
-                .background(TuckGradients.tile(tint, tuckColors.isDark)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = tuckColors.onScrim,
-                modifier = Modifier.size(15.dp)
+        // A tilted backing card gives the four tools a shared, tactile silhouette.
+        // Keep the actual glyph upright and use the palette's contrast-tested foreground.
+        Box(Modifier.size(52.dp), contentAlignment = Alignment.Center) {
+            Box(
+                Modifier.size(44.dp).rotate(-10f)
+                    .background(palette.fill.copy(alpha = 0.18f), iconShape)
             )
+            Box(
+                Modifier.size(42.dp)
+                    .shadow(3.dp, iconShape, ambientColor = palette.fill.copy(alpha = 0.2f),
+                        spotColor = palette.fill.copy(alpha = 0.2f))
+                    .background(palette.fill, iconShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = palette.onFill, modifier = Modifier.size(26.dp))
+            }
+            if (isActive) {
+                Box(
+                    Modifier.align(Alignment.TopEnd).size(10.dp)
+                        .background(colors.destructive, CircleShape)
+                        .border(2.dp, colors.surface, CircleShape)
+                )
+            }
         }
-
-        Spacer(modifier = Modifier.height(7.dp))
-
+        Spacer(Modifier.height(9.dp))
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
-            color = tuckColors.textPrimary,
-            maxLines = 1
+            color = colors.textPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
+        Spacer(Modifier.height(2.dp))
         Text(
             text = sublabel,
             style = MaterialTheme.typography.labelSmall,
-            color = tuckColors.textMuted,
-            maxLines = 1
+            color = colors.textSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
