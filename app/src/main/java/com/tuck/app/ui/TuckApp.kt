@@ -1,5 +1,7 @@
 package com.tuck.app.ui
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Box
@@ -82,6 +84,24 @@ fun TuckApp(
         // navigating away from a list the reader had scrolled down.
         LaunchedEffect(currentRoute) { navBar.reveal() }
 
+        val barShowing = showBottomBar && navBar.visible
+
+        /**
+         * Clearance for the floating bar, given back to the content while the bar is away.
+         *
+         * Holding the space permanently kept the layout still, but it meant a band of nothing
+         * sat at the bottom of every screen for as long as the bar was hidden — which is most
+         * of the time someone is reading a list. Animating it instead keeps the layout calm
+         * without the dead area, so long as it moves with the bar rather than snapping: the
+         * durations here are the bar's own, so the content grows into the space at exactly the
+         * rate the bar vacates it.
+         */
+        val navBarReserve by animateDpAsState(
+            targetValue = if (barShowing) FloatingNavBarSpace else 0.dp,
+            animationSpec = tween(durationMillis = if (barShowing) 220 else 180),
+            label = "navBarReserve"
+        )
+
         Scaffold(
             containerColor = tuckColors.background,
             modifier = Modifier
@@ -94,10 +114,7 @@ fun TuckApp(
                 startDestination = NavRoutes.HOME,
                 modifier = Modifier.padding(
                     top = paddingValues.calculateTopPadding(),
-                    // Reserved whether or not the bar is showing, so nothing reflows under the
-                    // reader's thumb when it slides away.
-                    bottom = paddingValues.calculateBottomPadding() +
-                        if (showBottomBar) FloatingNavBarSpace else 0.dp
+                    bottom = paddingValues.calculateBottomPadding() + navBarReserve
                 )
             ) {
                 composable(NavRoutes.HOME) {

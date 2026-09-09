@@ -68,6 +68,8 @@ private val CaptureSize = 50.dp
  *
  * The system navigation inset is *not* included: the bar is already offset by it where it is
  * placed, so counting it here would push content up by it twice.
+ *
+ * Held only while the bar is showing — see [FloatingNavBar].
  */
 val FloatingNavBarSpace: Dp = BarHeight + BarBottomMargin + 8.dp
 
@@ -134,9 +136,9 @@ class NavBarVisibility(private val thresholdPx: Float) {
  * raised capture button.
  *
  * It sits over the content rather than pushing it, so the content area reserves
- * [FloatingNavBarSpace] permanently. That keeps the layout still while the bar slides away —
- * reserving space only while it is showing would reflow the list under the reader's thumb every
- * time they changed scroll direction.
+ * [FloatingNavBarSpace] while it is showing and gives that space back as it slides away. The
+ * reserve is animated on the bar's own durations rather than switched, because releasing it in
+ * one step would jump the list under the reader's thumb every time they changed direction.
  */
 @Composable
 fun FloatingNavBar(
