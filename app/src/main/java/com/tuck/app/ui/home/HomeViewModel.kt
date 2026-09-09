@@ -9,13 +9,13 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.tuck.app.data.local.storage.FileStorageService
-import com.tuck.app.domain.memory.RelatedItemsEngine
 import com.tuck.app.domain.model.Collection
 import com.tuck.app.domain.model.ContentType
 import com.tuck.app.domain.model.SavedItem
 import com.tuck.app.domain.repository.CollectionRepository
 import com.tuck.app.domain.repository.SavedItemRepository
 import com.tuck.app.processing.GalleryScreenshot
+import com.tuck.app.domain.memory.rediscoverPicks
 import com.tuck.app.processing.ItemProcessingWorker
 import com.tuck.app.processing.QuickRecordController
 import com.tuck.app.processing.ScreenshotImporter
@@ -23,6 +23,8 @@ import com.tuck.app.processing.UrlMetadataProcessor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
@@ -66,7 +68,6 @@ class HomeViewModel @Inject constructor(
     private val screenshotImporter: ScreenshotImporter,
     private val fileStorageService: FileStorageService,
     private val urlMetadataProcessor: UrlMetadataProcessor,
-    private val relatedItemsEngine: RelatedItemsEngine,
     private val settingsRepository: com.tuck.app.domain.repository.SettingsRepository
 ) : ViewModel() {
 
@@ -120,31 +121,67 @@ class HomeViewModel @Inject constructor(
         FilterState(category = category, type = type, source = source)
     }
 
+    /**
+     * Fixed for the life of the screen, so the rediscover row keeps the same four saves while
+     * the reader is looking at it instead of re-dealing whenever anything in the vault changes.
+     */
+    private val rediscoverSeed = System.currentTimeMillis()
+
     private val baseDataFlow = combine(
         savedItemRepository.getAllActiveItems(),
-        collectionRepository.getAllCollections(),
-        relatedItemsEngine.getRediscoverItems(4)
-    ) { allItems, collections, rediscover ->
-        BaseHomeData(allItems = allItems, collections = collections, rediscoverItems = rediscover)
+        collectionRepository.getAllCollections()
+    ) { allItems, collections ->
+        // Derived from the items already in hand. Collecting the engine's own flow ran the same
+        // query and the same entity mapping a second time on every change.
+        BaseHomeData(
+            allItems = allItems,
+            collections = collections,
+            rediscoverItems = allItems.rediscoverPicks(limit = 4, seed = rediscoverSeed)
+        )
     }
 
     init {
-        viewModelScope.launch {
+        // Housekeeping, not the feed. None of it is needed to draw the home screen, and all of
+        // it used to run on the main thread while the first frame was trying to get out: a
+        // MediaStore scan for screenshots, and a WorkManager enqueue per item missing a
+        // thumbnail. Off the main thread, and behind the feed rather than in front of it.
+        viewModelScope.launch(Dispatchers.Default) {
             collectionRepository.ensureDefaultCollections()
-            checkGalleryScreenshots()
 
-            // Heal any previously saved URLs missing thumbnails
-            try {
-                val active = savedItemRepository.getAllActiveItems().first()
-                for (item in active) {
-                    if ((item.contentType == ContentType.URL || item.contentType == ContentType.VIDEO) && item.thumbnailPath.isNullOrBlank() && !item.originalUrl.isNullOrBlank()) {
-                        val workRequest = OneTimeWorkRequestBuilder<ItemProcessingWorker>()
-                            .setInputData(workDataOf(ItemProcessingWorker.KEY_ITEM_ID to item.id))
-                            .build()
-                        WorkManager.getInstance(context).enqueue(workRequest)
-                    }
+            healMissingThumbnails()
+
+            // Last, because it is the slowest and the least urgent — the banner it feeds can
+            // appear a moment after the vault does.
+            checkGalleryScreenshots()
+        }
+    }
+
+    /**
+     * Re-queues processing for saves whose preview never arrived.
+     *
+     * Reads the vault once rather than watching it: this is a one-off repair at launch, and
+     * collecting the live query would re-run the whole sweep on every later change.
+     */
+    private suspend fun healMissingThumbnails() {
+        try {
+            val active = savedItemRepository.getAllActiveItems().first()
+            val needsThumbnail = active.filter { item ->
+                (item.contentType == ContentType.URL || item.contentType == ContentType.VIDEO) &&
+                    item.thumbnailPath.isNullOrBlank() &&
+                    !item.originalUrl.isNullOrBlank()
+            }
+            if (needsThumbnail.isEmpty()) return
+
+            // One enqueue call rather than one per item: each is a binder round trip and a
+            // write, and a vault with a hundred unprocessed links paid for all of them.
+            WorkManager.getInstance(context).enqueue(
+                needsThumbnail.map { item ->
+                    OneTimeWorkRequestBuilder<ItemProcessingWorker>()
+                        .setInputData(workDataOf(ItemProcessingWorker.KEY_ITEM_ID to item.id))
+                        .build()
                 }
-            } catch (_: Exception) {}
+            )
+        } catch (_: Exception) {
         }
     }
 
@@ -202,14 +239,21 @@ class HomeViewModel @Inject constructor(
             isImporting = isImporting,
             isLoading = false
         )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = HomeUiState(isLoading = true)
-    )
+    }
+        // The filter above walks every saved item and lowercases several of its fields, and a
+        // `combine` runs its transform on whoever collects it — which for `stateIn(viewModelScope)`
+        // is the main thread. So every database change re-filtered the whole vault between
+        // frames, which is what made opening the app stutter and the feed appear to redraw.
+        // `flowOn` moves the combine and everything upstream of it onto a worker.
+        .flowOn(Dispatchers.Default)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = HomeUiState(isLoading = true)
+        )
 
     fun checkGalleryScreenshots() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.Default) {
             try {
                 val recent = screenshotImporter.getRecentScreenshots(limit = 30)
                 _unimportedScreenshots.value = recent
