@@ -112,6 +112,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -1169,6 +1170,21 @@ private fun FeedViewModeButton(
     }
 }
 
+/** Height of a card's media block, and of the panel that stands in for it. */
+private val MEDIA_BLOCK_HEIGHT = 196.dp
+
+/**
+ * Height of a card in a side-by-side rail.
+ *
+ * Fixed, because a rail is read across rather than down: the media block is already the same
+ * height for every card, but a one-line title beside a two-line one still leaves the row
+ * ragged along its bottom edge.
+ */
+val RailCardHeight = 316.dp
+
+/** Media block height inside a rail card. */
+val RailMediaHeight = 140.dp
+
 // 7. Platform-Aware Content Card
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -1181,7 +1197,26 @@ fun TuckContentCard(
     /** Fields this item matched on, shown as chips so a result can justify itself. */
     matchFields: List<MatchField> = emptyList(),
     /** Long-press opens quick actions. Null leaves the card press-only. */
-    onLongPress: (() -> Unit)? = null
+    onLongPress: (() -> Unit)? = null,
+    /**
+     * Draw a media block even for items that have no picture.
+     *
+     * Off in a vertical list, where a note is honestly shorter than a screenshot and there is
+     * no neighbour to line it up against. On for side-by-side rails, where a card with a
+     * preview and one without differ by the whole height of the preview and the row ends up
+     * ragged.
+     */
+    uniformMedia: Boolean = false,
+    /**
+     * Height of the media block. Shorter in a rail, where the card is only 260dp wide and a
+     * full-height preview would leave no room for the words underneath.
+     */
+    mediaHeight: Dp = MEDIA_BLOCK_HEIGHT,
+    /**
+     * Lines the description may run to. One in a rail, which is a glance rather than a read,
+     * and where a second line is what pushes the body past the card and gets sliced in half.
+     */
+    descriptionMaxLines: Int = 2
 ) {
     val tuckColors = TuckTheme.colors
     val tuckShapes = TuckTheme.shapes
@@ -1230,7 +1265,7 @@ fun TuckContentCard(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(196.dp)
+                        .height(mediaHeight)
                         .background(tuckColors.surfaceCard)
                 ) {
                     val context = LocalContext.current
@@ -1298,6 +1333,30 @@ fun TuckContentCard(
                             )
                         }
                     }
+                }
+            } else if (uniformMedia) {
+                // The same block a picture would have filled, carrying the item's type instead.
+                // Leaving it out is what made a voice note a third the height of a screenshot.
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(mediaHeight)
+                        .background(TuckGradients.tint(tuckColors.accent, tuckColors.isDark)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = when (item.contentType) {
+                            ContentType.URL -> Icons.Filled.Link
+                            ContentType.TEXT -> Icons.Filled.Notes
+                            ContentType.PDF, ContentType.DOCUMENT -> Icons.Filled.PictureAsPdf
+                            ContentType.VIDEO -> Icons.Filled.PlayArrow
+                            ContentType.AUDIO -> Icons.Filled.Mic
+                            else -> Icons.Filled.Bookmark
+                        },
+                        contentDescription = null,
+                        tint = tuckColors.accent,
+                        modifier = Modifier.size(34.dp)
+                    )
                 }
             }
 
@@ -1400,7 +1459,7 @@ fun TuckContentCard(
                         text = item.description ?: "",
                         style = MaterialTheme.typography.bodySmall,
                         color = tuckColors.textSecondary,
-                        maxLines = 2,
+                        maxLines = descriptionMaxLines,
                         overflow = TextOverflow.Ellipsis
                     )
                 }

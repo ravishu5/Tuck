@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -111,6 +112,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tuck.app.R
 import com.tuck.app.domain.model.SavedItem
 import com.tuck.app.ui.components.ListBottomGap
+import com.tuck.app.ui.components.RailCardHeight
+import com.tuck.app.ui.components.RailMediaHeight
 import com.tuck.app.ui.components.CountStat
 import com.tuck.app.domain.repository.FeedViewMode
 import com.tuck.app.ui.components.FeedViewModeToggle
@@ -955,11 +958,15 @@ private fun RecentlySavedRail(
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(items, key = { "rail_${it.id}" }) { item ->
-            Box(modifier = Modifier.width(260.dp)) {
+            Box(modifier = Modifier.width(260.dp).height(RailCardHeight)) {
                 TuckContentCard(
                     item = item,
                     onClick = { onItemClick(item.id) },
-                    onToggleFavorite = { onToggleFavorite(item.id, item.isFavorite) }
+                    onToggleFavorite = { onToggleFavorite(item.id, item.isFavorite) },
+                    uniformMedia = true,
+                    mediaHeight = RailMediaHeight,
+                    descriptionMaxLines = 1,
+                    modifier = Modifier.fillMaxHeight()
                 )
             }
         }
