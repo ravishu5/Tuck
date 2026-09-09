@@ -179,9 +179,9 @@ data class TuckSpacing(
 
 data class TuckShapes(
     val small: Shape = RoundedCornerShape(12.dp),
-    val medium: Shape = RoundedCornerShape(16.dp),
-    val large: Shape = RoundedCornerShape(20.dp),
-    val extraLarge: Shape = RoundedCornerShape(24.dp),
+    val medium: Shape = RoundedCornerShape(20.dp),
+    val large: Shape = RoundedCornerShape(24.dp),
+    val extraLarge: Shape = RoundedCornerShape(32.dp),
     val pill: Shape = RoundedCornerShape(28.dp),
     val circle: Shape = CircleShape
 )

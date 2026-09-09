@@ -478,14 +478,7 @@ fun HomeScreen(
             }
         }
 
-        // Floating Action Button anchored to bottom-end
-        TuckFab(
-                    onClick = { showQuickAddSheet = true },
-                    contentDescription = stringResource(R.string.home_quick_save),
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(end = 16.dp, bottom = 16.dp)
-                )
+
     }
 
     quickActionsFor?.let { target ->
@@ -642,14 +635,20 @@ private fun HomeHeroHeader(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.home_editorial_eyebrow),
+                        style = TuckTheme.typography.sectionLabel,
+                        color = tuckColors.accent
+                    )
+                    Spacer(Modifier.height(8.dp))
                     Text(
                         text = stringResource(R.string.home_my_stash),
                         style = TuckTheme.typography.displayLarge,
@@ -671,10 +670,10 @@ private fun HomeHeroHeader(
                     Surface(
                         onClick = onOpenThemePicker,
                         shape = tuckShapes.medium,
-                        color = tuckColors.surfaceCard,
+                        color = tuckColors.surface,
                         border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.borderSubtle),
                         modifier = Modifier
-                            .size(44.dp)
+                            .size(48.dp)
                             .pressScale(themeSource)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -692,10 +691,10 @@ private fun HomeHeroHeader(
                     Surface(
                         onClick = onNavigateToSettings,
                         shape = tuckShapes.medium,
-                        color = tuckColors.surfaceCard,
+                        color = tuckColors.surface,
                         border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.borderSubtle),
                         modifier = Modifier
-                            .size(44.dp)
+                            .size(48.dp)
                             .pressScale(settingsSource)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -710,14 +709,14 @@ private fun HomeHeroHeader(
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             val searchSource = remember { MutableInteractionSource() }
             // Large Search Field Trigger
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
+                    .height(58.dp)
                     .pressScale(searchSource)
                     .shadow(
                         elevation = 2.dp,
@@ -731,7 +730,7 @@ private fun HomeHeroHeader(
                         indication = ripple(color = tuckColors.accent),
                         onClick = onNavigateToSearch
                     ),
-                color = tuckColors.surfaceCard,
+                color = tuckColors.surface,
                 shape = tuckShapes.pill,
                 border = androidx.compose.foundation.BorderStroke(1.dp, tuckColors.borderSubtle)
             ) {

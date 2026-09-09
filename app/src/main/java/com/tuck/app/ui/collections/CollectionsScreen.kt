@@ -221,7 +221,7 @@ fun CollectionsScreen(
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
                             if (outstanding.isNotEmpty() && finished.isNotEmpty()) {
                                 item(key = "hdr_open") {
@@ -284,9 +284,9 @@ fun CollectionsScreen(
                     // cramped for that, so the grid is two.
                     columns = GridCells.Fixed(if (isGridView) 2 else 1),
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 88.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 88.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     // Header (Spans full width)
                     item(span = { GridItemSpan(maxLineSpan) }) {
@@ -298,12 +298,13 @@ fun CollectionsScreen(
                             ) {
                                 Text(
                                     text = stringResource(R.string.collections_collections),
+                                    modifier = Modifier.weight(1f),
                                     style = TuckTheme.typography.displayLarge,
                                     color = tuckColors.textPrimary
                                 )
                                 IconButton(
                                     onClick = { isGridView = !isGridView },
-                                    modifier = Modifier.size(36.dp)
+                                    modifier = Modifier.size(48.dp)
                                 ) {
                                     Icon(
                                         imageVector = if (isGridView) Icons.Filled.ViewList else Icons.Filled.GridView,

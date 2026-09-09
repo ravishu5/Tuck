@@ -492,4 +492,6 @@
     <string name="travel_source_photos">Dalle foto</string>
     <string name="travel_country_required">Serve un paese</string>
     <string name="travel_dates_invalid">La data di fine non può precedere quella di inizio</string>
+    <string name="home_editorial_eyebrow">LA TUA BIBLIOTECA</string>
+    <string name="nav_folders">Raccolte</string>
 </resources>

@@ -13,6 +13,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -50,9 +55,9 @@ import com.tuck.app.ui.navigation.BottomNavScreen
 import com.tuck.app.ui.theme.TuckTheme
 
 /** Height the content area must reserve so the floating bar never covers the last row. */
-val FloatingNavBarSpace: Dp = 96.dp
+val FloatingNavBarSpace: Dp = 108.dp
 
-private val BarHeight = 64.dp
+private val BarHeight = 76.dp
 private val BarSideMargin = 16.dp
 private val BarBottomMargin = 14.dp
 private val CaptureSize = 50.dp
@@ -156,13 +161,13 @@ fun FloatingNavBar(
                 val half = (screens.size + 1) / 2
 
                 screens.take(half).forEach { screen ->
-                    NavIcon(screen, currentRoute == screen.route) { onSelect(screen) }
+                    NavIcon(screen, currentRoute == screen.route, Modifier.weight(1f)) { onSelect(screen) }
                 }
 
                 CaptureButton(onClick = onCapture)
 
                 screens.drop(half).forEach { screen ->
-                    NavIcon(screen, currentRoute == screen.route) { onSelect(screen) }
+                    NavIcon(screen, currentRoute == screen.route, Modifier.weight(1f)) { onSelect(screen) }
                 }
             }
         }
@@ -173,16 +178,16 @@ fun FloatingNavBar(
 private fun NavIcon(
     screen: BottomNavScreen,
     selected: Boolean,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     val colors = TuckTheme.colors
     val interactionSource = remember { MutableInteractionSource() }
-    // The selected pill grows in rather than appearing, which reads as the same object moving.
-    val pillWidth by animateDpAsState(if (selected) 52.dp else 44.dp, tween(180), label = "navPill")
 
     Box(
-        modifier = Modifier
-            .size(width = pillWidth, height = 40.dp)
+        modifier = modifier
+            .height(60.dp)
+            .padding(horizontal = 3.dp)
             .pressScale(interactionSource, pressedScale = 0.94f)
             .clip(RoundedCornerShape(percent = 50))
             .background(if (selected) colors.accentContainer else Color.Transparent)
@@ -190,19 +195,33 @@ private fun NavIcon(
                 if (selected) Modifier.border(1.dp, colors.accent.copy(alpha = 0.35f), RoundedCornerShape(percent = 50))
                 else Modifier
             )
-            .clickable(
+            .selectable(
+                selected = selected,
+                role = Role.Tab,
                 interactionSource = interactionSource,
                 indication = ripple(color = colors.accent),
                 onClick = onClick
             ),
         contentAlignment = Alignment.Center
     ) {
-        Icon(
-            imageVector = if (selected) screen.selectedIcon else screen.unselectedIcon,
-            contentDescription = stringResource(screen.titleRes),
-            tint = if (selected) colors.accent else colors.textMuted,
-            modifier = Modifier.size(23.dp)
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            Icon(
+                imageVector = if (selected) screen.selectedIcon else screen.unselectedIcon,
+                contentDescription = null,
+                tint = if (selected) colors.accent else colors.textMuted,
+                modifier = Modifier.size(22.dp)
+            )
+            Text(
+                text = stringResource(if (screen == BottomNavScreen.Collections) R.string.nav_folders else screen.titleRes),
+                style = MaterialTheme.typography.labelSmall,
+                color = if (selected) colors.accent else colors.textSecondary,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+        }
     }
 }
 

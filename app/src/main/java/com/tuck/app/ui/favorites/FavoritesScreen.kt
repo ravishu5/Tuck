@@ -43,18 +43,16 @@ fun FavoritesScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(tuckColors.background)
-            .statusBarsPadding()
     ) {
         // Header
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 16.dp)
+                .padding(horizontal = 20.dp, vertical = 20.dp)
         ) {
             Text(
                 text = stringResource(R.string.favorites_favorites),
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.ExtraBold,
+                style = TuckTheme.typography.displayLarge,
                 color = tuckColors.textPrimary
             )
             Text(

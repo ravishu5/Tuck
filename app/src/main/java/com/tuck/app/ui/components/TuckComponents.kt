@@ -487,27 +487,14 @@ fun TuckEmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Box(
-            modifier = Modifier
-                .size(64.dp)
-                .clip(CircleShape)
-                .background(tuckColors.accentContainer),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = tuckColors.accent,
-                modifier = Modifier.size(30.dp)
-            )
-        }
+        TuckKeepsakeIllustration(icon = icon)
 
         Spacer(modifier = Modifier.height(18.dp))
 
         Text(
             text = title,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.ExtraBold,
+            style = TuckTheme.typography.displayMedium,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             color = tuckColors.textPrimary
         )
 
@@ -517,7 +504,8 @@ fun TuckEmptyState(
             text = description,
             style = MaterialTheme.typography.bodyMedium,
             color = tuckColors.textSecondary,
-            lineHeight = 20.sp
+            lineHeight = 22.sp,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
 
         if (!actionLabel.isNullOrBlank() && onAction != null) {
@@ -704,7 +692,7 @@ private fun CollectionPreviewTile(
     modifier: Modifier = Modifier
 ) {
     val tuckColors = TuckTheme.colors
-    val accentEntry = resolveCollectionColor(colorId, name, collectionId)
+    val accentEntry = resolveCollectionColor(colorId, name, collectionId, tuckColors.palette)
     val interactionSource = remember { MutableInteractionSource() }
     val context = LocalContext.current
 
@@ -713,7 +701,7 @@ private fun CollectionPreviewTile(
             .fillMaxWidth()
             .pressScale(interactionSource)
             .shadow(
-                elevation = 6.dp,
+                elevation = 2.dp,
                 shape = RoundedCornerShape(22.dp),
                 ambientColor = tuckColors.scrim.copy(alpha = 0.35f),
                 spotColor = tuckColors.scrim.copy(alpha = 0.35f)
@@ -726,7 +714,7 @@ private fun CollectionPreviewTile(
                 indication = ripple(color = accentEntry.background),
                 onClick = onClick
             )
-            .padding(9.dp)
+            .padding(12.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().height(72.dp),
@@ -783,39 +771,8 @@ private fun CollectionPreviewTile(
             }
         }
 
-        Spacer(modifier = Modifier.height(9.dp))
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(7.dp)
-                    .clip(CircleShape)
-                    .background(accentEntry.background)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = name,
-                style = TuckTheme.typography.tileTitle,
-                color = tuckColors.textPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            if (isSelected) {
-                Spacer(modifier = Modifier.weight(1f))
-                Icon(
-                    imageVector = Icons.Filled.Check,
-                    contentDescription = stringResource(R.string.collections_selected),
-                    tint = accentEntry.background,
-                    modifier = Modifier.size(15.dp)
-                )
-            }
-        }
-
-        Text(
-            text = collectionSubtitle(count, openCount),
-            style = TuckTheme.typography.numericCount,
-            color = tuckColors.textMuted
-        )
+        Spacer(Modifier.height(12.dp))
+        CollectionTileCaption(name, count, openCount, isSelected, accentEntry.background)
     }
 }
 
@@ -867,107 +824,89 @@ private fun CollectionColorTile(
     modifier: Modifier = Modifier
 ) {
     val tuckColors = TuckTheme.colors
-    val colorEntry = resolveCollectionColor(colorId, name, collectionId)
+    val colorEntry = resolveCollectionColor(colorId, name, collectionId, tuckColors.palette)
     val visual = getCollectionVisual(name, iconHint, colorId, collectionId)
     val interactionSource = remember { MutableInteractionSource() }
+    val shape = RoundedCornerShape(22.dp)
 
-    val surface = TuckGradients.tint(colorEntry.background, tuckColors.isDark)
-    val edge = TuckGradients.tintEdge(colorEntry.background, tuckColors.isDark)
-
-    Box(
+    Column(
         modifier = modifier
             .fillMaxWidth()
             .pressScale(interactionSource)
-            // Matches the preview tile's elevation, so a mixed grid sits on one plane.
-            .shadow(
-                elevation = if (isSelected) 8.dp else 6.dp,
-                shape = RoundedCornerShape(22.dp),
-                ambientColor = if (isSelected) colorEntry.background.copy(alpha = 0.35f) else tuckColors.scrim.copy(alpha = 0.35f),
-                spotColor = if (isSelected) colorEntry.background.copy(alpha = 0.35f) else tuckColors.scrim.copy(alpha = 0.35f)
-            )
-            .clip(RoundedCornerShape(22.dp))
-            .background(surface)
+            .shadow(2.dp, shape)
+            .clip(shape)
+            .background(TuckGradients.tint(colorEntry.background, tuckColors.isDark))
             .border(
-                width = if (isSelected) 2.dp else 1.dp,
-                color = if (isSelected) colorEntry.background else edge,
-                shape = RoundedCornerShape(22.dp)
+                if (isSelected) 2.dp else 1.dp,
+                if (isSelected) colorEntry.background else TuckGradients.tintEdge(colorEntry.background, tuckColors.isDark),
+                shape
             )
             .clickable(
                 interactionSource = interactionSource,
                 indication = ripple(color = colorEntry.background),
                 onClick = onClick
             )
-            .padding(15.dp)
+            .padding(12.dp)
     ) {
-        // Subtle top edge sheen for lit tactile surface
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(32.dp)
-                .align(Alignment.TopCenter)
-                .background(TuckGradients.sheen(colorEntry.foreground))
-        )
-
-        if (isSelected) {
+        // The same artwork slot as the mosaic, even when a collection has no preview.
+        Box(Modifier.fillMaxWidth().height(72.dp), contentAlignment = Alignment.CenterStart) {
             Box(
-                modifier = Modifier
-                    .size(22.dp)
-                    .clip(CircleShape)
-                    .background(colorEntry.background)
-                    .align(Alignment.TopEnd),
+                Modifier.size(52.dp).clip(RoundedCornerShape(17.dp))
+                    .background(colorEntry.background),
                 contentAlignment = Alignment.Center
             ) {
+                Icon(visual.icon, contentDescription = null, tint = colorEntry.foreground, modifier = Modifier.size(26.dp))
+            }
+            if (isLocked) {
                 Icon(
-                    imageVector = Icons.Filled.Check,
-                    contentDescription = stringResource(R.string.collections_selected),
-                    tint = colorEntry.foreground,
-                    modifier = Modifier.size(14.dp)
+                    Icons.Filled.Lock,
+                    contentDescription = stringResource(R.string.components_locked),
+                    tint = tuckColors.textMuted,
+                    modifier = Modifier.align(Alignment.TopEnd).size(16.dp)
                 )
             }
-        } else if (isLocked) {
-            Icon(
-                imageVector = Icons.Filled.Lock,
-                contentDescription = stringResource(R.string.components_locked),
-                tint = tuckColors.textMuted,
-                modifier = Modifier.size(15.dp).align(Alignment.TopEnd)
-            )
         }
+        Spacer(Modifier.height(12.dp))
+        CollectionTileCaption(name, count, openCount, isSelected, colorEntry.background)
+    }
+}
 
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(TuckGradients.tile(colorEntry.background, tuckColors.isDark)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = visual.icon,
-                    contentDescription = name,
-                    tint = colorEntry.foreground,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(18.dp))
-
-            Text(
-                text = name,
-                style = TuckTheme.typography.tileTitle,
-                color = tuckColors.textPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Spacer(modifier = Modifier.height(2.dp))
-
-            Text(
-                text = collectionSubtitle(count, openCount),
-                style = TuckTheme.typography.numericCount,
-                color = tuckColors.textMuted
+/** Identical text slots keep every category aligned, including at larger system font sizes. */
+@Composable
+private fun CollectionTileCaption(
+    name: String,
+    count: Int,
+    openCount: Int,
+    isSelected: Boolean,
+    accent: Color
+) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+        Text(
+            text = name,
+            style = TuckTheme.typography.tileTitle,
+            color = TuckTheme.colors.textPrimary,
+            minLines = 2,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+        if (isSelected) {
+            Icon(
+                Icons.Filled.Check,
+                contentDescription = stringResource(R.string.collections_selected),
+                tint = accent,
+                modifier = Modifier.size(18.dp)
             )
         }
     }
+    Spacer(Modifier.height(4.dp))
+    Text(
+        text = collectionSubtitle(count, openCount),
+        style = TuckTheme.typography.numericCount,
+        color = TuckTheme.colors.textMuted,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
+    )
 }
 
 /**
@@ -1257,7 +1196,7 @@ fun TuckContentCard(
             .fillMaxWidth()
             .pressScale(interactionSource, pressedScale = 0.985f)
             .shadow(
-                elevation = 3.dp,
+                elevation = 1.dp,
                 shape = tuckShapes.medium,
                 ambientColor = tuckColors.scrim.copy(alpha = 0.35f),
                 spotColor = tuckColors.scrim.copy(alpha = 0.35f)
@@ -1291,7 +1230,7 @@ fun TuckContentCard(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(160.dp)
+                        .height(196.dp)
                         .background(tuckColors.surfaceCard)
                 ) {
                     val context = LocalContext.current
@@ -1366,7 +1305,7 @@ fun TuckContentCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(14.dp)
+                    .padding(18.dp)
             ) {
                 // Header Meta Row: Badge + Date + Favorite
                 Row(
@@ -1385,7 +1324,7 @@ fun TuckContentCard(
                         Spacer(modifier = Modifier.width(8.dp))
                         IconButton(
                             onClick = onToggleFavorite,
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(48.dp)
                         ) {
                             Icon(
                                 imageVector = if (item.isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
@@ -2495,7 +2434,7 @@ fun TuckGridCard(
                         .fillMaxWidth()
                         // Bounded so one very tall screenshot cannot own the whole column.
                         .heightIn(min = 100.dp, max = 260.dp)
-                        .background(tuckColors.surfaceCard)
+                        .background(TuckGradients.canvasWash(tuckColors.accent, tuckColors.canvas))
                 ) {
                     AsyncImage(
                         model = imageRequest,
@@ -2521,8 +2460,8 @@ fun TuckGridCard(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(84.dp)
-                        .background(tuckColors.surfaceCard),
+                        .height(112.dp)
+                        .background(TuckGradients.canvasWash(tuckColors.accent, tuckColors.canvas)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -2535,13 +2474,13 @@ fun TuckGridCard(
                             else -> Icons.Filled.Bookmark
                         },
                         contentDescription = null,
-                        tint = tuckColors.textMuted,
+                        tint = tuckColors.accent,
                         modifier = Modifier.size(26.dp)
                     )
                 }
             }
 
-            Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp)) {
                 Text(
                     text = item.title,
                     style = MaterialTheme.typography.bodyMedium,

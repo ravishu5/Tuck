@@ -307,14 +307,13 @@ fun ItemDetailScreen(
                     ) {
                         Text(
                             text = item.displayTitle,
-                            style = MaterialTheme.typography.headlineSmall,
+                            style = com.tuck.app.ui.theme.TuckTheme.typography.displayMedium,
                             color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.Bold,
                             modifier = Modifier.weight(1f)
                         )
                         IconButton(
                             onClick = { viewModel.startEditTitle(item.title) },
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(48.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Edit,
@@ -832,7 +831,7 @@ fun ItemPreviewCard(
                                                 imageVector = Icons.Filled.PlayArrow,
                                                 contentDescription = stringResource(R.string.components_play),
                                                 tint = TuckTheme.colors.onScrim,
-                                                modifier = Modifier.size(32.dp)
+                                                modifier = Modifier.size(48.dp)
                                             )
                                         }
                                     }

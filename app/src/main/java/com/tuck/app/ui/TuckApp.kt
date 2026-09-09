@@ -57,7 +57,8 @@ fun TuckApp(
     }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
+    // Optional arguments belong to a destination, not its identity in the dock.
+    val currentRoute = navBackStackEntry?.destination?.route?.substringBefore('?')
 
     var captureSignal by remember { mutableIntStateOf(0) }
 

@@ -539,4 +539,6 @@
     <string name="travel_source_photos">From photos</string>
     <string name="travel_country_required">A country is required</string>
     <string name="travel_dates_invalid">The end date cannot be before the start date</string>
+    <string name="home_editorial_eyebrow">YOUR PERSONAL LIBRARY</string>
+    <string name="nav_folders">Folders</string>
 </resources>

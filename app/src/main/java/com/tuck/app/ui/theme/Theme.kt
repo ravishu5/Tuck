@@ -1,5 +1,6 @@
 package com.tuck.app.ui.theme
 
+import androidx.compose.ui.unit.dp
 import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -107,6 +108,12 @@ fun TuckTheme(
         MaterialTheme(
             colorScheme = materialColorScheme,
             typography = TuckTypography,
+            shapes = androidx.compose.material3.Shapes(
+                small = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                medium = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+                large = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+                extraLarge = androidx.compose.foundation.shape.RoundedCornerShape(32.dp)
+            ),
             content = content
         )
     }

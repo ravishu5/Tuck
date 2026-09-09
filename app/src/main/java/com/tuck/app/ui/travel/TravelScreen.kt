@@ -352,14 +352,12 @@ private fun TravelHeader(stats: TravelStats) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .statusBarsPadding()
             .padding(horizontal = 16.dp)
             .padding(top = 12.dp, bottom = 16.dp)
     ) {
         Text(
             text = stringResource(R.string.travel_title),
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.ExtraBold,
+            style = TuckTheme.typography.displayLarge,
             color = colors.textPrimary
         )
         Spacer(Modifier.height(4.dp))
@@ -399,17 +397,16 @@ private fun StatTile(label: String, value: Int) {
     val colors = TuckTheme.colors
     Surface(
         shape = TuckTheme.shapes.medium,
-        color = colors.surfaceCard,
+        color = colors.surface,
         border = androidx.compose.foundation.BorderStroke(1.dp, colors.borderSubtle)
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.Start
         ) {
             Text(
                 text = value.toString(),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.ExtraBold,
+                style = TuckTheme.typography.displayMedium,
                 color = colors.textPrimary
             )
             Text(
